@@ -449,7 +449,7 @@ body.dark .hero{background:#1d3557;color:#e3ecff}body.dark .hs{background:rgba(2
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_CONFIG = { serverUrl:'', accessCode:'', geminiKey:'PASTE_YOUR_KEY_HERE' };
+const APP_CONFIG = { serverUrl:'', accessCode:'', geminiKey:'PASTE_YOUR_KEY_HERE', coachUrl:'https://orange-surf-ad2btracky.lokielsyed07.workers.dev' /* your Cloudflare Worker URL, e.g. https://tracky-coach.YOURNAME.workers.dev */ };
 const GEMINI_MODEL_DEFAULT = 'gemini-flash-latest';
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
@@ -1802,7 +1802,7 @@ const ANALYZE_RULES = "You are Tracky Coach, a strength coach reviewing training
 async function analyzeBody(ym, cur, old){
   const P = settings.profile || {};
   if (+P.age && +P.age < 18) return showToast('⚠️ AI photo analysis is only available for users 18 and older.');
-  if (!geminiReady()) return showToast('⚠️ Add your Gemini API key in Settings to use AI analysis.');
+  if (!coachReady()) return showToast('⚠️ Add your Gemini API key in Settings to use AI analysis.');
   if (!(await showConfirm('Your photos will be sent to Google Gemini to be analyzed. Continue?', '🤖 AI analysis'))) return;
   const b = $('rpAi'), out = $('aiOut'), imgs = [];
   POSES.forEach(p => { const n = lastPose(cur, p), o = lastPose(old, p);
@@ -2299,7 +2299,7 @@ const GEMINI_VERTEX_BASE = 'https://aiplatform.googleapis.com/v1/publishers/goog
 const isVertexKey = k => /^AQ\./.test(String(k || '').trim());
 const geminiKey = () => String((settings && settings.geminiKey) || APP_CONFIG.geminiKey || '').trim();
 const geminiReady = () => { const k = geminiKey(); return !!k && k !== 'PASTE_YOUR_KEY_HERE'; };
-const coachReady = geminiReady;
+const coachReady = () => geminiReady() || !!APP_CONFIG.coachUrl;
 let _geminiRoute = '';
 const geminiModel = () => (settings.model && /^gemini-/.test(settings.model) && !/^gemini-(1|2)\./.test(settings.model)) ? settings.model : GEMINI_MODEL_DEFAULT;
 const activeCoachLabel = () => 'Gemini · ' + geminiModel() + (_geminiRoute ? ' (' + _geminiRoute + ')' : '');
@@ -2340,6 +2340,19 @@ async function geminiInteractions(key, model, system, hist, userText, errors){
   const t = grab(j.steps || j.outputs || j, []).join('').trim(); return t || null;
 }
 
+/* Shared coach: the request goes to your own server, which holds the key. */
+async function askViaServer(system, hist, userParts, onChunk, maxTokens){
+  const body = JSON.stringify({systemInstruction:{parts:[{text:system}]}, contents:hist.concat([{role:'user', parts:userParts}]),
+    generationConfig:{temperature:0.7, topP:0.95, maxOutputTokens:Math.max(maxTokens || 2048, 1024)}});
+  let r;
+  try { r = await fetch(APP_CONFIG.coachUrl, {method:'POST', headers:{'Content-Type':'application/json'}, body}); }
+  catch(e){ throw new Error('Coach server unreachable (' + (e && e.message) + ')'); }
+  if (r.status === 429) throw new Error('Daily coach limit reached. Try again tomorrow, or add your own Gemini key in Settings.');
+  if (!r.ok) throw new Error('Coach server error ' + r.status + ' ' + await apiErr(r));
+  _geminiRoute = 'server';
+  return streamGeminiResponse(r, onChunk);
+}
+
 /* Primary route: the official @google/genai SDK (browser ESM build), same as ai.models.generateContent in the docs. */
 let _genaiMod = null;
 async function geminiSdk(key, model, system, hist, userParts, onChunk, maxTokens){
@@ -2361,7 +2374,8 @@ async function geminiSdk(key, model, system, hist, userParts, onChunk, maxTokens
 async function askCoach(system, hist, userText, onChunk, maxTokens, images){
   const key = geminiKey();
   const userParts = [{text:userText}]; (images || []).forEach(im => { userParts.push({text:im.t}); userParts.push({inlineData:{mimeType:'image/jpeg', data:im.d}}); });
-  if (!geminiReady()) throw new Error('No Gemini API key set — edit APP_CONFIG.geminiKey at the top of the script');
+  if (!(settings && settings.geminiKey) && APP_CONFIG.coachUrl) return askViaServer(system, hist, userParts, onChunk, maxTokens);
+  if (!geminiReady()) throw new Error('No Gemini API key set. Add yours in Settings.');
   const sdkErrors = [];
   for (const m of [...new Set(['gemini-flash-latest', geminiModel()])]){
     try {
@@ -2616,7 +2630,7 @@ async function sendToAI(){
   try {
     if (!coachReady()){
       loading.remove();
-      addMsg('ai', '⚠️ Add your AI API key in APP_CONFIG at the top of the script.');
+      addMsg('ai', '⚠️ Add your Gemini API key in Settings to use the coach.');
       saveChat(); return;
     }
     let bubble = null;
