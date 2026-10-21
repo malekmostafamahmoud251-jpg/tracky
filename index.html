@@ -414,7 +414,10 @@ body.dark .hero{background:#1d3557;color:#e3ecff}body.dark .hs{background:rgba(2
 <div class="overlay" id="modalSettings"><div class="modal"><h3 style="display:flex;justify-content:space-between;align-items:center">⚙️ Settings <button class="icon" onclick="closeModal('modalSettings')" aria-label="Close">✕</button></h3>
   <div class="fg"><label>Units</label><select id="unitSel"><option value="kg">Kilograms (kg)</option><option value="lb">Pounds (lb)</option></select></div>
   <div class="fg"><label>Workout reminder</label><div style="display:flex;gap:.8rem;align-items:center;margin-bottom:.6rem"><input type="checkbox" id="remOn" style="width:24px;height:24px"><input type="time" id="remTime"></div><div class="optrow" id="remDays" style="display:flex;gap:.4rem;flex-wrap:wrap"></div><small class="insight2">Works while Tracky is open or running in the background.</small></div>
-  <div class="fg"><label>Smart alerts</label><div style="display:flex;gap:.8rem;align-items:center;margin-bottom:.5rem"><input type="checkbox" id="alStreak" style="width:24px;height:24px"><span>Streak alerts (forgot to log, streak at risk)</span></div><div style="display:flex;gap:.8rem;align-items:center"><input type="checkbox" id="alReport" style="width:24px;height:24px"><span>Monthly report and photo check-in</span></div><small class="insight2">Shown in the app, and as phone notifications while Tracky is open or in the background.</small></div>
+  <div class="fg"><label>Smart alerts</label><div style="display:flex;gap:.8rem;align-items:center;margin-bottom:.5rem"><input type="checkbox" id="alStreak" style="width:24px;height:24px"><span>Streak alerts (forgot to log, streak at risk)</span></div><div style="display:flex;gap:.8rem;align-items:center"><input type="checkbox" id="alReport" style="width:24px;height:24px"><span>Monthly report and photo check-in</span></div><small class="insight2">Shown in the app, and as phone notifications while Tracky is open or in the background.</small>
+    <div style="display:flex;gap:.8rem;align-items:center;margin-top:.8rem"><input type="checkbox" id="alPush" style="width:24px;height:24px"><span>Phone notifications when the app is closed</span></div>
+    <button class="sec tiny" id="pushTestBtn" type="button" style="margin-top:.5rem">🔔 Send test notification</button>
+    <small class="insight2">On iPhone, first add Tracky to the Home Screen.</small></div>
   <div class="fg"><label>Backup</label><button class="sec" onclick="shareBackup()">Share / save backup</button><small class="insight2" id="bkInfo"></small></div>
   <div class="fg"><label>AI coach</label>
     <input type="password" id="gKeyInput" class="in" style="width:100%;margin-bottom:.6rem" autocomplete="off" placeholder="Gemini API key (stored on this device only)">
@@ -1113,6 +1116,13 @@ Add your Gemini API key in Settings to use AI analysis.|أضف مفتاح Gemini
 Your photos will be sent to Google Gemini to be analyzed. Continue?|سيتم إرسال صورك إلى Google Gemini لتحليلها. هل تريد المتابعة؟|Vos photos seront envoyées à Google Gemini pour analyse. Continuer ?
 AI analysis|التحليل الذكي|Analyse IA
 Analyzing your photos…|جارٍ تحليل صورك…|Analyse de vos photos…
+Phone notifications when the app is closed|إشعارات على الهاتف حتى لو التطبيق مقفول|Notifications sur le téléphone même app fermée
+Send test notification|إرسال إشعار تجريبي|Envoyer une notification test
+On iPhone, first add Tracky to the Home Screen.|على الآيفون، أضف Tracky إلى الشاشة الرئيسية أولاً.|Sur iPhone, ajoutez d'abord Tracky à l'écran d'accueil.
+Phone notifications are on|إشعارات الهاتف مفعّلة|Notifications téléphone activées
+Phone notifications need the coach server and a browser that supports push. On iPhone, add Tracky to the Home Screen first.|إشعارات الهاتف تحتاج سيرفر المدرب ومتصفحاً يدعم الإشعارات. على الآيفون أضف Tracky إلى الشاشة الرئيسية أولاً.|Les notifications nécessitent le serveur coach et un navigateur compatible. Sur iPhone, ajoutez d'abord Tracky à l'écran d'accueil.
+Turn on phone notifications first, then tap Done.|فعّل إشعارات الهاتف أولاً ثم اضغط تم.|Activez d'abord les notifications téléphone, puis touchez Terminé.
+Sent. It should arrive in a few seconds.|تم الإرسال. المفروض يوصل خلال ثوانٍ.|Envoyée. Elle devrait arriver dans quelques secondes.
 `.split('\n').forEach(l => { const p = l.split('|'); if (p.length === 3){ I18N.ar[p[0]] = p[1]; I18N.fr[p[0]] = p[2]; } });
 const PATS = [
  [/^(\d+) sets × (.+) reps · (.+)kg$/, "$1 مجموعات × $2 تكرار · $3 كجم", "$1 séries × $2 reps · $3 kg"],
@@ -1264,7 +1274,7 @@ function load(){
   if (!settings || typeof settings !== 'object') settings = {darkMode:false};
   goals.forEach(g => { if (!g.id) g.id = makeId(); });
 }
-function save(){ scheduleSync();
+function save(){ scheduleSync(); schedulePush();
   try {
     localStorage.setItem('gymState', JSON.stringify(state));
     localStorage.setItem('gymSessions', JSON.stringify(sessions));
@@ -1675,7 +1685,7 @@ function openSettings(){
   $('unitSel').value = settings.unit || 'kg'; $('remOn').checked = !!r.on; $('remTime').value = r.time; $('syncBox').style.display = APP_CONFIG.serverUrl ? '' : 'none'; $('syncPass').value = settings.syncPass || ''; $('autoSync').checked = !!settings.autoSync;
   { const t = +localStorage.getItem('trackySync'); $('syncInfo').textContent = t ? 'Last sync: ' + new Date(t).toLocaleString(LOCALE()) : ''; }
   $('bkInfo').textContent = settings.lastBackup ? 'Last backup: ' + settings.lastBackup : 'No backup yet.';
-  $('modelSel').value = geminiModel(); $('gKeyInput').value = settings.geminiKey || ''; $('alStreak').checked = alertOn('streak'); $('alReport').checked = alertOn('report');
+  $('modelSel').value = geminiModel(); $('gKeyInput').value = settings.geminiKey || ''; $('alStreak').checked = alertOn('streak'); $('alReport').checked = alertOn('report'); $('alPush').checked = !!settings.pushOn; $('pushTestBtn').onclick = pushTest;
   $('modelSel').onchange = e => { settings.model = e.target.value; save(); };
   $('testGeminiOut').textContent = '';
   $('testGeminiBtn').onclick = async () => {
@@ -1700,6 +1710,7 @@ async function saveSettings(){
   if (r.on && (!('Notification' in window) || Notification.permission !== 'granted')){ r.on = false; showToast('⚠️ Reminders need notifications to be allowed.'); }
   settings.rem = r; settings.syncPass = $('syncPass').value; settings.autoSync = $('autoSync').checked;
   settings.geminiKey = $('gKeyInput').value.trim(); settings.alerts = {streak:$('alStreak').checked, report:$('alReport').checked}; $('coachMode').textContent = coachReady() ? '✨ Gemini' : 'Not connected';
+  await pushApply();
   const u = $('unitSel').value, changed = u !== (settings.unit || 'kg'); settings.unit = u;
   save(); closeModal('modalSettings'); if (changed){ applyLang(document.body); renderAllViews(); }
 }
@@ -1739,7 +1750,7 @@ function remTick(){
   }
 }
 setInterval(remTick, 60000); document.addEventListener('visibilitychange', () => { if (!document.hidden) remTick(); });
-function buildBackup(){ const s = Object.assign({}, settings); ['syncPass','proxyToken','apiKey','geminiKey'].forEach(k => delete s[k]); return JSON.stringify({state, sessions, progress, goals, settings:s, bodyLog, bodyM, photos}); }
+function buildBackup(){ const s = Object.assign({}, settings); ['syncPass','proxyToken','apiKey','geminiKey','pushOn','pushId'].forEach(k => delete s[k]); return JSON.stringify({state, sessions, progress, goals, settings:s, bodyLog, bodyM, photos}); }
 async function shareBackup(){
   const file = new File([buildBackup()], 'tracky_backup.json', {type:'application/json'});
   try {
@@ -1822,6 +1833,62 @@ async function analyzeBody(ym, cur, old){
   finally { b.disabled = false; }
 }
 
+/* ---------- phone push (works while the app is closed; needs the coach server) ---------- */
+const bytesToB64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const b64uToBytes = str => { const p = (str + '='.repeat((4 - str.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/'); return Uint8Array.from(atob(p), c => c.charCodeAt(0)); };
+const pushSupported = () => !!(APP_CONFIG.coachUrl && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window);
+const pushUrl = path => APP_CONFIG.coachUrl.replace(/\/+$/, '') + path;
+const pushPost = (path, body, keep) => fetch(pushUrl(path), {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body), keepalive:!!keep});
+function pushState(){
+  const r = settings.rem;
+  return {tz:-new Date().getTimezoneOffset(), lang:LANG, profileDone:!!settings.profileDone, alerts:{streak:alertOn('streak'), report:alertOn('report')},
+    rem:r ? {on:!!r.on, time:r.time, days:r.days || []} : null, goal:weekGoal(),
+    days:[...new Set(sessions.map(x => localKey(x.date)))].sort().slice(-182), lastReport:settings.lastReport || '',
+    photoMonths:[...new Set(photos.filter(q => q.pose).map(phMonth))], sent:settings.sent || {}};
+}
+async function enablePush(){
+  if (!pushSupported()) throw new Error(tr('Phone notifications need the coach server and a browser that supports push. On iPhone, add Tracky to the Home Screen first.'));
+  if (Notification.permission === 'default') await Notification.requestPermission();
+  if (Notification.permission !== 'granted') throw new Error(tr('Reminders need notifications to be allowed.'));
+  const reg = await navigator.serviceWorker.ready;
+  const vr = await fetch(pushUrl('/vapid')); if (!vr.ok) throw new Error('Server ' + vr.status);
+  const key = (await vr.json()).publicKey;
+  let sub = await reg.pushManager.getSubscription();
+  if (sub && sub.options && sub.options.applicationServerKey && bytesToB64u(sub.options.applicationServerKey) !== key){ await sub.unsubscribe(); sub = null; }
+  if (!sub) sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64uToBytes(key)});
+  await (await caches.open('tracky-cfg')).put('cfg', new Response(JSON.stringify({url:pushUrl('')})));
+  const st = pushState(), r = await pushPost('/push/subscribe', {sub:sub.toJSON(), state:st}); if (!r.ok) throw new Error('Server ' + r.status);
+  settings.pushId = (await r.json()).id; settings.pushOn = true; localStorage.setItem('trackyPushHash', JSON.stringify(st)); save();
+}
+async function disablePush(){
+  try { const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription(); if (sub) await sub.unsubscribe(); } catch(e){}
+  try { if (settings.pushId) await pushPost('/push/unsubscribe', {id:settings.pushId}); } catch(e){}
+  settings.pushOn = false; delete settings.pushId; save();
+}
+async function pushApply(){
+  const want = $('alPush').checked;
+  try {
+    if (want && !settings.pushOn){ await enablePush(); showToast('🔔 Phone notifications are on'); }
+    else if (!want && settings.pushOn) await disablePush();
+  } catch(e){ $('alPush').checked = !!settings.pushOn; showToast('⚠️ ' + String((e && e.message) || e).slice(0, 160)); }
+}
+async function pushTest(){
+  if (!settings.pushOn) return showToast('⚠️ Turn on phone notifications first, then tap Done.');
+  try { const r = await pushPost('/push/test', {id:settings.pushId}); showToast(r.ok ? '🔔 Sent. It should arrive in a few seconds.' : '⚠️ Server error ' + r.status); }
+  catch(e){ showToast('⚠️ ' + String((e && e.message) || e).slice(0, 120)); }
+}
+let pushT = null;
+function schedulePush(){ if (!settings || !settings.pushOn) return; clearTimeout(pushT); pushT = setTimeout(() => pushStateNow(false), 15000); }
+async function pushStateNow(keep){
+  if (!settings || !settings.pushOn || !APP_CONFIG.coachUrl || !settings.pushId) return;
+  const st = JSON.stringify(pushState()); if (st === localStorage.getItem('trackyPushHash')) return;
+  try {
+    const r = await pushPost('/push/state', {id:settings.pushId, state:JSON.parse(st)}, keep);
+    if (r.status === 404){ await enablePush(); return; }
+    if (r.ok) localStorage.setItem('trackyPushHash', st);
+  } catch(e){}
+}
+
 /* ---------- encrypted cloud sync ---------- */
 const enc = new TextEncoder(), dec = new TextDecoder();
 const b64 = buf => { const a = new Uint8Array(buf); let s = ''; for (let i = 0; i < a.length; i += 8192) s += String.fromCharCode.apply(null, a.subarray(i, i + 8192)); return btoa(s); };
@@ -1854,7 +1921,7 @@ async function syncPull(show, auto){
     if (!r.ok) throw new Error(r.status);
     const p = await r.json(); if (auto && p.t <= (+localStorage.getItem('trackySync') || 0)) return;
     if (!(await showConfirm(auto ? 'Newer data was found in the cloud. Load it and replace this device?' : 'Replace the data on this device with your cloud backup?', '☁️ Cloud sync'))) return;
-    const d = JSON.parse(await syncDecrypt(settings.syncPass, p)), keep = {syncPass:settings.syncPass, proxyToken:settings.proxyToken, apiKey:settings.apiKey, geminiKey:settings.geminiKey, proxyUrl:settings.proxyUrl, autoSync:settings.autoSync};
+    const d = JSON.parse(await syncDecrypt(settings.syncPass, p)), keep = {syncPass:settings.syncPass, proxyToken:settings.proxyToken, apiKey:settings.apiKey, geminiKey:settings.geminiKey, pushOn:settings.pushOn, pushId:settings.pushId, proxyUrl:settings.proxyUrl, autoSync:settings.autoSync};
     window._syncing = true;
     if (d.state) state = d.state; if (d.sessions) sessions = d.sessions; if (d.progress) progress = d.progress; if (d.goals) goals = d.goals;
     if (d.bodyLog) bodyLog = d.bodyLog; if (d.bodyM) bodyM = d.bodyM;
@@ -2834,7 +2901,7 @@ $('importFile').addEventListener('change', e => {
     try {
       const d = JSON.parse(ev.target.result);
       if (d.state) state = d.state; if (d.sessions) sessions = d.sessions; if (d.progress) progress = d.progress;
-      if (d.goals) goals = d.goals; if (d.settings) settings = Object.assign({}, d.settings, {syncPass:settings.syncPass, proxyToken:settings.proxyToken, apiKey:settings.apiKey, geminiKey:settings.geminiKey, proxyUrl:settings.proxyUrl, autoSync:settings.autoSync}); if (d.bodyLog) bodyLog = d.bodyLog; if (d.bodyM) bodyM = d.bodyM; if (d.photos){ photos = d.photos; savePhotos(); }
+      if (d.goals) goals = d.goals; if (d.settings) settings = Object.assign({}, d.settings, {syncPass:settings.syncPass, proxyToken:settings.proxyToken, apiKey:settings.apiKey, geminiKey:settings.geminiKey, pushOn:settings.pushOn, pushId:settings.pushId, proxyUrl:settings.proxyUrl, autoSync:settings.autoSync}); if (d.bodyLog) bodyLog = d.bodyLog; if (d.bodyM) bodyM = d.bodyM; if (d.photos){ photos = d.photos; savePhotos(); }
       logData = {}; save(); init(); showToast('✅ Imported successfully');
     } catch(err){ showToast('⚠️ Invalid file format'); }
   };
@@ -2889,7 +2956,7 @@ if (Object.values(logData).some(d => d.sets && d.sets.some(s => s.done))) setTim
 let savedTab = null; try { savedTab = localStorage.getItem('trackyTab'); } catch(e){}
 (document.querySelector(`.tab[data-tab="${savedTab}"]`) || document.querySelector(`.tab[data-tab="${state.days.length ? 'train' : 'builder'}"]`)).click();
 if (!settings.profileDone) openIntro();
-remTick();
+remTick(); setTimeout(() => pushStateNow(false), 4000);
 if (settings.autoSync) setTimeout(() => syncPull(false, true), 2500);
 setTimeout(() => {
   if (!settings.profileDone) return;
@@ -2897,7 +2964,7 @@ setTimeout(() => {
   if (settings.lastReport !== pv && sessions.some(s => localKey(s.date).slice(0,7) === pv)){ settings.lastReport = pv; save(); showReport(-1, true); }
   else if (weighDue()) openWeigh();
 }, 1500);
-const flush = () => { save(); saveDraft(); saveChat(); };
+const flush = () => { save(); saveDraft(); saveChat(); pushStateNow(true); };
 document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
 addEventListener('pagehide', flush);
 try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e){}
