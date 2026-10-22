@@ -305,6 +305,61 @@ mark.hl{background:#ffe066;color:#222;border-radius:3px;padding:0 2px}
 .btnrow2 button{flex:1}
 body.noanim *,body.noanim *::before,body.noanim *::after{animation-duration:.001s!important;animation-delay:0s!important;animation-iteration-count:1!important;transition-duration:.001s!important}
 @media (prefers-reduced-motion:reduce){body:not(.forceanim) *,body:not(.forceanim) *::before,body:not(.forceanim) *::after{animation-duration:.001s!important;animation-delay:0s!important;animation-iteration-count:1!important;transition-duration:.001s!important}}
+body:not([data-tab="progress"]) .hero{display:none}
+body[data-tab="train"] .bar{display:none}
+details.more{margin-top:.6rem}details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--accent);list-style:none}
+details.more>summary::-webkit-details-marker{display:none}
+.snaprow{display:flex;justify-content:space-between;align-items:center;gap:.5rem;padding:.4rem 0;font-size:.8rem}
+.panel.active{animation:panelIn .28s ease both}@keyframes panelIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.homecard{background:linear-gradient(135deg,#1e3b5c,#2a5a8a);color:#fff;border-radius:1.5rem;padding:1.4rem;margin-bottom:1rem}
+.homecard small{opacity:.8;font-weight:700;text-transform:uppercase;font-size:.7rem;letter-spacing:.04em}
+.homecard h2{font-size:1.6rem;margin:.2rem 0 .4rem}.homecard p{opacity:.9;font-size:.9rem;line-height:1.5;margin-bottom:1rem}
+.startbtn{width:100%;padding:1.1rem;font-size:1.1rem;background:linear-gradient(135deg,#ffb347,#ffd966);color:#5a4500;box-shadow:0 8px 20px -6px rgba(255,179,71,.6)}
+.hgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.8rem;margin-bottom:1rem}
+.hcard{background:var(--card);border:1px solid var(--border);border-radius:1.2rem;padding:1rem;display:flex;flex-direction:column;gap:.5rem;align-items:center;text-align:center}
+.hcard b{font-size:1.3rem}.hcard small{color:var(--sub);font-weight:700}
+.ring{position:relative;width:84px;height:84px}.ring svg{transform:rotate(-90deg)}.ring circle{fill:none;stroke-width:8}
+.ring .bg{stroke:var(--border)}.ring .fg{stroke:var(--accent);stroke-linecap:round;transition:stroke-dashoffset .9s cubic-bezier(.2,.8,.2,1)}
+.ring span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:800}
+.ex.exdone{animation:exGlow .7s ease}@keyframes exGlow{40%{box-shadow:0 0 0 3px var(--ok),0 0 24px var(--ok)}}
+.xpfloat{position:fixed;left:50%;top:40%;transform:translateX(-50%);z-index:999;font-size:1.8rem;font-weight:900;color:#ffb000;text-shadow:0 2px 10px rgba(0,0,0,.4);pointer-events:none;animation:xpUp 1.4s ease forwards}
+@keyframes xpUp{from{opacity:0;transform:translate(-50%,10px) scale(.8)}20%{opacity:1;transform:translate(-50%,0) scale(1.15)}to{opacity:0;transform:translate(-50%,-60px)}}
+.prrow{display:flex;justify-content:space-between;gap:.5rem;padding:.55rem 0;border-bottom:1px solid var(--border);font-size:.9rem}.prrow:last-child{border:0}
+.sheetctl{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;padding:.6rem .4rem .2rem;border-top:1px solid var(--border);margin-top:.3rem}
+.sheetctl select{padding:.4rem .6rem;border-radius:2rem;border:1.5px solid var(--inb);background:var(--card);color:var(--text);font-weight:700;max-width:100%}
+.srow input[type=text]{width:100%;padding:.5rem;border:1.5px solid var(--inb);border-radius:.5rem;font-weight:700;background:var(--inbg);color:var(--text);text-align:center}
+.srow.done input[type=text]{opacity:.55}
+#anl{position:fixed;inset:0;z-index:1000;background:radial-gradient(circle at 50% 18%,#1b2f4d,#0b1220 70%);color:#fff;overflow-y:auto;padding:1.2rem 1rem calc(2rem + env(safe-area-inset-bottom));animation:anlIn .4s ease both}
+@keyframes anlIn{from{opacity:0}to{opacity:1}}
+#anl .wrap{max-width:560px;margin:0 auto}
+#anl .pulse{position:relative;height:120px;display:flex;align-items:center;justify-content:center;margin-bottom:.4rem}
+#anl .pulse i{position:absolute;width:70px;height:70px;border-radius:50%;border:2px solid #ffb347;opacity:0;animation:rip 2.2s ease-out infinite}
+#anl .pulse i:nth-child(2){animation-delay:.7s}#anl .pulse i:nth-child(3){animation-delay:1.4s}
+@keyframes rip{0%{transform:scale(.4);opacity:.9}100%{transform:scale(2.6);opacity:0}}
+#anl .pulse b{font-size:2.6rem;animation:beat 1.1s ease-in-out infinite}@keyframes beat{50%{transform:scale(1.18)}}
+#anl h2{text-align:center;font-size:1.4rem;margin-bottom:.2rem}#anl .sub{text-align:center;opacity:.7;font-size:.85rem;margin-bottom:1.2rem}
+#anl .kcal{text-align:center;background:linear-gradient(135deg,#ff7a45,#ffb347);color:#3a1a00;border-radius:1.4rem;padding:1.1rem;margin-bottom:1rem;box-shadow:0 10px 30px -10px #ff7a45}
+#anl .kcal b{display:block;font-size:2.8rem;line-height:1}#anl .kcal small{font-weight:700;opacity:.8}
+#anl .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-bottom:1rem}
+#anl .st{background:rgba(255,255,255,.08);border-radius:1rem;padding:.8rem .4rem;text-align:center;opacity:0;transform:translateY(14px);animation:stIn .5s ease forwards}
+#anl .st b{display:block;font-size:1.3rem}#anl .st small{opacity:.7;font-size:.7rem;font-weight:700}
+@keyframes stIn{to{opacity:1;transform:none}}
+#anl h3{font-size:1rem;margin:1rem 0 .6rem}
+#anl .mrow{margin-bottom:.7rem}#anl .mrow div:first-child{display:flex;justify-content:space-between;font-size:.85rem;font-weight:700;margin-bottom:.25rem}
+#anl .mt{height:12px;background:rgba(255,255,255,.1);border-radius:99px;overflow:hidden}
+#anl .mt span{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#4cc9f0,#ffb347,#ff5a36);transition:width 1.1s cubic-bezier(.2,.8,.2,1)}
+#anl .note{background:rgba(255,255,255,.08);border-radius:1rem;padding:.8rem 1rem;font-size:.88rem;margin-bottom:.5rem;opacity:0;animation:stIn .5s ease forwards}
+#anl .btns{display:flex;gap:.5rem;margin-top:1.2rem}#anl .btns button{flex:1;padding:.9rem;border:0;border-radius:1rem;font-weight:800;font-size:.95rem;cursor:pointer}
+#anl .ok{background:#ffb347;color:#4a2c00}#anl .gh{background:rgba(255,255,255,.14);color:#fff}
+body.noanim #anl *,body.noanim #anl{animation-duration:.01s!important;transition-duration:.01s!important}
+.frz{margin-top:.2rem;font-size:.75rem;padding:.3rem .7rem}
+.pxhero{image-rendering:auto!important;animation:none!important}
+.emotebar{display:flex;gap:.4rem;flex-wrap:wrap;justify-content:center;margin:.6rem 0}.emotebar button{display:flex;flex-direction:column;align-items:center;min-width:56px;padding:.4rem .5rem;border-radius:.9rem;border:1.5px solid var(--inb);background:var(--card);color:var(--text);font-size:1.3rem;cursor:pointer}
+.emotebar button small{font-size:.62rem;font-weight:700;color:var(--sub)}.emotebar button.lock{opacity:.5}
+.pxq button.sel{outline:3px solid var(--accent)}
+#evoBar{margin:.4rem 0 .8rem}.evot{font-weight:800;font-size:.85rem;margin-bottom:.3rem;color:var(--sub)}.evor{display:flex;gap:.3rem;overflow-x:auto;padding-bottom:.3rem}
+.evoc{display:flex;flex-direction:column;align-items:center;flex:0 0 auto;padding:.3rem .2rem;border-radius:.9rem;border:1.5px solid transparent}.evoc small{font-size:.62rem;font-weight:800;color:var(--sub)}
+.evoc.cur{border-color:var(--accent);background:rgba(255,179,71,.12)}.evoc.lock canvas{filter:brightness(0) opacity(.3)}
 </style>
 </head>
 <body>
@@ -318,30 +373,33 @@ body.noanim *,body.noanim *::before,body.noanim *::after{animation-duration:.001
     <div class="hs">🛡️<div><b id="unlocksNum">1</b><small>Level</small><div class="xpbar"><div id="heroXp"></div></div></div></div>
   </div>
 </div>
-<div class="bar">
+<nav class="tabs">
+  <button class="tab" data-tab="home"><i>🏠</i>Home</button>
+  <button class="tab" data-tab="train"><i>🏋️</i>Train</button>
+  <button class="tab" data-tab="builder"><i>🛠️</i>Plan</button>
+  <button class="tab ai" data-tab="aicoach"><i>🤖</i>Coach</button>
+  <button class="tab" data-tab="history"><i>📅</i>History</button>
+  <button id="moreBtn"><i>⚙️</i>Settings</button>
+</nav>
+<div class="sheet" id="moreSheet">
+  <button class="tab" data-tab="charts">📊 Charts</button>
+  <button class="tab" data-tab="progress">🧑 Profile</button>
+  <button class="tab" data-tab="goals">🎯 Goals</button>
+  <div class="sheetctl">
   <button class="sec tiny" onclick="openSettings()">⚙️ Settings</button>
-  <button class="sec tiny" onclick="openIntro(true)">👤 Profile</button>
+  <button class="sec tiny" onclick="openIntro(true)">👤 Edit profile</button>
   <button class="sec tiny" id="darkBtn">🌙 Dark</button>
   <select id="langSel" aria-label="Language"><option value="en">English</option><option value="ar">العربية</option><option value="fr">Français</option></select>
   <select id="restSel" aria-label="Rest timer"></select>
   <button class="sec tiny" id="exportBtn">⬇ Export</button>
   <button class="sec tiny" id="importBtn">⬆ Import</button>
   <input type="file" id="importFile" accept=".json" style="display:none">
-</div>
-<nav class="tabs">
-  <button class="tab" data-tab="train"><i>🏋️</i>Train</button>
-  <button class="tab" data-tab="builder"><i>🛠️</i>Plan</button>
-  <button class="tab ai" data-tab="aicoach"><i>🤖</i>Coach</button>
-  <button class="tab" data-tab="history"><i>📅</i>History</button>
-  <button id="moreBtn"><i>☰</i>More</button>
-</nav>
-<div class="sheet" id="moreSheet">
-  <button class="tab" data-tab="charts">📊 Charts</button>
-  <button class="tab" data-tab="progress">🌳 Progress & Body</button>
-  <button class="tab" data-tab="goals">🎯 Goals</button>
+  </div>
 </div>
 
-<div class="panel active" data-panel="builder">
+<div class="panel" data-panel="home"><div id="homeBox"></div></div>
+
+<div class="panel" data-panel="builder">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
     <h2 style="font-size:1.3rem">Your Custom Days</h2>
     <button class="sec tiny" onclick="openDayModal()">＋ Add Day</button>
@@ -386,6 +444,7 @@ body.noanim *,body.noanim *::before,body.noanim *::after{animation-duration:.001
 
 <div class="panel" data-panel="progress">
   <div class="box" id="charBox"></div>
+  <div class="box"><h3>🏅 Personal Records <span id="prCount" style="font-size:.9rem;color:var(--sub)"></span></h3><div id="prLog"></div></div>
   <div class="box"><h3>👹 Weekly Boss</h3><div id="boss"></div></div>
   <div class="box"><h3>📜 Weekly Quests</h3><div id="quests"></div></div>
   <div class="box"><h3>🗓️ Monthly Challenges</h3><div id="mchal"></div></div>
@@ -469,6 +528,16 @@ body.noanim *,body.noanim *::before,body.noanim *::after{animation-duration:.001
 <small class="insight2">Every time you rank up, your hero gets bigger and stronger 💪</small>
 <div class="acts" style="flex-wrap:wrap;margin-top:1rem"><button class="sec tiny" id="pxClear">Clear</button><button class="sec tiny" id="pxReset">Default</button><button class="sec tiny" id="pxPhoto">📷 Use photo</button></div>
 </div></div></div>
+<div class="overlay" id="modalHero3"><div class="modal" style="padding:0;display:flex;flex-direction:column;max-height:92vh;overflow:hidden;text-align:left">
+<div style="display:flex;align-items:center;gap:.6rem;padding:.7rem 1rem;border-bottom:1px solid var(--inb)"><button class="sec tiny" onclick="closeModal('modalHero3')">← Back</button><b style="flex:1;text-align:center">🎨 Design your hero</b><button id="h3Save">Save</button></div>
+<div style="flex:1;overflow-y:auto;padding:1rem"><div style="text-align:center"><canvas id="h3Prev" class="pxhero" data-h="250"></canvas><br><small class="insight2">Drag to rotate · tap to play an emote</small><br><input type="range" id="h3Stage" min="0" max="6" step=".25" value="0" style="width:60%"><br><small class="insight2">Strength preview</small></div>
+<div class="fg"><label>📷 Your face</label><div style="display:flex;gap:.5rem;flex-wrap:wrap"><button class="sec tiny" type="button" id="h3FaceBtn">Use my photo</button><button class="sec tiny" type="button" id="h3FaceRm">Remove</button></div><input type="file" id="h3File" accept="image/*" style="display:none"><small class="insight2">Your photo becomes your hero's 3D head, and skin tone is matched to it. It stays on this device.</small></div>
+<div class="fg"><label>Skin tone</label><div class="pxq" id="h3Skin"></div></div><div class="fg"><label>Hair style</label><select id="h3Hair" class="in" style="width:100%"></select></div><div class="fg"><label>Hair color</label><div class="pxq" id="h3HairC"></div></div>
+<div class="fg"><label>Outfit color</label><div class="pxq" id="h3Out"></div></div><div class="fg"><label>Accessory</label><select id="h3Acc" class="in" style="width:100%"></select></div>
+<div class="fg"><label>Idle animation</label><select id="h3Anim" class="in" style="width:100%"><option value="breathe">Breathe</option><option value="bounce">Bounce</option><option value="sway">Turntable sway</option><option value="flex">Flex now and then</option></select></div>
+<div class="fg"><label><input type="checkbox" id="h3Aura"> ✨ Flame aura <small id="h3AuraLk"></small></label></div>
+<div class="fg"><label>Emotes</label><div id="h3Emotes" class="emotebar"></div></div><small class="insight2">As you level up, your hero grows bigger muscles and unlocks new emotes, hair and gear 💪</small></div></div></div>
+<div class="overlay" id="modalFace"><div class="modal" style="text-align:center"><h3>📷 Position your face</h3><canvas id="fcCv" width="300" height="300" style="width:100%;max-width:300px;touch-action:none;border-radius:1rem;background:#000"></canvas><br><input type="range" id="fcZoom" min="1" max="4" step=".01" value="1" style="width:80%"><br><small class="insight2">Drag to move, slide to zoom. Fit your face inside the circle, looking straight at the camera.</small><div class="acts"><button class="cancel" onclick="closeModal('modalFace')">Cancel</button><button id="fcOk">Use this face</button></div></div></div>
 <div class="overlay" id="modalPlates"><div class="modal"><h3>🧮 Plates &amp; Warm-up</h3>
 <div class="fg"><label>Target weight (kg)</label><input type="number" id="plateTarget" step="0.5" value="60" oninput="calcPlates()"></div>
 <div class="fg"><label>Bar (kg)</label><input type="number" id="plateBar" value="20" oninput="calcPlates()"></div>
@@ -514,7 +583,7 @@ body.noanim *,body.noanim *::before,body.noanim *::after{animation-duration:.001
     <div style="display:flex;gap:.8rem;align-items:center;margin-top:.8rem"><input type="checkbox" id="alPush" style="width:24px;height:24px"><span>Phone notifications when the app is closed</span></div>
     <button class="sec tiny" id="pushTestBtn" type="button" style="margin-top:.5rem">🔔 Send test notification</button>
     <small class="insight2">On iPhone, first add Tracky to the Home Screen.</small></div>
-  <div class="fg"><label>Backup</label><button class="sec" onclick="shareBackup()">Share / save backup</button><small class="insight2" id="bkInfo"></small></div>
+  <div class="fg"><label>Backup</label><div style="display:flex;gap:.5rem;flex-wrap:wrap"><button class="sec tiny" type="button" onclick="shareBackup()">⬇ Export</button><button class="sec tiny" type="button" onclick="$('importFile').click()">⬆ Import</button><button class="sec tiny" type="button" onclick="dataCheck()">🧪 Check my data</button></div><small class="insight2" id="bkInfo"></small><div id="snapList" style="margin-top:.5rem"></div></div>
   <div class="fg"><label>AI coach</label>
     <input type="password" id="gKeyInput" class="in" style="width:100%;margin-bottom:.6rem" autocomplete="off" placeholder="Gemini API key (stored on this device only)">
     <select id="modelSel" class="in" style="width:100%;margin-bottom:.6rem">
@@ -568,7 +637,7 @@ Train|تمرين|Entraînement
 Plan|الخطة|Plan
 Coach|المدرب|Coach
 History|السجل|Historique
-More|المزيد|Plus
+Settings|الإعدادات|Paramètres
 Charts|الرسوم|Graphiques
 Progress & Body|التقدم والجسم|Progrès & corps
 Goals|الأهداف|Objectifs
@@ -894,7 +963,7 @@ Volume Dragon|تنين الحجم|Dragon du volume
 Gravity Wraith|شبح الجاذبية|Spectre de gravité
 Steel Titan|عملاق الفولاذ|Titan d'acier
 Train this week to summon a boss next week.|تمرّن هذا الأسبوع لاستدعاء زعيم الأسبوع القادم.|Entraînez-vous cette semaine pour invoquer un boss la semaine prochaine.
-Boss defeated! +120 XP|هُزم الزعيم! +120 خبرة|Boss vaincu ! +120 XP
+Boss defeated!|هُزم الزعيم!|Boss vaincu !
 Monthly Challenges|تحديات الشهر|Défis du mois
 Move 30,000 kg this month|حرّك 30,000 كجم هذا الشهر|Soulevez 30 000 kg ce mois-ci
 Break 3 personal records|حطّم 3 أرقام قياسية|Battez 3 records personnels
@@ -1416,6 +1485,7 @@ const shiftDays = (k,n) => new Date(new Date(k).getTime() + n*864e5).toISOString
 function computeStreak(){
   const per = {};
   sessions.forEach(s => { const k = localKey(s.date), w = weekStart(k); (per[w] = per[w] || new Set()).add(k); });
+  (progress.freezes || []).forEach(k => { const w = weekStart(k); if (per[w]) per[w].add(k); });
   const good = w => per[w] && per[w].size >= weekGoal(), ok = Object.keys(per).filter(good).sort();
   let best = 0, run = 0;
   ok.forEach((w,i) => { run = (i && dayDiff(w, ok[i-1]) === 7) ? run + 1 : 1; best = Math.max(best, run); });
@@ -1425,17 +1495,12 @@ function computeStreak(){
   progress.streakDays = cur; progress.bestStreak = Math.max(best, cur);
 }
 
+const LS_MAP = {state:'gymState', sessions:'gymSessions', progress:'gymProgress', goals:'gymGoals', settings:'gymSettings', bodyLog:'gymBody', logData:'trackyDraft', bodyM:'trackyM', photos:'trackyPhotos'};
+function lsGet(k, d){ const raw = localStorage.getItem(k); if (raw == null) return d; try { const v = JSON.parse(raw); return v == null ? d : v; } catch(e){ try { localStorage.setItem('trackyCorrupt_' + k, raw); } catch(_){} (window._bad = window._bad || []).push(k); return d; } }
 function load(){
-  try {
-    state = JSON.parse(localStorage.getItem('gymState')) || state;
-    sessions = JSON.parse(localStorage.getItem('gymSessions')) || [];
-    progress = JSON.parse(localStorage.getItem('gymProgress')) || progress;
-    goals = JSON.parse(localStorage.getItem('gymGoals')) || [];
-    settings = JSON.parse(localStorage.getItem('gymSettings')) || settings;
-    bodyLog = JSON.parse(localStorage.getItem('gymBody')) || [];
-    logData = JSON.parse(localStorage.getItem('trackyDraft')) || {};
-    bodyM = JSON.parse(localStorage.getItem('trackyM')) || []; photos = JSON.parse(localStorage.getItem('trackyPhotos')) || [];
-  } catch(e){ console.error(e); }
+  state = lsGet('gymState', state); sessions = lsGet('gymSessions', []); progress = lsGet('gymProgress', progress); goals = lsGet('gymGoals', []);
+  settings = lsGet('gymSettings', settings); bodyLog = lsGet('gymBody', []); logData = lsGet('trackyDraft', {}); bodyM = lsGet('trackyM', []); photos = lsGet('trackyPhotos', []);
+  if (window._bad && window._bad.length) setTimeout(() => showToast('⚠️ Some saved data was unreadable and was kept aside. Restore a backup in Settings.'), 1500);
   if (!state || !Array.isArray(state.days)) state = {days:[]};
   if (!Array.isArray(sessions)) sessions = [];
   if (!Array.isArray(goals)) goals = [];
@@ -1444,15 +1509,15 @@ function load(){
   if (!settings || typeof settings !== 'object') settings = {darkMode:false};
   goals.forEach(g => { if (!g.id) g.id = makeId(); });
 }
-function save(){ scheduleSync(); schedulePush();
+function save(){ scheduleSync(); schedulePush(); if (!window._bad || !window._bad.length) autoSnap(false);
   try {
-    localStorage.setItem('gymState', JSON.stringify(state));
-    localStorage.setItem('gymSessions', JSON.stringify(sessions));
-    localStorage.setItem('gymProgress', JSON.stringify(progress));
-    localStorage.setItem('gymGoals', JSON.stringify(goals));
-    localStorage.setItem('gymSettings', JSON.stringify(settings));
-    localStorage.setItem('gymBody', JSON.stringify(bodyLog));
-    localStorage.setItem('trackyM', JSON.stringify(bodyM));
+    if (!(window._bad || []).includes('gymState')) localStorage.setItem('gymState', JSON.stringify(state));
+    if (!(window._bad || []).includes('gymSessions')) localStorage.setItem('gymSessions', JSON.stringify(sessions));
+    if (!(window._bad || []).includes('gymProgress')) localStorage.setItem('gymProgress', JSON.stringify(progress));
+    if (!(window._bad || []).includes('gymGoals')) localStorage.setItem('gymGoals', JSON.stringify(goals));
+    if (!(window._bad || []).includes('gymSettings')) localStorage.setItem('gymSettings', JSON.stringify(settings));
+    if (!(window._bad || []).includes('gymBody')) localStorage.setItem('gymBody', JSON.stringify(bodyLog));
+    if (!(window._bad || []).includes('trackyM')) localStorage.setItem('trackyM', JSON.stringify(bodyM));
   } catch(e){ console.error('Save failed', e); if (!window._sw){ window._sw = 1; showToast('⚠️ Storage is blocked, so changes will be lost. Use a normal (non-private) browser tab.'); } }
 }
 
@@ -1493,15 +1558,15 @@ function applyTheme(){
 }
 $('darkBtn').onclick = () => { const o = ['auto','light','dark']; settings.theme = o[(o.indexOf(themeMode()) + 1) % 3]; save(); applyTheme(); };
 try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (themeMode() === 'auto') applyTheme(); }); } catch(e){}
-document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+document.querySelectorAll('.tab[data-tab]').forEach(tab => tab.addEventListener('click', () => {
+  document.querySelectorAll('.tab[data-tab]').forEach(t => t.classList.remove('active'));
   buzz(8); $('moreSheet').classList.remove('on'); window.scrollTo(0,0);
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   tab.classList.add('active');
-  const n = tab.dataset.tab; try { localStorage.setItem('trackyTab', n); } catch(e){} setFab(n);
+  const n = tab.dataset.tab; document.body.dataset.tab = n; try { localStorage.setItem('trackyTab', n); } catch(e){} setFab(n);
   document.querySelector(`.panel[data-panel="${n}"]`).classList.add('active');
   if (n === 'train') TRAIN_ANIM = true;
-  ({builder:renderBuilder, train:renderTrain, history:renderHistory, charts:renderCharts, progress:renderProgress, goals:renderGoals}[n] || (()=>{}))();
+  ({home:renderHome, builder:renderBuilder, train:renderTrain, history:renderHistory, charts:renderCharts, progress:renderProgress, goals:renderGoals}[n] || (()=>{}))();
 }));
 
 /* ---------- builder ---------- */
@@ -1633,6 +1698,8 @@ function rankOf(lv){
   const r = RANKS[i], nx = RANKS[i + 1], div = nx ? 3 - Math.min(2, Math.floor((lv - r.min) / (nx.min - r.min) * 3)) : 0;
   return Object.assign({}, r, {i, div, next:nx || null});
 }
+const RANK_WEEKS = [0,3,8,16,28,44,64,90];
+const goodWeeks = () => { const per = {}; sessions.forEach(x => { const k = localKey(x.date), w = weekStart(k); (per[w] = per[w] || new Set()).add(k); }); (progress.freezes || []).forEach(k => { const w = weekStart(k); if (per[w]) per[w].add(k); }); return Object.values(per).filter(v => v.size >= weekGoal()).length; };
 const rankText = r => tr(r.n) + (r.div ? ' ' + ROMAN[r.div] : '');
 function weekAgg(list = sessions){
   const w = {};
@@ -1642,14 +1709,13 @@ function weekAgg(list = sessions){
 }
 const QUESTS = [
   {icon:'📅', get name(){ return 'Train ' + weekGoal() + ' days'; }, get goal(){ return weekGoal(); }, xp:100, val:a => a.days.size},
-  {icon:'🎯', name:'Complete 20 sets', goal:20, xp:60, val:a => a.sets},
-  {icon:'🏋️', name:'Move 5,000 kg of volume', goal:5000, xp:60, kg:true, val:a => a.vol}
+  {icon:'🎯', name:'Complete 12 sets', goal:12, xp:50, val:a => a.sets},
+  {icon:'🔥', name:'Keep your weekly streak alive', goal:1, xp:40, val:a => a.days.size >= weekGoal() && progress.streakDays >= 2 ? 1 : 0}
 ];
 const sz = m => m.days.size !== undefined ? m.days.size : m.days;
 const MCH = [
   {icon:'📆', get name(){ return 'Train ' + weekGoal() * 4 + ' days this month'; }, get goal(){ return weekGoal() * 4; }, xp:250, val:sz},
-  {icon:'🏋️', name:'Move 30,000 kg this month', goal:30000, xp:250, kg:true, val:m => m.vol},
-  {icon:'🏅', name:'Break 3 personal records', goal:3, xp:200, val:m => m.prs}
+  {icon:'🏅', name:'Break 3 personal records', goal:3, xp:100, val:m => m.prs}
 ];
 const BOSSES = ['Iron Golem','Volume Dragon','Gravity Wraith','Steel Titan'];
 function rpgXP(until){
@@ -1657,12 +1723,12 @@ function rpgXP(until){
   all.forEach(s => {
     const k = localKey(s.date), ym = k.slice(0,7), m = mo[ym] = mo[ym] || {days:new Set(), vol:0, prs:0}, n = s.exercises.reduce((a,e) => a + e.sets.length, 0);
     m.days.add(k); m.vol += s.volume || 0;
-    xp += 50 + Math.min(100, Math.floor((s.volume || 0) / 200)) + n * 3 + (s.cardio ? Math.min(60, s.cardio.min) : 0);
-    s.exercises.forEach(e => { const top = Math.max(...e.sets.map(t => t.weight)), key = e.name.trim().toLowerCase(); if (best[key] > 0 && top > best[key]){ xp += 75; m.prs++; } best[key] = Math.max(best[key] || 0, top); });
+    xp += 60 + Math.min(20, Math.floor((s.volume || 0) / 1000)) + Math.min(n, 20) * 2 + (s.cardio ? Math.min(20, s.cardio.min) : 0);
+    s.exercises.forEach(e => { const top = Math.max(...e.sets.map(t => t.weight)), key = e.name.trim().toLowerCase(); if (best[key] > 0 && top > best[key]){ xp += 40; m.prs++; } best[key] = Math.max(best[key] || 0, top); });
   });
   const wk = weekAgg(all);
   Object.values(wk).forEach(a => QUESTS.forEach(q => { if (q.val(a) >= q.goal) xp += q.xp; }));
-  Object.keys(wk).forEach(w => { const p = wk[shiftDays(w, -7)]; if (p && p.vol > 0 && wk[w].vol >= p.vol * 1.05) xp += 120; });
+  { let run = 0, prevW = null; Object.keys(wk).sort().forEach(w => { const ok = wk[w].days.size + (progress.freezes || []).filter(k => weekStart(k) === w && !wk[w].days.has(k)).length >= weekGoal(); run = ok ? ((prevW && dayDiff(w, prevW) === 7) ? run + 1 : 1) : 0; if (ok) xp += 30 * Math.min(run, 8); prevW = w; }); }
   Object.values(mo).forEach(m => MCH.forEach(c => { if (c.val(m) >= c.goal) xp += c.xp; }));
   if (!until) xp += goals.filter(g => g.completedAt).length * 150 + Object.keys(progress.unlockedSkills).length * 100;
   return xp;
@@ -1681,12 +1747,14 @@ function rpg(){
   const top5 = Object.values(best).sort((a,b) => b - a).slice(0,5).reduce((a,b) => a + b, 0);
   const stats = {STR:cl(top5 / 6), END:cl(sets / 3), DISC:cl(sessions.length * 2 + (progress.bestStreak || 0) * 6), TECH:cl(Object.keys(best).length * 6)};
   const cls = sessions.length ? {STR:['Berserker','⚔️'], END:['Ranger','🏹'], DISC:['Monk','🧘'], TECH:['Mage','🔮']}[Object.entries(stats).sort((a,b) => b[1] - a[1])[0][0]] : ['Adventurer','🗺️'];
-  const rk = rankOf(lv); let nextLv = null, toNext = 0, pr = 100;
+  const cw = goodWeeks(); let ai = 0; RANK_WEEKS.forEach((n,i) => { if (cw >= n) ai = i; });
+  const cap = RANKS[ai + 1] ? RANKS[ai + 1].min - 1 : lv, lvR = Math.min(lv, cap), rk = rankOf(lvR); let nextLv = null, toNext = 0, pr = 100;
+  const gate = rk.next && lv >= rk.next.min ? {cw, need:RANK_WEEKS[rk.i + 1]} : null;
   if (rk.next){
-    const span = rk.next.min - rk.min, bl = [1,2].map(k => rk.min + Math.ceil(span * k / 3)).concat(rk.next.min), prev = [rk.min].concat(bl.slice(0,2)).filter(x => x <= lv).pop();
-    nextLv = bl.find(x => x > lv); toNext = xpFor(nextLv) - xp; pr = Math.round((xp - xpFor(prev)) / (xpFor(nextLv) - xpFor(prev)) * 100);
+    const span = rk.next.min - rk.min, bl = [1,2].map(k => rk.min + Math.ceil(span * k / 3)).concat(rk.next.min), prev = [rk.min].concat(bl.slice(0,2)).filter(x => x <= lvR).pop();
+    nextLv = bl.find(x => x > lvR) || rk.next.min; toNext = Math.max(0, xpFor(nextLv) - xp); pr = Math.max(0, Math.min(100, Math.round((xp - xpFor(prev)) / (xpFor(nextLv) - xpFor(prev)) * 100)));
   }
-  return {xp, lv, into:left, need:lvNeed(lv), pct:Math.round(left / lvNeed(lv) * 100), title:t[1], avatar:t[2], stats, cls, rk, nextLv, toNext, rpct:pr};
+  return {xp, lv, into:left, need:lvNeed(lv), pct:Math.round(left / lvNeed(lv) * 100), title:t[1], avatar:t[2], stats, cls, rk, nextLv, toNext, rpct:pr, gate, cw};
 }
 function levelCheck(){
   const r = rpg(), key = r.rk.i * 10 + (3 - r.rk.div);
@@ -1694,7 +1762,7 @@ function levelCheck(){
   if (rankUp || lvUp){
     $('lvEmoji').textContent = rankUp ? r.rk.e : r.avatar; $('lvNum').textContent = rankUp ? 'RANK UP!' : 'LEVEL ' + r.lv;
     $('lvTitle').textContent = rankUp ? rankText(r.rk) + ' · ' + tr('Level') + ' ' + r.lv : tr(r.title) + ' · ' + tr(r.cls[0]);
-    $('modalLevel').classList.add('active'); buzz([80,40,80,40,160]); if (rankUp || (progress.lastLevel && stageOf(progress.lastLevel) !== stageOf(r.lv))) flexHero(progress.lastLevel || r.lv, r.lv); else if ($('lvPx')){ $('lvPx').remove(); $('lvEmoji').style.display = ''; }
+    $('modalLevel').classList.add('active'); buzz([80,40,80,40,160]); if (rankUp && animOn()) { try { confetti(170, .5, .3, 1.3); } catch(e){} } if (rankUp || (progress.lastLevel && stageOf(progress.lastLevel) !== stageOf(r.lv))) flexHero(progress.lastLevel || r.lv, r.lv); else if ($('lvPx')){ $('lvPx').remove(); $('lvEmoji').style.display = ''; }
   }
   progress.lastLevel = r.lv; progress.lastRankKey = key;
 }
@@ -1706,7 +1774,7 @@ function renderChar(){
     <div style="color:var(--sub);font-weight:700;margin:.3rem 0"><span>Lv ${r.lv}</span> · <span>${r.title}</span> · <span>${r.cls[1]} ${r.cls[0]}</span></div>
     ${unlocked.length ? `<select id="titleSel" class="in" style="width:100%;margin-bottom:.5rem"><option value="">—</option>${unlocked.map(s => `<option value="${s.id}"${settings.title === s.id ? ' selected' : ''}>${s.title}</option>`).join('')}</select>` : ''}
     <div class="xp"><div style="width:${r.pct}%"></div></div><small style="color:var(--sub);font-weight:700">${r.into} / ${r.need} XP · ${r.xp} total</small></div></div>
-    <div class="rankcard" style="border-color:${rk.c}"><span class="rkbadge">${rk.e}</span><div style="flex:1"><b style="color:${rk.c};font-size:1.1rem">${rankText(rk)}</b>${rk.next ? `<div class="xp s"><div style="width:${r.rpct}%;background:${rk.c}"></div></div><small style="color:var(--sub);font-weight:700">${r.toNext} XP to ${rankText(rankOf(r.nextLv))}</small>` : '<small style="color:var(--sub);font-weight:700">Max rank reached</small>'}</div></div>
+    <div class="rankcard" style="border-color:${rk.c}"><span class="rkbadge">${rk.e}</span><div style="flex:1"><b style="color:${rk.c};font-size:1.1rem">${rankText(rk)}</b>${rk.next ? `<div class="xp s"><div style="width:${r.rpct}%;background:${rk.c}"></div></div><small style="color:var(--sub);font-weight:700">${r.gate ? `🔒 Level is ready. Reach ${r.gate.need} weeks hitting your goal for ${rankText(rankOf(rk.next.min))} (you have ${r.gate.cw}).` : `${r.toNext} XP to ${rankText(rankOf(r.nextLv))} · needs ${RANK_WEEKS[rk.i + 1]} goal weeks (you have ${r.cw})`}</small>` : '<small style="color:var(--sub);font-weight:700">Max rank reached</small>'}</div></div>
     <div style="margin-top:1rem">${Object.entries(r.stats).map(([k,v]) => `<div class="stat"><span>${names[k]}</span><div class="xp s"><div style="width:${v}%"></div></div><b>${v}</b></div>`).join('')}</div>`;
   $('heroName').onchange = e => { settings.heroName = e.target.value.trim().slice(0,16); save(); };
   if ($('titleSel')) $('titleSel').onchange = e => { settings.title = e.target.value; save(); };
@@ -1716,7 +1784,7 @@ function renderChar(){
   $('quests').innerHTML = QUESTS.map(q => prog(q, q.val(wk))).join('');
   $('mchal').innerHTML = MCH.map(c => prog(c, c.val(cm))).join('');
   const bi = bossInfo();
-  $('boss').innerHTML = !bi.hp ? '<p class="insight">Train this week to summon a boss next week.</p>' : `<div class="goal${bi.dead ? ' done' : ''}"><div class="goal-h"><span>👹 ${bi.name}</span><span style="color:var(--accent)">+120 XP</span></div><div class="track"><div style="width:${Math.min(100, bi.dmg / bi.hp * 100)}%;background:var(--danger)"></div></div><div class="goal-v" style="margin:.4rem 0 0"><span>${Math.round(bi.dmg).toLocaleString()} kg / ${bi.hp.toLocaleString()} kg</span></div></div><p class="insight">${bi.dead ? 'Boss defeated! +120 XP' : 'Lift ' + Math.round(bi.hp - bi.dmg).toLocaleString() + ' kg more to defeat the boss.'}</p>`;
+  $('boss').innerHTML = !bi.hp ? '<p class="insight">Train this week to summon a boss next week.</p>' : `<div class="goal${bi.dead ? ' done' : ''}"><div class="goal-h"><span>👹 ${bi.name}</span><span style="color:var(--accent)">for fun · no XP</span></div><div class="track"><div style="width:${Math.min(100, bi.dmg / bi.hp * 100)}%;background:var(--danger)"></div></div><div class="goal-v" style="margin:.4rem 0 0"><span>${Math.round(bi.dmg).toLocaleString()} kg / ${bi.hp.toLocaleString()} kg</span></div></div><p class="insight">${bi.dead ? 'Boss defeated!' : 'Lift ' + Math.round(bi.hp - bi.dmg).toLocaleString() + ' kg more to defeat the boss.'}</p>`;
 }
 $('charBox').addEventListener('click', e => {
   if (e.target.closest('#avatarDel')){ delete settings.avatar; save(); renderChar(); renderHero(); }
@@ -1855,7 +1923,7 @@ function openSettings(){
   const r = settings.rem || {on:false, time:'18:00', days:[1,3,5]};
   $('unitSel').value = settings.unit || 'kg'; $('remOn').checked = !!r.on; $('remTime').value = r.time; $('syncBox').style.display = APP_CONFIG.serverUrl ? '' : 'none'; $('syncPass').value = settings.syncPass || ''; $('autoSync').checked = !!settings.autoSync;
   { const t = +localStorage.getItem('trackySync'); $('syncInfo').textContent = t ? 'Last sync: ' + new Date(t).toLocaleString(LOCALE()) : ''; }
-  $('bkInfo').textContent = settings.lastBackup ? 'Last backup: ' + settings.lastBackup : 'No backup yet.';
+  renderSnaps(); $('bkInfo').textContent = settings.lastBackup ? 'Last backup: ' + settings.lastBackup : 'No backup yet.';
   $('modelSel').value = geminiModel(); $('gKeyInput').value = settings.geminiKey || ''; $('alStreak').checked = alertOn('streak'); $('alReport').checked = alertOn('report'); $('animOn').checked = settings.anim !== false; $('alPush').checked = !!settings.pushOn; $('pushTestBtn').onclick = pushTest;
   $('modelSel').onchange = e => { settings.model = e.target.value; save(); };
   $('testGeminiOut').textContent = '';
@@ -1921,6 +1989,42 @@ function remTick(){
   }
 }
 setInterval(remTick, 60000); document.addEventListener('visibilitychange', () => { if (!document.hidden) remTick(); });
+const SNAP_KEY = 'trackySnaps';
+function getSnaps(){ try { return JSON.parse(localStorage.getItem(SNAP_KEY)) || []; } catch(e){ return []; } }
+function autoSnap(force, label){
+  if (!force && settings && settings.lastSnap === todayKey()) return;
+  if (!sessions.length && !(state.days || []).length) return;
+  try {
+    const b = JSON.parse(buildBackup()); delete b.photos;
+    const arr = getSnaps(); arr.unshift({t:Date.now(), label:label || 'Auto', n:sessions.length, d:JSON.stringify(b)});
+    while (arr.length > 4) arr.pop();
+    localStorage.setItem(SNAP_KEY, JSON.stringify(arr)); if (settings) settings.lastSnap = todayKey();
+  } catch(e){ console.error('snapshot failed', e); }
+}
+function applyBackup(d, keepPhotos){
+  if (d.state) state = d.state; if (d.sessions) sessions = d.sessions; if (d.progress) progress = d.progress; if (d.goals) goals = d.goals;
+  if (d.settings) settings = Object.assign({}, d.settings, {syncPass:settings.syncPass, proxyToken:settings.proxyToken, apiKey:settings.apiKey, geminiKey:settings.geminiKey, pushOn:settings.pushOn, pushId:settings.pushId, proxyUrl:settings.proxyUrl, autoSync:settings.autoSync});
+  if (d.bodyLog) bodyLog = d.bodyLog; if (d.bodyM) bodyM = d.bodyM; if (d.photos && !keepPhotos){ photos = d.photos; savePhotos(); }
+  window._bad = []; logData = {}; save(); init();
+}
+function validBackup(d){ return d && typeof d === 'object' && (!d.state || Array.isArray(d.state.days)) && (!d.sessions || Array.isArray(d.sessions)) && (d.state || d.sessions); }
+function renderSnaps(){
+  const el = $('snapList'); if (!el) return; const a = getSnaps();
+  el.innerHTML = a.length ? a.map((x,i) => `<div class="snaprow"><span>${new Date(x.t).toLocaleString()} · ${escapeHTML(x.label)} · ${x.n} sessions</span><button class="sec tiny" type="button" onclick="restoreSnap(${i})">Restore</button></div>`).join('') : '<small class="insight2">No automatic copies yet. One is saved daily and before every import.</small>';
+}
+async function restoreSnap(i){
+  const x = getSnaps()[i]; if (!x) return;
+  if (!(await showConfirm(`Restore the copy from ${new Date(x.t).toLocaleString()} (${x.n} sessions)? Your current data is saved as a copy first.`, '♻️ Restore copy'))) return;
+  autoSnap(true, 'Before restore'); applyBackup(JSON.parse(x.d), true); renderSnaps(); showToast('✅ Copy restored');
+}
+function dataCheck(){
+  save(); const out = []; let ok = true;
+  [['sessions', sessions, 'gymSessions'], ['days', state.days, 'gymState']].forEach(([n, mem, k]) => {
+    try { const st = JSON.parse(localStorage.getItem(k)); const c = Array.isArray(st) ? st.length : (st.days || []).length; const same = c === mem.length; ok = ok && same; out.push(n + ' ' + mem.length + (same ? ' ✓' : ' ✗ (stored ' + c + ')')); } catch(e){ ok = false; out.push(n + ' ✗'); }
+  });
+  try { const b = JSON.parse(buildBackup()); ok = ok && validBackup(b); out.push('backup file ' + (validBackup(b) ? '✓' : '✗')); } catch(e){ ok = false; out.push('backup file ✗'); }
+  showToast((ok ? '✅ Data check passed: ' : '⚠️ Problem found: ') + out.join(', '));
+}
 function buildBackup(){ const s = Object.assign({}, settings); ['syncPass','proxyToken','apiKey','geminiKey','pushOn','pushId'].forEach(k => delete s[k]); return JSON.stringify({state, sessions, progress, goals, settings:s, bodyLog, bodyM, photos}); }
 async function shareBackup(){
   const file = new File([buildBackup()], 'tracky_backup.json', {type:'application/json'});
@@ -2321,15 +2425,20 @@ function initLog(day, ex){
   if (logData[key] && Array.isArray(logData[key].sets)) return key;
   const last = sessions.slice().reverse().find(s => s.exercises.some(e => sameEx(e.name, ex.name)));
   const le = last && last.exercises.find(e => sameEx(e.name, ex.name));
-  let prev = '', hint = '', w = ex.weight, lastNote = '';
+  let prev = '', hint = '', w = ex.weight, lastNote = '', r0 = null;
+  const U = isLb() ? 'lb' : 'kg';
   if (le && le.sets.length){
-    const t = le.sets.reduce((a,b) => b.weight > a.weight ? b : a, le.sets[0]);
-    prev = `🕐 Last: ${t.weight}kg × ${t.reps} (${le.sets.length} sets)`; w = t.weight; lastNote = le.note || '';
-    if (le.sets.length >= ex.sets && le.sets.every(x => x.reps >= topReps(ex.reps))){ w = t.weight + 2.5; hint = `💡 You hit ${topReps(ex.reps)} reps on every set last time. Try ${w}kg today.`; }
+    const work = le.sets.filter(x => !x.warm), ls = work.length ? work : le.sets;
+    const t = ls.reduce((a,b) => b.weight > a.weight ? b : a, ls[0]);
+    prev = '🕐 Last: ' + ls.map(x => toDisp(x.weight) + '×' + (x.repsText || x.reps)).join(' · ') + ' ' + U; w = t.weight; lastNote = le.note || '';
+    const top = topReps(ex.reps), low = parseFirstRep(ex.reps), allTop = ls.length >= ex.sets && ls.every(x => x.reps >= top), tooHard = le.rpe && le.rpe >= 10;
+    if (allTop && !tooHard){ w = t.weight + (t.weight < 20 ? 1 : 2.5); hint = `💡 You hit ${top} reps on every set last time. Try ${toDisp(w)}${U} today.`; }
+    else if (allTop && tooHard){ hint = '💡 You hit the top reps but it felt maxed out (RPE 10). Repeat the same weight and aim for an easier set.'; }
+    else if (ls.length >= ex.sets && ls.every(x => x.reps >= low)){ r0 = Math.min(top, Math.min(...ls.map(x => x.reps)) + 1); hint = `💡 Same weight today. Aim for ${r0} reps on each set, and add weight once every set reaches ${top}.`; }
   }
   const st = stalledFor(ex.name);
   if (st){ w = Math.round(w * 0.9 / 2.5) * 2.5; hint = `📉 No progress for ${st} sessions. Deload today: ${w}kg (-10%), then build back up. Or try a different rep range.`; }
-  const r = parseFirstRep(ex.reps);
+  const r = r0 || parseFirstRep(ex.reps);
   logData[key] = {prev, hint, lastNote, sets:Array.from({length:ex.sets}, () => ({weight:w, reps:r, done:false}))};
   return key;
 }
@@ -2393,11 +2502,11 @@ function renderTrain(){
       const cur = logData[initLog(day, ex)], item = document.createElement('div'); let wn = 0; const both = isBoth(ex);
       item.className = 'ex'; item.dataset.d = day.id; item.dataset.i = k;
       const rows = cur.sets.map((s,j) => { if (!s.warm) wn++;
-        return `<div class="srow${s.done ? ' done' : ''}"><small data-warm="${j}" class="${s.warm ? 'warm' : ''}">${s.warm ? 'W' : (s.drop ? '↓' : wn)}</small><input type="number" step="0.5" min="0" data-f="weight" data-s="${j}" value="${toDisp(s.weight)}" aria-label="Weight"><input type="number" min="0" data-f="reps" data-s="${j}" value="${s.reps}" aria-label="Reps"><input type="checkbox" data-f="done" data-s="${j}" ${s.done ? 'checked' : ''} aria-label="Set done"></div>`; }).join('');
+        return `<div class="srow${s.done ? ' done' : ''}"><small data-warm="${j}" class="${s.warm ? 'warm' : ''}">${s.warm ? 'W' : (s.drop ? '↓' : wn)}</small><input type="number" step="0.5" min="0" data-f="weight" data-s="${j}" value="${toDisp(s.weight)}" aria-label="Weight"><input type="text" inputmode="text" autocomplete="off" pattern="[0-9_+/]*" data-f="reps" data-s="${j}" value="${escapeHTML(s.repsText || String(s.reps))}" aria-label="Reps (you can type 4_4)"><input type="checkbox" data-f="done" data-s="${j}" ${s.done ? 'checked' : ''} aria-label="Set done"></div>`; }).join('');
       item.innerHTML = `<div class="exh"><span class="exn">${escapeHTML(ex.name)}${both ? '<span class="bothtag">L + R</span>' : ''}</span><span class="badge">${escapeHTML(ex.sets + ' × ' + ex.reps)}</span></div>
         <div class="srow"><small>#</small><small>kg</small><small>${both ? 'reps / side' : 'reps'}</small><small>✓</small></div>` + rows +
-        `<div class="row"><button class="sec tiny" data-act="add">＋ Set</button><button class="sec tiny" data-act="drop">↓ Drop</button><button class="sec tiny" data-act="rem">－ Set</button><button class="sec tiny${cur.ss ? ' on' : ''}" data-act="ss" aria-label="Superset">🔗</button><button class="sec tiny" data-act="info" aria-label="Form tips">ⓘ</button></div>` +
-        `<div class="row"><select class="in" data-f="rpe" aria-label="RPE">${rpeOpts(cur.rpe)}</select><textarea rows="1" class="in note" data-f="note" placeholder="Notes...">${escapeHTML(cur.note || '')}</textarea></div>` +
+        `<div class="row"><button class="sec tiny" data-act="add">＋ Set</button><button class="sec tiny" data-act="rem">－ Set</button><button class="sec tiny" data-act="info" aria-label="Form tips">ⓘ</button></div>` +
+        `<details class="more"${(cur.note || cur.rpe || cur.ss) ? ' open' : ''}><summary>⋯ More</summary><div class="row"><button class="sec tiny" data-act="drop">↓ Drop</button><button class="sec tiny${cur.ss ? ' on' : ''}" data-act="ss" aria-label="Superset">🔗</button></div><div class="row"><select class="in" data-f="rpe" aria-label="RPE">${rpeOpts(cur.rpe)}</select><textarea rows="1" class="in note" data-f="note" placeholder="Notes...">${escapeHTML(cur.note || '')}</textarea></div></details>` +
         (cur.lastNote ? `<div class="prevnote">📝 Last time: ${escapeHTML(cur.lastNote)}</div>` : '') +
         (cur.prev ? `<div class="prev">${escapeHTML(cur.prev)}</div>` : '') + (cur.hint ? `<div class="hint">${escapeHTML(cur.hint)}</div>` : '');
       list.appendChild(item);
@@ -2440,8 +2549,8 @@ $('workoutGrid').addEventListener('change', e => {
   if (f === 'note'){ d.note = inp.value.trim(); saveDraft(); return; }
   const s = d.sets[+inp.dataset.s]; if (!s) return;
   if (f === 'weight') s.weight = Math.max(0, fromDisp(parseFloat(inp.value) || 0));
-  if (f === 'reps') s.reps = Math.max(0, parseInt(inp.value,10) || 0);
-  if (f === 'done'){ s.done = inp.checked; inp.closest('.srow').classList.toggle('done', s.done); if (s.done){ spark(inp); }
+  if (f === 'reps'){ const r = parseReps(inp.value); s.reps = r.total; if (r.text) s.repsText = r.text; else delete s.repsText; }
+  if (f === 'done'){ s.done = inp.checked; inp.closest('.srow').classList.toggle('done', s.done); if (s.done){ spark(inp); const ex = inp.closest('.ex'); if (ex && [...ex.querySelectorAll('input[data-f=done]')].every(c => c.checked)){ ex.classList.add('exdone'); buzz([20,40,30]); setTimeout(() => ex.classList.remove('exdone'), 750); } }
     if (s.done && !s.warm){ buzz(15); const xx = inp.closest('.ex'), dd = state.days.find(q => q.id === xx.dataset.d), ee = dd && dd.exercises[+xx.dataset.i]; if (!d.ss && settings.restAuto !== false) startRest((ee && ee.rest) || settings.rest || 90); } }
   updateStats();
 });
@@ -2476,7 +2585,7 @@ async function logSession(dayId = null){
   let vol = 0, dropped = 0, nSets = 0; const exs = [], used = [], prs = [], notes = logData.__notes || {};
   days.forEach(day => (day.exercises || []).forEach(ex => {
     const key = `${day.id}_${ex.name}`, d = logData[key]; if (!d) return;
-    const done = d.sets.filter(s => s.done && s.reps > 0), sets = done.filter(s => !s.warm).map(s => ({weight:s.weight, reps:s.reps})), warm = done.filter(s => s.warm).map(s => ({weight:s.weight, reps:s.reps}));
+    const done = d.sets.filter(s => s.done && s.reps > 0), sets = done.filter(s => !s.warm).map(s => s.repsText ? {weight:s.weight, reps:s.reps, repsText:s.repsText} : {weight:s.weight, reps:s.reps}), warm = done.filter(s => s.warm).map(s => ({weight:s.weight, reps:s.reps}));
     if (!sets.length) return;
     dropped += d.sets.filter(s => !s.done && !s.warm).length; nSets += sets.length;
     const old = Math.max(0, ...sessions.flatMap(s => s.exercises.filter(e => sameEx(e.name, ex.name)).flatMap(e => e.sets.map(t => t.weight))));
@@ -2504,7 +2613,8 @@ async function logSession(dayId = null){
     goals.forEach(g => { if (g.completedAt && !goalDone(g)) g.completedAt = null; });
     progress.lastLogDate = before.last; computeStreak(); saveDraft(); save(); renderAllViews(); showToast('↩️ Session restored. Your sets are back.');
   };
-  showDone({vol, sets:nSets, exs:exs.length, xp:Math.max(0, rpgXP() - xp0), prs, undo});
+  floatXP(Math.max(0, rpgXP() - xp0)); buzz([30,50,30]);
+  showAnalysis({rec, xp:Math.max(0, rpgXP() - xp0), prs, undo});
 }
 async function deleteSession(id){
   const i = sessions.findIndex(s => s.id === id); if (i < 0) return;
@@ -2562,6 +2672,34 @@ function showDone(d){
   confetti(d.prs.length ? 150 : 70, .5, .3, d.prs.length ? 1.2 : .9);
   if (window.applyLang) applyLang($('modalDone'));
 }
+function userKg(){ const l = bodyLog.slice().sort((a,b) => String(a.date).localeCompare(String(b.date))).pop(); return (l && +l.kg) || (settings.profile && +settings.profile.weight) || 75; }
+function showAnalysis(d){
+  const rec = d.rec, mus = {}, A = animOn(); let sets = 0, reps = 0, vol = 0, heavy = 0, e1 = 0, rpeS = 0, rpeN = 0, topEx = null;
+  rec.exercises.forEach(e => { const m = muscleOf(e.name), k = m || 'other', ev = e.sets.reduce((a,t) => a + t.weight * t.reps, 0); mus[k] = mus[k] || {sets:0, vol:0}; mus[k].sets += e.sets.length; mus[k].vol += ev;
+    e.sets.forEach(t => { sets++; reps += t.reps; vol += t.weight * t.reps; heavy = Math.max(heavy, t.weight); e1 = Math.max(e1, e1rm(t.weight, t.reps)); }); if (e.rpe){ rpeS += e.rpe; rpeN++; } if (!topEx || ev > topEx.v) topEx = {n:e.name, v:ev}; });
+  const rpe = rpeN ? rpeS / rpeN : 7, mins = Math.max(5, Math.round(sets * 2.3 + (rec.exercises.length * 1.5))), met = Math.max(3.5, Math.min(6, 4.5 + (rpe - 7) * .25)), kcal = Math.round(met * userKg() * mins / 60);
+  const tot = Object.values(mus).reduce((a,m) => a + m.sets, 0) || 1, rows = Object.entries(mus).sort((a,b) => b[1].sets - a[1].sets);
+  const prevS = sessions.slice(0, -1).reverse().find(x => x.dayName && x.dayName === rec.dayName), pv = prevS ? prevS.volume : 0, dv = pv > 0 ? Math.round((vol - pv) / pv * 100) : null;
+  const notes = [];
+  if (dv !== null) notes.push(dv >= 0 ? `📈 Volume is ${dv}% higher than your last ${escapeHTML(rec.dayName)} session.` : `📉 Volume is ${Math.abs(dv)}% lower than your last ${escapeHTML(rec.dayName)} session. That's fine if recovery was the goal.`);
+  if (rows[0]) notes.push(`🎯 Most worked: ${escapeHTML(MUSCLES[rows[0][0]] || 'Other')} (${Math.round(rows[0][1].sets / tot * 100)}% of your sets).`);
+  if (d.prs.length) notes.push(`🏅 New PR: ${escapeHTML(d.prs.join(', '))}`);
+  const dly = i => `animation-delay:${A ? (.3 + i * .12).toFixed(2) : 0}s`, st = (v, l, i, c) => `<div class="st" style="${dly(i)}"><b data-count="${c == null ? v : c}">${v}</b><small>${l}</small></div>`;
+  const el = document.createElement('div'); el.id = 'anl';
+  el.innerHTML = `<div class="wrap"><div class="pulse"><i></i><i></i><i></i><b>💪</b></div><h2>Session analysis</h2><div class="sub">${escapeHTML(rec.dayName || 'Workout')} · about ${mins} min</div>
+    <div class="kcal"><b data-count="${kcal}">0</b><small>kcal burned (estimate)</small></div>
+    <div class="grid">${st(sets, 'sets', 0)}${st(reps, 'reps', 1)}${st(Math.round(toDisp(vol)), unitName() + ' moved', 2)}${st(toDisp(heavy), 'heaviest set', 3)}${st(Math.round(toDisp(e1)), 'best est. 1RM', 4)}${st(d.xp ? '+' + d.xp : '0', 'XP earned', 5, d.xp || 0)}</div>
+    <h3>Training load by muscle group</h3>${rows.map(([k,m], i) => `<div class="mrow"><div><span>${escapeHTML(MUSCLES[k] || 'Other')}</span><span>${m.sets} sets${m.vol ? ' · ' + Math.round(toDisp(m.vol)) + ' ' + unitName() : ''}</span></div><div class="mt"><span data-w="${Math.round(m.sets / rows[0][1].sets * 100)}"></span></div></div>`).join('')}
+    ${notes.map((n, i) => `<div class="note" style="${dly(6 + i)}">${n}</div>`).join('')}
+    <div class="btns"><button class="gh" id="anlUndo">↩ Undo</button><button class="gh" id="anlHist">History</button><button class="ok" id="anlOk">Done</button></div>
+    <p style="opacity:.5;font-size:.7rem;text-align:center;margin-top:.8rem">Calories are a rough estimate from your body weight, session length and effort.</p></div>`;
+  document.body.appendChild(el); buzz([40, 30, 80]); try { chime('done'); confetti(d.prs.length ? 150 : 70, .5, .2, 1); } catch(e){}
+  const close = () => { el.remove(); };
+  el.querySelector('#anlOk').onclick = close; el.querySelector('#anlHist').onclick = () => { close(); const b = document.querySelector('.tab[data-tab="history"]'); if (b) b.click(); };
+  el.querySelector('#anlUndo').onclick = () => { close(); if (d.undo) d.undo(); };
+  requestAnimationFrame(() => requestAnimationFrame(() => el.querySelectorAll('.mt span').forEach(b => { b.style.width = b.dataset.w + '%'; })));
+  el.querySelectorAll('[data-count]').forEach(n => { const to = +n.dataset.count, pre = n.textContent.startsWith('+') ? '+' : ''; if (!A || !isFinite(to)) { n.textContent = pre + to; return; } const t0 = performance.now(); (function f(t){ const k = Math.min(1, (t - t0) / 1200); n.textContent = pre + Math.round(to * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(f); })(t0); });
+}
 function closeDone(){ $('modalDone').classList.remove('active'); DONE = null; }
 $('doneOk').onclick = closeDone;
 $('doneHist').onclick = () => { closeDone(); const b = document.querySelector('.tab[data-tab="history"]'); if (b) b.click(); };
@@ -2572,7 +2710,7 @@ let ACHQ = [], ACHT = null, FRESH_SK = null;
 function queueAch(sk){ if (!ACHQ.some(x => x.id === sk.id)) ACHQ.push(sk); FRESH_SK = sk.id; if (!ACHT) ACHT = setInterval(pumpAch, 600); }
 function pumpAch(){
   if (!ACHQ.length){ clearInterval(ACHT); ACHT = null; return; }
-  if (['modalAch', 'modalDone', 'modalLevel', 'modalConfirm'].some(id => $(id).classList.contains('active'))) return;
+  if ((['modalAch', 'modalDone', 'modalLevel', 'modalConfirm'].some(id => $(id).classList.contains('active')) || document.getElementById('anl'))) return;
   showAch(ACHQ.shift());
 }
 function showAch(sk, replay){
@@ -2674,6 +2812,9 @@ const SKILL_TREE = [
   {id:'ses_big', icon:'🔨', name:'Marathon Session', desc:'Train 8 or more exercises in one session', title:'Marathoner', r:'Rare', check:() => sessions.some(x => x.exercises.length >= 8)},
   {id:'vol_3', icon:'🏗️', name:'Heavy Day', desc:'Move 5,000 kg in one session', title:'Heavy Hitter', r:'Rare', check:() => sessions.some(x => x.volume >= 5000)},
   {id:'both_1', icon:'⚖️', name:'Both Sides', desc:'Log a left and right exercise with one load', title:'Balanced', r:'Common', check:() => sessions.some(x => x.exercises.some(e => e.both))},
+  {id:'cons_3', icon:'🧱', name:'Steady Month', desc:'Hit your weekly goal 4 weeks in a row', title:'The Steady', r:'Rare', check:() => progress.bestStreak >= 4},
+  {id:'cons_4', icon:'🌱', name:'Back On Track', desc:'Return and train after a week off', title:'Comeback', r:'Common', check:() => { const d = [...new Set(sessions.map(x => localKey(x.date)))].sort(); return d.some((k,i) => i && dayDiff(k, d[i-1]) >= 8); }},
+  {id:'cons_5', icon:'🏔️', name:'Habit Built', desc:'Hit your weekly goal in 12 different weeks', title:'Habit Builder', r:'Epic', check:() => goodWeeks() >= 12},
   {id:'week_5', icon:'🗓️', name:'Five Alive', desc:'Train on 5 different days in one week', title:'Five Alive', r:'Rare', check:() => { const w = {}; sessions.forEach(x => { const k = localKey(x.date); (w[weekStart(k)] = w[weekStart(k)] || new Set()).add(k); }); return Object.values(w).some(v => v.size >= 5); }}
 ];
 const goalDone = g => sessions.some(s => s.exercises.some(e => sameEx(e.name, g.exercise) && e.sets.some(t => t.weight >= g.weight && t.reps >= g.reps)));
@@ -2959,30 +3100,143 @@ function withMuscle(base, st){
   add.forEach(i => { const x = i % 24, y = Math.floor(i / 24); [[1,0],[-1,0],[0,1],[0,-1]].forEach(([a, b]) => { const X = x + a, Y = y + b; if (X >= 0 && X < 24 && Y >= 0 && Y < 24 && !g[Y * 24 + X]) g[Y * 24 + X] = 1; }); });
   return g;
 }
-function drawHero(cv, st, pump, rk, t, flash){
-  const S = 6, H = 24 * S, W = Math.ceil(H * 1.6), cx = W / 2; cv.width = W; cv.height = H; cv.style.height = '108px';
-  const c = cv.getContext('2d'), d = withMuscle(pxData(), st), col = rk ? rk.c : '#3a7bd5', P = Array.isArray(settings.pxPal) ? settings.pxPal : PXPAL;
-  const an = settings.pxAnim || 'breathe', T = (t || 0) / 1000; let sx = 1, sy = 1, dy = 0, rot = 0, pp = pump || 0;
-  if (t != null){
-    if (an === 'breathe'){ sy = 1 + Math.sin(T * 2.2) * .02; sx = 1 - Math.sin(T * 2.2) * .01; }
-    else if (an === 'bounce'){ const b = Math.abs(Math.sin(T * 3.5)); dy = -b * S * 1.6; sx = 1 + (1 - b) * .04; sy = 1 - (1 - b) * .04; }
-    else if (an === 'dance'){ rot = Math.sin(T * 4) * .09; dy = -Math.abs(Math.sin(T * 4)) * S * .8; }
-    else if (an === 'flex'){ const ph = T % 3; if (ph < .9) pp += Math.sin(ph / .9 * Math.PI) * .1; sy = 1 + Math.sin(T * 2.2) * .015; }
-  }
-  if (rk){ const gr = c.createRadialGradient(cx, H / 2, 8, cx, H / 2, H * .75); gr.addColorStop(0, col + '66'); gr.addColorStop(1, col + '00'); c.fillStyle = gr; c.fillRect(0, 0, W, H); }
-  c.save(); c.translate(cx, H + dy); c.rotate(rot); c.scale(sx * (1 + pp), sy * (1 + pp)); c.translate(-cx, -H);
-  for (let y = 0; y < 24; y++) for (let x = 0; x < 24; x++){ const v = d[y * 24 + x]; if (!v) continue; c.fillStyle = flash ? '#fff' : P[v]; c.fillRect(cx + (x - 12) * S, y * S, S + .5, S + .5); }
-  if (rk && rk.i >= 1){ c.fillStyle = col; c.fillRect(cx - S, 17 * S, S * 2, S); }                        /* rank gem on the belt */
-  if (rk && rk.i >= 4){ c.fillStyle = '#f5c518'; [-3, 0, 2].forEach(o => c.fillRect(cx + (o - .5) * S, 0, S, S)); } /* crown */
-  c.restore();
-  if (t != null) for (let k = 0; k < 6; k++){ const a = t / 700 + k * 1.047; c.fillStyle = k % 2 ? '#fff' : col; c.fillRect(cx + Math.cos(a) * H * .62, H / 2 + Math.sin(a * 1.3) * H * .45, S * .6, S * .6); }
+/* ===== 3D hero (software-rendered, no libraries) ===== */
+const EMOTES = [['wave','Wave','👋',1],['pump','Fist Pump','✊',5],['flex','Flex','💪',10],['dance','Dance','🕺',15],['victory','Victory','🏆',20],['hero','Hero Pose','🦸',30]];
+const H3_SKIN = ['#f1c7a0','#e0ac69','#c68642','#8d5524','#5a3a1c'], H3_HAIRC = ['#8b5a2b','#2b2b2b','#f5c518','#e63946','#9b5de5','#e6e6e6'], H3_OUT = ['#3a7bd5','#e63946','#2a9d8f','#9b5de5','#444444','#f77f00'];
+const H3_HAIRS = [['short','Short',1],['spiky','Spiky',1],['long','Long',1],['bald','Bald',1],['mohawk','Mohawk',5],['afro','Afro',10]];
+const H3_ACC = [['none','None',1],['band','Headband',1],['glasses','Glasses',3],['gloves','Gloves',6],['cape','Cape',12],['crown','Crown',25]];
+const h3 = () => Object.assign({skin:1, hair:'short', hairCol:0, outfit:0, acc:'band', aura:false, anim:'breathe'}, settings.hero3d || {});
+const FACES = {};
+function getFace(src){ let f = FACES[src]; if (!f){ Object.keys(FACES).forEach(k => delete FACES[k]); f = FACES[src] = {img:new Image(), ok:false}; f.img.onload = () => { f.ok = true; if (window.onFaceReady) window.onFaceReady(); }; f.img.src = src; } return f.ok ? f.img : null; }
+function hx(c, k){ const n = parseInt(c.slice(1), 16); let r = n >> 16, g = n >> 8 & 255, b = n & 255; const f = k > 0 ? 255 : 0, a = Math.abs(k); r = Math.round(r + (f - r) * a); g = Math.round(g + (f - g) * a); b = Math.round(b + (f - b) * a); return `rgb(${r},${g},${b})`; }
+const dirv = (sg, a, b) => { const x = sg * Math.sin(a), y = -Math.cos(a); return [x, y * Math.cos(b), -y * Math.sin(b)]; };
+function poseFor(id, u){
+  const s = Math.sin; let R = [.14,0,.2,.35], L = [.14,0,.2,.35], dy = 0, yaw = 0, mouth = 0, pump = 0;
+  if (id === 'wave'){ R = [2.4,0,2.4 + s(u * 9) * .55,0]; mouth = 1; yaw = -.15; }
+  else if (id === 'pump'){ R = [.5,1.2,2.4 + s(u * 9) * .5,1.6]; dy = Math.abs(s(u * 9)) * .25; mouth = 2; pump = .06; }
+  else if (id === 'flex'){ R = [1.5,0,3.3,0]; L = R.slice(); mouth = 2; pump = .1 + .05 * s(u * 5); yaw = s(u * 1.5) * .3; }
+  else if (id === 'dance'){ R = [1.7 + s(u * 7) * .6, s(u * 7) * .5, 2.6 + s(u * 7) * .5, 0]; L = [1.7 - s(u * 7) * .6, -s(u * 7) * .5, 2.6 - s(u * 7) * .5, 0]; dy = Math.abs(s(u * 7)) * .5; yaw = s(u * 3.5) * .7; mouth = 1; }
+  else if (id === 'victory'){ R = [2.7 + s(u * 8) * .12,0,3,0]; L = R.slice(); dy = Math.abs(s(u * 5)) * 1; mouth = 1; }
+  else if (id === 'hero'){ R = [.9,0,-.55,0]; L = R.slice(); pump = .05; yaw = .1; }
+  return {R, L, dy, yaw, mouth, pump};
 }
-function idleHero(cv){ const t0 = performance.now(), r = rpg(), st = stageOf(r.lv); (function L(now){ if (!cv.isConnected) return; drawHero(cv, st, 0, r.rk, now - t0); requestAnimationFrame(L); })(t0); }
+function blendPose(P, Q, k){ ['R','L'].forEach(a => P[a] = P[a].map((v, i) => v + (Q[a][i] - v) * k)); ['dy','yaw','pump'].forEach(a => P[a] += Q[a] * k); if (Q.mouth && k > .3) P.mouth = Q.mouth; }
+function playEmote(cv, id){ if (cv) cv._emote = {id, t0:performance.now()}; }
+function bindHero(cv){
+  cv._ev = 1; cv.style.cursor = 'pointer'; cv.style.touchAction = 'pan-y'; let x0 = 0, y0 = 0, mv = false, dn = false;
+  cv.addEventListener('pointerdown', e => { dn = true; mv = false; x0 = e.clientX; y0 = cv._yaw != null ? cv._yaw : (cv._curYaw || 0); cv._px = e.clientX; });
+  cv.addEventListener('pointermove', e => { if (!dn) return; const d = e.clientX - x0; if (Math.abs(d) > 5) mv = true; if (mv){ cv._yaw = y0 + d * .02; cv._yawT = performance.now(); } });
+  const up = () => { if (dn && !mv){ const lv = rpg().lv, ok = EMOTES.filter(m => m[3] <= lv); cv._ei = ((cv._ei || 0) + 1) % ok.length; playEmote(cv, ok[cv._ei][0]); buzz(15); } dn = false; };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', () => { dn = false; });
+}
+function drawHero(cv, st, pump, rk, t, flash){
+  const cfg = cv._cfg || h3(), dpr = Math.min(2, window.devicePixelRatio || 1), CH = +cv.dataset.h || 150, CW = Math.round(CH * .95), W = CW * dpr, H = CH * dpr;
+  if (cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; } cv.style.height = CH + 'px'; cv.style.width = CW + 'px'; if (!cv._ev) bindHero(cv);
+  const c = cv.getContext('2d'); c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,W,H); c.lineJoin = 'round';
+  const T = (t || 0) / 1000, col = rk ? rk.c : '#3a7bd5', U = H / 12.2, cx = W / 2, base = H * .965, s = st;
+  let P = {R:[.14,0,.2,.35], L:[.14,0,.2,.35], dy:0, yaw:0, pump:0, mouth:0}; const breath = Math.sin(T * 2.2) * .025;
+  if (cfg.anim === 'bounce') P.dy = Math.abs(Math.sin(T * 3.5)) * .45; else if (cfg.anim === 'sway') P.yaw = Math.sin(T * 1.4) * .5;
+  else if (cfg.anim === 'flex'){ const ph = T % 4; if (ph < 1.6) blendPose(P, poseFor('flex', ph), Math.sin(ph / 1.6 * Math.PI)); }
+  let em = null; if (cv._emote){ const u = (performance.now() - cv._emote.t0) / 1000; if (u > 3.2) cv._emote = null; else { em = cv._emote.id; blendPose(P, poseFor(em, u), Math.min(1, u / .3, (3.2 - u) / .3)); } }
+  if (cv._yaw != null && performance.now() - cv._yawT > 4000) cv._yaw = null;
+  const yaw = (cv._yaw != null ? cv._yaw : .3 + Math.sin(T * .9) * .2) + P.yaw; cv._curYaw = yaw;
+  const g = Math.min(1.15, s / 6 + (pump || 0) * .8 + P.pump), cs = Math.cos(yaw), sn = Math.sin(yaw), items = [], OL = 2.6 * dpr;
+  const skin = cfg.skinHex || H3_SKIN[cfg.skin] || H3_SKIN[1], hair = (cfg.face && cfg.hairHex) || H3_HAIRC[cfg.hairCol] || H3_HAIRC[0], out = H3_OUT[cfg.outfit] || H3_OUT[0], shoe = '#f4f4f4';
+  const tr = (x, y, z) => { const X = x * cs + z * sn, Z = -x * sn + z * cs, f = 28 / (28 - Z); return {X:cx + X * U * f, Y:base - (y + P.dy) * U * f, Z, f}; };
+  if (rk){ const gr = c.createRadialGradient(cx, H * .5, 8, cx, H * .5, H * .72); gr.addColorStop(0, col + '88'); gr.addColorStop(1, col + '00'); c.fillStyle = gr; c.fillRect(0,0,W,H); }
+  c.fillStyle = 'rgba(0,0,0,.3)'; c.beginPath(); c.ellipse(cx, base, 2.3 * U * (1 - P.dy * .12), .45 * U, 0, 0, 6.2832); c.fill();
+  const ell = (x, y, z, rx, ry, rz, color, zb) => { const p = tr(x, y, z); items.push({z:p.Z + (zb || 0), f:() => { const sw = Math.hypot(rx * cs, rz * sn) * U * p.f, sh = ry * U * p.f; if (sw < .5 || sh < .5) return; c.save(); c.translate(p.X, p.Y); c.scale(sw, sh);
+    c.beginPath(); c.arc(0,0,1,0,6.2832); c.fillStyle = hx(color,-.3); c.fill(); c.save(); c.clip(); c.fillStyle = color; c.beginPath(); c.arc(-.17,-.2,.93,0,6.2832); c.fill(); c.fillStyle = 'rgba(255,255,255,.3)'; c.beginPath(); c.ellipse(-.43,-.5,.22,.1,-.6,0,6.2832); c.fill(); c.restore();
+    c.lineWidth = OL / Math.min(sw, sh); c.strokeStyle = hx(color,-.62); c.beginPath(); c.arc(0,0,1,0,6.2832); c.stroke(); c.restore(); }}); return p; };
+  const cap = (a, b, ra, rb, color, zb) => { const p = tr(...a), q = tr(...b); items.push({z:(p.Z + q.Z) / 2 + (zb || 0), f:() => { const r1 = ra * U * p.f, r2 = rb * U * q.f, dx = q.X - p.X, dy = q.Y - p.Y, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L, m = Math.max(r1, r2);
+    const path = new Path2D(); path.moveTo(p.X + nx * r1, p.Y + ny * r1); path.lineTo(q.X + nx * r2, q.Y + ny * r2); path.lineTo(q.X - nx * r2, q.Y - ny * r2); path.lineTo(p.X - nx * r1, p.Y - ny * r1); path.closePath(); path.moveTo(p.X + r1, p.Y); path.arc(p.X, p.Y, r1, 0, 6.2832); path.moveTo(q.X + r2, q.Y); path.arc(q.X, q.Y, r2, 0, 6.2832);
+    c.lineWidth = OL * 2; c.strokeStyle = hx(color,-.62); c.stroke(path);
+    const gg = c.createLinearGradient(p.X - nx * m, p.Y - ny * m, p.X + nx * m, p.Y + ny * m); gg.addColorStop(0, color); gg.addColorStop(.58, color); gg.addColorStop(.6, hx(color,-.3)); gg.addColorStop(1, hx(color,-.3)); c.fillStyle = gg; c.fill(path); }}); };
+  const limb = (pts, rads, cols, zb) => { const q = pts.map(a => tr(...a)); items.push({z:q.reduce((a, b) => a + b.Z, 0) / q.length + (zb || 0), f:() => {
+    c.lineCap = 'round'; c.lineJoin = 'round'; const seg = (fn) => { for (let i = 0; i < q.length - 1; i++){ const w = 2 * rads[i] * U * (q[i].f + q[i + 1].f) / 2; fn(i, w); } };
+    seg((i, w) => { c.strokeStyle = hx(cols[i], -.62); c.lineWidth = w + OL * 2; c.beginPath(); c.moveTo(q[i].X, q[i].Y); c.lineTo(q[i + 1].X, q[i + 1].Y); c.stroke(); });
+    seg((i, w) => { c.strokeStyle = hx(cols[i], -.3); c.lineWidth = w; c.beginPath(); c.moveTo(q[i].X, q[i].Y); c.lineTo(q[i + 1].X, q[i + 1].Y); c.stroke(); });
+    seg((i, w) => { c.strokeStyle = cols[i]; c.lineWidth = w * .78; c.beginPath(); c.moveTo(q[i].X - w * .09, q[i].Y - w * .06); c.lineTo(q[i + 1].X - w * .09, q[i + 1].Y - w * .06); c.stroke(); }); }}); };
+  const line = (pts, zb, alpha) => { const q = pts.map(a => tr(...a)); items.push({z:q[0].Z + zb, f:() => { const al = Math.max(0, cs - .2) * (alpha || 1); if (al <= 0) return; c.strokeStyle = `rgba(40,15,10,${(.5 * al).toFixed(2)})`; c.lineWidth = 2.4 * dpr; c.lineCap = 'round'; c.beginPath(); c.moveTo(q[0].X, q[0].Y); if (q.length === 3) c.quadraticCurveTo(q[1].X, q[1].Y, q[2].X, q[2].Y); else c.lineTo(q[1].X, q[1].Y); c.stroke(); }}); };
+  const shirtless = s >= 3, tank = s >= 1.5 && s < 3, tcol = shirtless ? skin : out;
+  /* legs: short, chunky */
+  const thR = .55 + .22 * g, caR = .44 + .12 * g;
+  [-1, 1].forEach(sg => { const hip = [sg * .8, 3.2, 0], kn = [sg * (.85 + .04 * g), 1.75, .1], an = [sg * .9, .55, 0];
+    limb([hip, kn, an], [thR * .93, caR * .95], [skin, skin]); limb([[sg * .85, 3.1, 0], [sg * .9, 2.3, .05]], [thR * 1.1], [out], .2);
+    if (s >= 2.5) ell(sg * .88, 1.3, -.2, caR * .9, .5, caR * .8, skin, .1);
+    ell(sg * .92, .3, .4, .55, .32, .8, shoe); ell(sg * .92, .5, .78, .42, .2, .3, col, .25); });
+  ell(0, 3.45, 0, 1.45 + .1 * g, .85, 1, out, .1); ell(0, 3.85, 0, 1.4 + .1 * g, .2, 1, '#2b2b36', .3); ell(0, 3.85, 1.0, .26, .2, .08, '#f5c518', .8);
+  /* torso: V-shape */
+  ell(0, 4.45, 0, 1.05 + .08 * g, .9, .78, tcol); ell(0, 5.75, 0, 1.5 + .6 * g, 1.2 * (1 + breath), .95 + .15 * g, tcol, .05);
+  if (shirtless){ const sh = hx(skin, -.16), pc = tr(0, 5.4, 1.1 + .1 * g); items.push({z:pc.Z + .6, f:() => { const al = Math.max(0, cs - .25); if (al <= 0) return; c.fillStyle = 'rgba(70,30,10,' + (.22 * al).toFixed(2) + ')'; const k = U * pc.f;
+    [-1, 1].forEach(sg => { [0, 1, 2].forEach(r => { const q = tr(sg * .34, 4.9 - r * .5, .8); c.beginPath(); c.ellipse(q.X, q.Y, .27 * k * cs, .18 * k, 0, 0, 6.2832); c.fill(); }); const q = tr(sg * .72, 5.35, 1.0 + .1 * g); c.beginPath(); c.ellipse(q.X, q.Y, .62 * k * cs, .16 * k, sg * .15, 0, Math.PI); c.fill(); }); }}); }
+  else { ell(0, 5.8, .98 + .15 * g, .3, .3, .06, col, .6); }
+  if (s >= 2) { [-1, 1].forEach(sg => ell(sg * (1.35 + .6 * g), 5.5, -.35, .5 + .2 * g, .9, .5, tank || shirtless ? skin : out, -.1)); }
+  ell(0, 6.95, 0, .62, .5, .6, skin, 0);
+  /* arms: chunky */
+  const sw = 1.75 + .6 * g, aR = .42 + .3 * g, fR = .38 + .2 * g, glove = cfg.acc === 'gloves';
+  [['R', 1], ['L', -1]].forEach(([k, sg]) => { const A = P[k], S = [sg * sw, 6, 0], d1 = dirv(sg, A[0], A[1]), d2 = dirv(sg, A[2], A[3]);
+    const E = [S[0] + d1[0] * 1.35, S[1] + d1[1] * 1.35, S[2] + d1[2] * 1.35], Hd = [E[0] + d2[0] * 1.25, E[1] + d2[1] * 1.25, E[2] + d2[2] * 1.25];
+    ell(S[0], S[1], S[2], .6 + .38 * g, .58 + .34 * g, .58 + .3 * g, tank || shirtless ? skin : out, .2);
+    const ua = (!tank && !shirtless) ? out : skin; limb([S, E, Hd], [aR * .95, fR * .9], [ua, skin], .1);
+    if (s >= 2) ell((S[0] + E[0]) / 2, (S[1] + E[1]) / 2, (S[2] + E[2]) / 2 + .18, aR * (1.1 + .25 * g), .62 + .2 * g, aR * (1 + .2 * g), ua, .3);
+    ell(E[0] + (Hd[0] - E[0]) * .78, E[1] + (Hd[1] - E[1]) * .78, E[2] + (Hd[2] - E[2]) * .78, fR * .95, fR * .95, fR * .95, col, .35);
+    const hr = .46 + .16 * g; ell(Hd[0], Hd[1], Hd[2], hr, hr, hr, glove ? hx(out, .1) : skin, .4); });
+  /* head: big, friendly */
+  const hy = 8.2, hp = tr(0, hy, 0); ell(0, hy, 0, 1.62, 1.5, 1.5, skin, .2); [-1, 1].forEach(sg => ell(sg * 1.58, hy - .1, 0, .26, .4, .2, skin, 0));
+  const hs = cfg.hair;
+  if (hs !== 'bald'){ if (!cfg.face) ell(0, 9.1, -.1, 1.68, .88, 1.6, hair, .35); ell(0, 8.55, -.55, 1.62, 1.35, 1.1, hair, -.05);
+    if (hs === 'spiky' && !cfg.face) for (let i = -2; i <= 2; i++) cap([i * .5, 9.7, -.1], [i * .8, 11.1 - Math.abs(i) * .22, -.1], .36, .03, hair, .4);
+    if (hs === 'mohawk' && !cfg.face) for (let i = 0; i < 5; i++) cap([0, 9.7, .85 - i * .42], [0, 11 - Math.abs(i - 2) * .22, .75 - i * .42], .26, .05, hair, .4);
+    if (hs === 'long'){ ell(0, 7.3, -.95, 1.45, 1.9, .7, hair, -.1); [-1, 1].forEach(sg => ell(sg * 1.5, 7.7, -.1, .32, 1.1, .5, hair, .1)); }
+    if (hs === 'afro') ell(0, 9.2, -.2, 2.15, 1.95, 2, hair, .1); }
+  if (cfg.acc === 'band') ell(0, 8.95, 0, 1.64, .22, 1.58, col, .5);
+  if (cfg.acc === 'crown'){ ell(0, 10, 0, 1.3, .26, 1.3, '#f5c518', .6); [-.8, 0, .8].forEach(x => cap([x, 10.05, .1], [x, 10.95, .1], .22, .03, '#f5c518', .7)); }
+  if (cfg.acc === 'cape'){ const fl = Math.sin(T * 3) * .3 + (em === 'hero' ? .7 : 0) + P.dy * .5, a = tr(-sw * .9, 6.2, -.7), b = tr(sw * .9, 6.2, -.7), c1 = tr(-2.4 - fl, 1.4, -1.9 - fl), c2 = tr(2.4 + fl, 1.4, -1.9 - fl), m = tr(0, 1 + fl * .4, -2.2 - fl);
+    items.push({z:Math.min(a.Z, b.Z) - 1.5, f:() => { const gg = c.createLinearGradient(0, a.Y, 0, c1.Y); gg.addColorStop(0, hx(col, .05)); gg.addColorStop(1, hx(col, -.5)); c.fillStyle = gg; c.strokeStyle = hx(col, -.65); c.lineWidth = OL; c.beginPath(); c.moveTo(a.X, a.Y); c.lineTo(b.X, b.Y); c.lineTo(c2.X, c2.Y); c.quadraticCurveTo(m.X, m.Y + 16 * dpr, c1.X, c1.Y); c.closePath(); c.fill(); c.stroke(); }}); }
+  /* face */
+  items.push({z:hp.Z + 1.2, f:() => { const k0 = hp.f * U, fi = cfg.face ? getFace(cfg.face) : null;
+    if (fi){ const R = 1.56 * k0, RY = 1.5 * k0, N = 40, L0 = 1.22, sM = Math.sin(L0), tw = fi.width, th = fi.height;
+      c.save(); c.beginPath(); c.ellipse(hp.X, hp.Y, R, RY, 0, 0, 6.2832); c.clip(); if ('filter' in c) c.filter = 'saturate(1.12) contrast(1.05)';
+      for (let i = 0; i < N; i++){ const la = -L0 + 2 * L0 * i / N, lb = -L0 + 2 * L0 * (i + 1) / N, xa = Math.sin(la + yaw), xb = Math.sin(lb + yaw); if (Math.cos((la + lb) / 2 + yaw) < .08 || xb <= xa) continue;
+        c.drawImage(fi, (.5 + .5 * Math.sin(la) / sM) * tw, 0, (Math.sin(lb) - Math.sin(la)) / (2 * sM) * tw, th, hp.X + xa * R, hp.Y - RY, (xb - xa) * R + .7, RY * 2); }
+      if ('filter' in c) c.filter = 'none'; const gr = c.createRadialGradient(hp.X - .3 * R, hp.Y - .35 * RY, R * .15, hp.X, hp.Y, R * 1.1); gr.addColorStop(0, 'rgba(255,255,255,.1)'); gr.addColorStop(.65, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.42)'); c.fillStyle = gr; c.fillRect(hp.X - R, hp.Y - RY, R * 2, RY * 2); c.restore();
+      c.strokeStyle = hx(skin, -.62); c.lineWidth = OL; c.beginPath(); c.ellipse(hp.X, hp.Y, R, RY, 0, 0, 6.2832); c.stroke(); return; }
+    [-1, 1].forEach(sg => { const lx = sg * .62, lz = 1.3, X = lx * cs + lz * sn, Z = -lx * sn + lz * cs; if (Z < .2) return; const ex = hp.X + X * k0, ey = hp.Y + .05 * k0, wd = Math.max(.3, Z / 1.3);
+      c.fillStyle = 'rgba(255,120,130,.35)'; c.beginPath(); c.ellipse(ex + sg * .25 * k0 * wd, ey + .62 * k0, .3 * k0 * wd, .17 * k0, 0, 0, 6.2832); c.fill();
+      c.fillStyle = '#fff'; c.strokeStyle = '#2a1a14'; c.lineWidth = 1.8 * dpr; c.beginPath(); c.ellipse(ex, ey, .3 * k0 * wd, .4 * k0, 0, 0, 6.2832); c.fill(); c.stroke();
+      c.fillStyle = '#1b1b24'; c.beginPath(); c.ellipse(ex + sn * .06 * k0, ey + .04 * k0, .2 * k0 * wd, .27 * k0, 0, 0, 6.2832); c.fill(); c.fillStyle = '#fff'; c.beginPath(); c.arc(ex + sn * .06 * k0 - .06 * k0 * wd, ey - .08 * k0, .07 * k0 * Math.max(.5, wd), 0, 6.2832); c.fill();
+      c.strokeStyle = hx(hair, -.35); c.lineWidth = 3.2 * dpr; c.lineCap = 'round'; const tilt = P.mouth === 2 ? .16 * sg : .03 * sg; c.beginPath(); c.moveTo(ex - .34 * k0 * wd, ey - .62 * k0 - tilt * k0); c.lineTo(ex + .34 * k0 * wd, ey - .62 * k0 + tilt * k0); c.stroke();
+      if (cfg.acc === 'glasses'){ c.strokeStyle = '#111'; c.lineWidth = 2.6 * dpr; c.beginPath(); c.ellipse(ex, ey, .42 * k0 * wd, .5 * k0, 0, 0, 6.2832); c.stroke(); } });
+    if (cs > .2){ const mx = hp.X + 1.3 * sn * k0, my = hp.Y + .85 * k0, mw = .46 * k0 * Math.max(.35, cs); c.strokeStyle = '#6a2424'; c.fillStyle = '#7a2a2a'; c.lineWidth = 2.6 * dpr;
+      if (P.mouth === 1){ c.beginPath(); c.ellipse(mx, my - .05 * k0, mw, .3 * k0, 0, 0, Math.PI); c.fill(); c.stroke(); c.fillStyle = '#ff8b8b'; c.beginPath(); c.ellipse(mx, my + .12 * k0, mw * .5, .12 * k0, 0, 0, Math.PI); c.fill(); }
+      else if (P.mouth === 2){ c.fillStyle = '#fff'; c.beginPath(); c.roundRect(mx - mw, my - .12 * k0, mw * 2, .26 * k0, 4 * dpr); c.fill(); c.stroke(); c.lineWidth = 1.4 * dpr; c.beginPath(); c.moveTo(mx, my - .12 * k0); c.lineTo(mx, my + .14 * k0); c.stroke(); }
+      else { c.beginPath(); c.moveTo(mx - mw, my - .05 * k0); c.quadraticCurveTo(mx, my + .35 * k0, mx + mw, my - .05 * k0); c.stroke(); } } }});
+  items.sort((a, b) => a.z - b.z).forEach(i => i.f());
+  if (t != null){ for (let k = 0; k < 6; k++){ const a = t / 700 + k * 1.047; c.fillStyle = k % 2 ? '#fff' : col; c.beginPath(); c.arc(cx + Math.cos(a) * H * .36, H * .5 + Math.sin(a * 1.3) * H * .4, 2.4 * dpr, 0, 6.2832); c.fill(); }
+    if (cfg.aura) for (let k = 0; k < 14; k++){ const ph = ((T * .45 + k * .137) % 1), x = cx + Math.sin(k * 7.3 + T) * H * .22, y = base - ph * H * .85; c.fillStyle = (k % 2 ? '#ffb347' : col) + Math.round((1 - ph) * 200).toString(16).padStart(2, '0'); c.beginPath(); c.arc(x, y, (1 - ph) * 4 * dpr + 1, 0, 6.2832); c.fill(); } }
+  if (flash){ c.globalCompositeOperation = 'source-atop'; c.fillStyle = 'rgba(255,255,255,.85)'; c.fillRect(0, 0, W, H); c.globalCompositeOperation = 'source-over'; }
+}
+function heroExtras(el){
+  const lv = rpg().lv, old = document.getElementById('emoteBar'); if (old) old.remove();
+  const bar = document.createElement('div'); bar.id = 'emoteBar'; bar.className = 'emotebar';
+  bar.innerHTML = EMOTES.map(m => lv >= m[3] ? `<button type="button" data-e="${m[0]}" title="${m[1]}">${m[2]}<small>${m[1]}</small></button>` : `<button type="button" class="lock" data-lock="${m[3]}">🔒<small>Lv ${m[3]}</small></button>`).join('');
+  bar.onclick = e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.lock) return showToast('🔒 This emote unlocks at level ' + b.dataset.lock); playEmote($('pxHero'), b.dataset.e); buzz(15); };
+  el.parentNode.insertAdjacentElement('afterend', bar);
+  const oe = document.getElementById('evoBar'); if (oe) oe.remove(); const cur = Math.min(6, Math.floor((lv - 1) / 8)), evo = document.createElement('div'); evo.id = 'evoBar';
+  evo.innerHTML = '<div class="evot">🧬 Evolution</div><div class="evor">' + [0,1,2,3,4,5,6].map(i => `<div class="evoc ${lv >= 1 + 8 * i ? (i === cur ? 'cur' : 'ok') : 'lock'}"><canvas data-st="${i}" data-h="96"></canvas><small>${lv >= 1 + 8 * i ? (i === cur ? 'You' : 'Lv ' + (1 + 8 * i)) : '🔒 Lv ' + (1 + 8 * i)}</small></div>`).join('') + '</div>';
+  bar.insertAdjacentElement('afterend', evo); window.onFaceReady = drawEvo; drawEvo();
+  if (settings.emoteLv == null){ settings.emoteLv = lv; return; }
+  if (lv > settings.emoteLv){ const from = settings.emoteLv, n = [].concat(EMOTES.filter(m => m[3] > from && m[3] <= lv).map(m => m[2] + ' ' + m[1] + ' emote'), H3_ACC.filter(m => m[2] > from && m[2] <= lv).map(m => '🎨 ' + m[1]), H3_HAIRS.filter(m => m[2] > from && m[2] <= lv).map(m => '💇 ' + m[1] + ' hair'), (8 > from && 8 <= lv) ? ['✨ Aura'] : []);
+    settings.emoteLv = lv; save(); if (n.length){ showToast('🎭 Unlocked: ' + n.join(', ')); const ok = EMOTES.filter(m => m[3] <= lv).pop(); setTimeout(() => playEmote($('pxHero'), ok[0]), 600); } }
+}
+function drawEvo(){ const rk = rpg().rk; document.querySelectorAll('#evoBar canvas').forEach(cv => { cv._yaw = .3; drawHero(cv, +cv.dataset.st, 0, rk, null); }); }
+function idleHero(cv){ const t0 = performance.now(), r = rpg(), st = Math.min(6, (r.lv - 1) / 8); (function L(now){ if (!cv.isConnected) return; drawHero(cv, st, 0, r.rk, now - t0); requestAnimationFrame(L); })(t0); }
 function flexHero(la, lb){
   let cv = $('lvPx');
   if (!cv){ cv = document.createElement('canvas'); cv.id = 'lvPx'; cv.className = 'pxhero'; cv.style.cssText = 'display:block;margin:0 auto'; $('lvEmoji').before(cv); }
-  $('lvEmoji').style.display = 'none';
-  const rk = rpg().rk, sa = stageOf(la), sb = stageOf(lb), t0 = performance.now(), D = 2800;
+  $('lvEmoji').style.display = 'none'; cv.dataset.h = '190'; playEmote(cv, 'flex');
+  const rk = rpg().rk, sa = Math.min(6, (la - 1) / 8), sb = Math.min(6, (lb - 1) / 8), t0 = performance.now(), D = 2800;
   (function step(now){
     const p = Math.min(1, (now - t0) / D);
     if (p < .4) drawHero(cv, sa, Math.sin(p * 20) * .02, rk, now - t0);
@@ -2995,7 +3249,7 @@ function flexHero(la, lb){
   _rc(); if (settings.avatar) return;
   const el = document.querySelector('#charBox .avatar'); if (!el) return;
   el.id = ''; el.style.cssText += ';width:auto;height:auto;border-radius:14px;padding:4px 8px';
-  el.innerHTML = '<canvas class="pxhero" id="pxHero"></canvas>'; idleHero($('pxHero'));
+  el.innerHTML = '<canvas class="pxhero" id="pxHero" data-h="170"></canvas>'; idleHero($('pxHero')); heroExtras(el);
   const hint = el.parentNode.querySelector('small'); if (hint) hint.outerHTML = '<button class="sec tiny" id="pxEditBtn" style="margin-top:.6rem">🎨 Design hero</button>';
 }; }
 let pxDraft = [], pxPalD = [], pxColor = 7, pxTool = 'pen', pxHist = [], pxRedo = [];
@@ -3044,7 +3298,36 @@ $('pxReset').onclick = () => { pxSnap(); pxDraft = defHero().slice(); pxPalD = P
 $('pxPhoto').onclick = () => { closeModal('modalPx'); $('avatarFile').click(); };
 $('pxSave').onclick = () => { settings.px = pxDraft.slice(); settings.pxPal = pxPalD.slice(); settings.pxAnim = $('pxAnim').value; save(); closeModal('modalPx'); renderChar(); showToast('🎨 Hero saved'); };
 $('modalPx').addEventListener('click', e => { if (e.target === $('modalPx')) closeModal('modalPx'); });
-document.addEventListener('click', e => { if (e.target.closest('#pxEditBtn')) openPx(); });
+let H3D = {}, H3RK = null;
+function h3Sw(id, list, key){ $(id).innerHTML = list.map((c, i) => `<button type="button" data-i="${i}" class="${H3D[key] === i ? 'sel' : ''}" style="background:${c}"></button>`).join(''); $(id).onclick = e => { const b = e.target.closest('button'); if (!b) return; H3D[key] = +b.dataset.i; if (key === 'skin') H3D.skinHex = null; h3Sw(id, list, key); }; }
+function h3Sel(id, list, key, lv){ $(id).innerHTML = list.map(m => `<option value="${m[0]}" ${lv < m[2] ? 'disabled' : ''}>${m[1]}${lv < m[2] ? ' 🔒 Lv ' + m[2] : ''}</option>`).join(''); $(id).value = H3D[key]; $(id).onchange = () => { H3D[key] = $(id).value; }; }
+function openHero3(){
+  const r = rpg(), lv = r.lv; H3D = h3(); H3RK = r.rk;
+  h3Sw('h3Skin', H3_SKIN, 'skin'); h3Sw('h3HairC', H3_HAIRC, 'hairCol'); h3Sw('h3Out', H3_OUT, 'outfit'); h3Sel('h3Hair', H3_HAIRS, 'hair', lv); h3Sel('h3Acc', H3_ACC, 'acc', lv);
+  $('h3Anim').value = H3D.anim; $('h3Anim').onchange = () => { H3D.anim = $('h3Anim').value; };
+  $('h3Aura').checked = !!H3D.aura && lv >= 8; $('h3Aura').disabled = lv < 8; $('h3AuraLk').textContent = lv < 8 ? '🔒 Lv 8' : ''; $('h3Aura').onchange = () => { H3D.aura = $('h3Aura').checked; };
+  $('h3Stage').value = Math.min(6, (lv - 1) / 8);
+  $('h3Emotes').innerHTML = EMOTES.map(m => lv >= m[3] ? `<button type="button" data-e="${m[0]}">${m[2]}<small>${m[1]}</small></button>` : `<button type="button" class="lock">🔒<small>Lv ${m[3]}</small></button>`).join('');
+  $('h3Emotes').onclick = e => { const b = e.target.closest('button[data-e]'); if (b) playEmote($('h3Prev'), b.dataset.e); };
+  $('modalHero3').classList.add('active'); requestAnimationFrame(h3Loop);
+}
+function h3Loop(now){ if (!$('modalHero3').classList.contains('active')) return; const cv = $('h3Prev'); cv._cfg = H3D; drawHero(cv, +$('h3Stage').value, 0, H3RK, now); requestAnimationFrame(h3Loop); }
+let FC = {img:null, x:0, y:0, z:1};
+function fcRender(c, S){ if (!FC.img) return; const b = Math.max(300 / FC.img.width, 300 / FC.img.height) * FC.z, w = FC.img.width * b * S, h = FC.img.height * b * S; c.drawImage(FC.img, 150 * S + FC.x * S - w / 2, 150 * S + FC.y * S - h / 2, w, h); }
+function fcDraw(){ const c = $('fcCv').getContext('2d'); c.fillStyle = '#000'; c.fillRect(0, 0, 300, 300); fcRender(c, 1); c.fillStyle = 'rgba(0,0,0,.55)'; c.beginPath(); c.rect(0, 0, 300, 300); c.arc(150, 150, 140, 0, 6.2832); c.fill('evenodd'); c.strokeStyle = '#fff'; c.lineWidth = 2; c.beginPath(); c.arc(150, 150, 140, 0, 6.2832); c.stroke(); }
+$('h3FaceBtn').onclick = () => $('h3File').click(); $('h3FaceRm').onclick = () => { delete H3D.face; H3D.skinHex = null; H3D.hairHex = null; showToast('Face removed'); };
+$('h3File').onchange = e => { const f = e.target.files[0]; if (!f) return; const img = new Image(); img.onload = () => { FC = {img, x:0, y:0, z:1}; $('fcZoom').value = 1; $('modalFace').classList.add('active'); fcDraw(); }; img.onerror = () => showToast('⚠️ Could not read that photo'); img.src = URL.createObjectURL(f); e.target.value = ''; };
+$('fcZoom').oninput = () => { FC.z = +$('fcZoom').value; fcDraw(); };
+{ let dn = false, lx = 0, ly = 0, cv = $('fcCv'); cv.onpointerdown = e => { dn = true; lx = e.clientX; ly = e.clientY; cv.setPointerCapture(e.pointerId); }; cv.onpointermove = e => { if (!dn) return; const k = 300 / cv.getBoundingClientRect().width; FC.x += (e.clientX - lx) * k; FC.y += (e.clientY - ly) * k; lx = e.clientX; ly = e.clientY; fcDraw(); }; cv.onpointerup = cv.onpointercancel = () => { dn = false; }; }
+$('fcOk').onclick = () => {
+  const o = document.createElement('canvas'); o.width = o.height = 256; const c = o.getContext('2d'); c.fillStyle = '#888'; c.fillRect(0, 0, 256, 256); fcRender(c, 256 / 300);
+  const avg = (x0, y0, x1, y1) => { const d = c.getImageData(Math.round(x0 * 256), Math.round(y0 * 256), Math.max(1, Math.round((x1 - x0) * 256)), Math.max(1, Math.round((y1 - y0) * 256))).data; let r = 0, g = 0, b = 0, n = d.length / 4; for (let i = 0; i < d.length; i += 4){ r += d[i]; g += d[i + 1]; b += d[i + 2]; } return [r / n, g / n, b / n]; };
+  const hex = a => '#' + a.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join(''), L = avg(.24, .5, .38, .64), R = avg(.62, .5, .76, .64), top = avg(.36, .1, .64, .17);
+  H3D.face = o.toDataURL('image/jpeg', .85); H3D.skinHex = hex([(L[0] + R[0]) / 2, (L[1] + R[1]) / 2, (L[2] + R[2]) / 2]); H3D.hairHex = hex(top);
+  closeModal('modalFace'); showToast('✅ Face added. Save to keep it.');
+};
+$('h3Save').onclick = () => { settings.hero3d = Object.assign({}, H3D); save(); closeModal('modalHero3'); renderChar(); showToast('🎨 Hero saved'); };
+document.addEventListener('click', e => { if (e.target.closest('#pxEditBtn')) openHero3(); });
 
 async function sendToAI(){
   const input = $('aiInput'), text = input.value.trim(); if (!text) return;
@@ -3250,10 +3533,53 @@ function deleteGoal(i){
 
 function renderHero(){ setNum($('streakNum'), progress.streakDays); setNum($('sessionsNum'), sessions.length); const rr = rpg(); $('appLv').textContent = rr.rk.e + ' Lv ' + rr.lv; $('appAv').style.display = settings.avatar ? '' : 'none'; if (settings.avatar) $('appAv').src = settings.avatar; $('unlocksNum').textContent = rr.lv; $('heroXp').style.width = rr.pct + '%'; }
 
+/* ---------- home / PR log / effects ---------- */
+const ringSvg = pct => `<div class="ring"><svg width="84" height="84" viewBox="0 0 84 84"><circle class="bg" cx="42" cy="42" r="34"/><circle class="fg" cx="42" cy="42" r="34" stroke-dasharray="213.6" stroke-dashoffset="213.6" data-pct="${pct}"/></svg><span>${Math.round(pct)}%</span></div>`;
+function startToday(id){ document.querySelector('.tab[data-tab="train"]').click(); if (id) goDay(id); }
+const parseReps = v => { const parts = String(v).split(/[_+\/]/).map(x => parseInt(x, 10)).filter(n => n > 0); return {total:parts.reduce((a,b) => a + b, 0), text:parts.length > 1 ? parts.join('_') : ''}; };
+const freezesThisWeek = () => (progress.freezes || []).filter(k => weekStart(k) === weekStart(todayKey()));
+function toggleFreeze(){
+  progress.freezes = progress.freezes || []; const t = todayKey(), i = progress.freezes.indexOf(t);
+  if (i >= 0) progress.freezes.splice(i, 1);
+  else { if (freezesThisWeek().length >= 2) return showToast('🧊 You can freeze up to 2 rest days per week.'); progress.freezes.push(t); showToast('🧊 Today is a protected rest day. It counts toward this week once you log a workout.'); }
+  computeStreak(); save(); renderAllViews();
+}
+function renderHome(){
+  const box = $('homeBox'); if (!box) return;
+  if (!state.days.length){ box.innerHTML = '<div class="homecard"><h2>Welcome to Tracky</h2><p>Create your first training day and start logging.</p><button class="startbtn" onclick="document.querySelector(\'.tab[data-tab=builder]\').click()">🛠️ Create my plan</button></div>'; return; }
+  const day = state.days.find(d => d.id === nextDayId()) || state.days[0], exs = day.exercises || [], r = rpg(), wk = weekAgg()[weekStart(todayKey())] || {days:new Set()}, goal = weekGoal(), today = todayKey();
+  const done = sessions.some(x => x.dayName === day.name && localKey(x.date) === today), last = sessions[sessions.length - 1];
+  box.innerHTML = `<div class="homecard"><small>${done ? 'Done today ✅' : "Today's workout"}</small><h2>${escapeHTML(day.name)}</h2>
+    <p>${exs.length} exercises${exs.length ? ' · ' + exs.slice(0,3).map(e => escapeHTML(e.name)).join(', ') + (exs.length > 3 ? '…' : '') : ''}</p>
+    <button class="startbtn" onclick="startToday('${day.id}')">${done ? '➕ Train again' : '▶ Start workout'}</button></div>
+    <div class="hgrid">
+      <div class="hcard">${ringSvg(r.pct)}<b>${r.rk.e} Lv ${r.lv}</b><small>${r.into} / ${r.need} XP</small></div>
+      <div class="hcard">${ringSvg(Math.min(100, wk.days.size / goal * 100))}<b>🔥 ${progress.streakDays} wk</b><small>${wk.days.size + freezesThisWeek().filter(k => !wk.days.has(k)).length} / ${goal} days this week</small><button class="sec tiny frz" onclick="toggleFreeze()">${(progress.freezes || []).includes(today) ? '🧊 Frozen today · undo' : '🧊 Freeze rest day (' + (2 - freezesThisWeek().length) + ' left)'}</button></div>
+    </div>
+    <div class="hgrid"><div class="hcard"><b>${rankText(r.rk)}</b><small>${r.gate ? '🔒 needs ' + r.gate.need + ' goal weeks' : (r.rk.next ? r.toNext + ' XP to next' : 'Max rank')}</small></div>
+    <div class="hcard"><b>${last ? new Date(last.date).toLocaleDateString(LOCALE(), {day:'numeric', month:'short'}) : '—'}</b><small>Last session</small></div></div>`;
+  requestAnimationFrame(() => requestAnimationFrame(() => box.querySelectorAll('.fg').forEach(c => { c.style.strokeDashoffset = 213.6 * (1 - Math.min(100, +c.dataset.pct) / 100); })));
+}
+function prList(){
+  const best = {}, out = [];
+  sessions.slice().sort((a,b) => a.date.localeCompare(b.date)).forEach(s => s.exercises.forEach(e => {
+    const top = Math.max(...e.sets.map(t => t.weight)), k = e.name.trim().toLowerCase();
+    if (best[k] > 0 && top > best[k] && !out.some(o => o.k === k && o.w === top)) out.push({k, name:e.name, w:top, up:top - best[k], date:localKey(s.date)});
+    best[k] = Math.max(best[k] || 0, top);
+  }));
+  return out.reverse();
+}
+function renderPRLog(){
+  const el = $('prLog'); if (!el) return; const l = prList(); $('prCount').textContent = l.length ? l.length + ' total' : '';
+  el.innerHTML = l.length ? l.slice(0, 15).map(x => `<div class="prrow"><span>🏅 ${escapeHTML(x.name)} <b>${toDisp(x.w)} ${isLb() ? 'lb' : 'kg'}</b></span><span style="color:var(--sub)">+${toDisp(x.up)} · ${x.date}</span></div>`).join('') : '<p class="insight">Beat your best weight on any exercise and it shows up here.</p>';
+}
+function floatXP(n){ if (!n || !animOn()) return; const e = document.createElement('div'); e.className = 'xpfloat'; e.textContent = '+' + n + ' XP'; document.body.appendChild(e); setTimeout(() => e.remove(), 1500); }
+{ const _rh = renderHero; renderHero = function(){ _rh(); renderHome(); }; const _rc = renderChar; renderChar = function(){ _rc(); renderPRLog(); }; }
+
 /* ---------- export / import ---------- */
 $('exportBtn').onclick = () => {
   const blob = new Blob([buildBackup()], {type:'application/json'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'tracky_backup.json'; a.click(); settings.lastBackup = todayKey(); save(); showToast('✅ Backup downloaded');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'tracky_backup_' + todayKey() + '.json'; a.click(); settings.lastBackup = todayKey(); save(); showToast('✅ Backup downloaded');
 };
 $('importBtn').onclick = () => $('importFile').click();
 $('importFile').addEventListener('change', e => {
@@ -3262,9 +3588,10 @@ $('importFile').addEventListener('change', e => {
   rd.onload = ev => {
     try {
       const d = JSON.parse(ev.target.result);
-      if (d.state) state = d.state; if (d.sessions) sessions = d.sessions; if (d.progress) progress = d.progress;
-      if (d.goals) goals = d.goals; if (d.settings) settings = Object.assign({}, d.settings, {syncPass:settings.syncPass, proxyToken:settings.proxyToken, apiKey:settings.apiKey, geminiKey:settings.geminiKey, pushOn:settings.pushOn, pushId:settings.pushId, proxyUrl:settings.proxyUrl, autoSync:settings.autoSync}); if (d.bodyLog) bodyLog = d.bodyLog; if (d.bodyM) bodyM = d.bodyM; if (d.photos){ photos = d.photos; savePhotos(); }
-      logData = {}; save(); init(); showToast('✅ Imported successfully');
+      if (!validBackup(d)) return showToast('⚠️ This file is not a Tracky backup, nothing was changed.');
+      showConfirm(`Replace your current data with this backup (${(d.sessions || []).length} sessions, ${((d.state || {}).days || []).length} days)? A copy of your current data is saved first so you can undo.`, '⬆ Import backup').then(ok => {
+        if (!ok) return; autoSnap(true, 'Before import'); applyBackup(d); showToast('✅ Imported. Your previous data is under Settings > Restore.');
+      });
     } catch(err){ showToast('⚠️ Invalid file format'); }
   };
   rd.readAsText(f); e.target.value = '';
@@ -3276,7 +3603,7 @@ $('exNameInput').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.pr
 $('goalExerciseInput').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); saveGoal(); } });
 ['modalDay','modalExercise','modalGoal','modalPlates','modalSettings','modalCardio','modalEdit','modalInfo','modalCheckin','modalRest'].forEach(id => { const o = $(id); o.addEventListener('click', e => { if (e.target === o) closeModal(id); }); });
 
-Object.assign(window, {openDayModal, openExerciseModal, openGoalModal, saveDay, saveExercise, saveGoal, deleteDay, deleteExercise, deleteGoal, closeModal, resolveConfirm, loadTemplate, showReport, openSettings, openIntro, moveDay, moveEx, dupDay, openEdit, deleteSession, editDelSet, editDelEx, openInfo});
+Object.assign(window, {toggleFreeze, restoreSnap, dataCheck, openDayModal, openExerciseModal, openGoalModal, saveDay, saveExercise, saveGoal, deleteDay, deleteExercise, deleteGoal, closeModal, resolveConfirm, loadTemplate, showReport, openSettings, openIntro, moveDay, moveEx, dupDay, openEdit, deleteSession, editDelSet, editDelEx, openInfo});
 
 document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.overlay.active').forEach(o => o.id === 'modalConfirm' ? resolveConfirm(false) : o.classList.remove('active')); });
 function init(){
@@ -3316,7 +3643,7 @@ try {
 } catch(e){}
 if (Object.values(logData).some(d => d.sets && d.sets.some(s => s.done))) setTimeout(() => showToast('↩️ Restored your unfinished workout'), 900);
 let savedTab = null; try { savedTab = localStorage.getItem('trackyTab'); } catch(e){}
-(document.querySelector(`.tab[data-tab="${savedTab}"]`) || document.querySelector(`.tab[data-tab="${state.days.length ? 'train' : 'builder'}"]`)).click();
+document.querySelector(`.tab[data-tab="${state.days.length ? 'home' : 'builder'}"]`).click();
 if (!settings.profileDone) openIntro();
 remTick(); setTimeout(() => pushStateNow(false), 4000);
 if (settings.autoSync) setTimeout(() => syncPull(false, true), 2500);
