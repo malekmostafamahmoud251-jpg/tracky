@@ -110,7 +110,7 @@ body.dark .prev{background:#14283f;color:#c6dcf0}
 .goal-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;font-weight:700}
 .goal-v{display:flex;justify-content:space-between;font-size:.8rem;color:var(--sub);font-weight:600;margin-bottom:.5rem;flex-wrap:wrap;gap:.4rem}
 .track{height:8px;background:var(--border);border-radius:4px;overflow:hidden}.track div{height:100%;background:var(--accent);transition:width .3s}
-.srow{display:grid;grid-template-columns:28px 1fr 1fr 40px;gap:.5rem;align-items:center;margin-top:.5rem}
+.srow>*{min-width:0}.srow input[type=number],.srow input[type=text]{min-width:0}.srow{display:grid;grid-template-columns:28px 1fr 1fr 40px;gap:.5rem;align-items:center;margin-top:.5rem}
 .srow.uni{grid-template-columns:28px 1fr 1fr 1fr 40px}
 .handq{display:flex;gap:.6rem;flex-wrap:wrap}.handq button{flex:1;min-width:140px;padding:.7rem .6rem;border-radius:.9rem;border:1.5px solid var(--inb);background:var(--inbg);color:var(--text);font-weight:800;cursor:pointer}.handq button.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent);background:rgba(255,179,71,.14)}
 .srow input[type=number]{width:100%;padding:.5rem;border:1.5px solid var(--inb);border-radius:.6rem;font-weight:700;background:var(--inbg);color:var(--text);text-align:center}
@@ -137,7 +137,7 @@ button:active{transform:scale(.96)}.panel.active{animation:up .25s ease}
 .chat{height:calc(100dvh - 17rem);min-height:360px}
 .chips{display:flex;gap:.4rem;overflow-x:auto;padding:.6rem 1rem 0}.chips button{white-space:nowrap}
 .bar select{padding:.35rem .6rem;border-radius:2rem;border:1.5px solid var(--inb);background:var(--card);color:var(--text);font-weight:700}
-@media(max-width:640px){body{padding-left:.8rem;padding-right:.8rem}.hero{padding:1rem 1.2rem;border-radius:1.2rem}.grid{grid-template-columns:1fr}
+@media(max-width:640px){body{padding-left:.8rem;padding-right:.8rem}.hero{padding:1rem 1.2rem;border-radius:1.2rem}.grid{grid-template-columns:minmax(0,1fr)}.grid>*{min-width:0}
 .overlay{align-items:flex-end;padding:0}.modal{border-radius:1.5rem 1.5rem 0 0;max-width:none;padding-bottom:calc(1.5rem + env(safe-area-inset-bottom));animation:sheetUp .3s ease}
 .conf .modal{max-width:none}}
 .avatar{width:84px;height:84px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2.8rem;background:linear-gradient(135deg,#1e3b5c,#3a7bd5);box-shadow:0 0 0 4px var(--card),0 0 0 7px var(--accent);flex-shrink:0}
