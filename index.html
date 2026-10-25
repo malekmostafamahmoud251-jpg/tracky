@@ -121,7 +121,7 @@ body.dark .prev{background:#14283f;color:#c6dcf0}
 #timer.on{display:flex}#timer b{font-size:1.4rem}#timer button{padding:.3rem .6rem;font-size:.75rem;background:rgba(255,255,255,.2)}
 .heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,14px);gap:3px;overflow-x:auto}
 .heat i{width:14px;height:14px;border-radius:3px;background:var(--border)}.heat i.l2{background:var(--accent)}
-html{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+html{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none;overflow-x:hidden}
 body{padding-top:calc(1rem + env(safe-area-inset-top));padding-bottom:calc(6.5rem + env(safe-area-inset-bottom));-webkit-user-select:none;user-select:none}
 input,select,.msg{-webkit-user-select:text;user-select:text}input,select{font-size:16px}
 button:active{transform:scale(.96)}.panel.active{animation:up .25s ease}
@@ -367,7 +367,7 @@ body.noanim #anl *,body.noanim #anl{animation-duration:.01s!important;transition
 .emotebar{display:flex;gap:.4rem;flex-wrap:wrap;justify-content:center;margin:.6rem 0}.emotebar button{display:flex;flex-direction:column;align-items:center;min-width:56px;padding:.4rem .5rem;border-radius:.9rem;border:1.5px solid var(--inb);background:var(--card);color:var(--text);font-size:1.3rem;cursor:pointer}
 .emotebar button small{font-size:.62rem;font-weight:700;color:var(--sub)}.emotebar button.lock{opacity:.5}
 .pxq button.sel{outline:3px solid var(--accent)}
-#evoBar{margin:.4rem 0 .8rem}.evot{font-weight:800;font-size:.85rem;margin-bottom:.3rem;color:var(--sub)}.evor{display:flex;gap:.3rem;overflow-x:auto;padding-bottom:.3rem}
+#evoBar{margin:.4rem 0 .8rem;min-width:0;max-width:100%;width:100%}.evot{font-weight:800;font-size:.85rem;margin-bottom:.3rem;color:var(--sub)}.evor{display:flex;gap:.3rem;overflow-x:auto;padding-bottom:.3rem;max-width:100%;min-width:0}
 .evoc{display:flex;flex-direction:column;align-items:center;flex:0 0 auto;padding:.3rem .2rem;border-radius:.9rem;border:1.5px solid transparent}.evoc small{font-size:.62rem;font-weight:800;color:var(--sub)}
 .evoc.cur{border-color:var(--accent);background:rgba(255,179,71,.12)}.evoc.lock canvas{filter:brightness(0) opacity(.3)}
 
