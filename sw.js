@@ -1,75 +1,48 @@
-/* Tracky service worker: works offline, always prefers the newest version, and shows phone notifications. */
-const CACHE = 'tracky-v3';
-const ASSETS = ['./', 'index.html', 'manifest.json', 'icons/icon-192.png', 'icons/apple-touch-icon.png'];
+/* Tracky service worker: offline cache + phone push notifications */
+const VER = 'tracky-v30', SHELL = ['./', 'index.html', 'manifest.json', 'icons/icon-192.png'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE)
-      .then(c => Promise.allSettled(ASSETS.map(a => c.add(a))))
-      .then(() => self.skipWaiting())
-  );
+  e.waitUntil(caches.open(VER).then(c => Promise.all(SHELL.map(u => c.add(u).catch(() => {})))).then(() => self.skipWaiting()));
 });
-
 self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k.startsWith('tracky-v') && k !== CACHE).map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
-  );
+  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('tracky-v') && k !== VER).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 
-/* Network first (so updates show immediately), cache as the offline fallback.
-   Page loads are always stored under ONE key (index.html), so offline always opens the newest version
-   that was loaded online, whichever address (/, /index.html, ?x) opened the app. */
 self.addEventListener('fetch', e => {
-  const req = e.request;
-  if (req.method !== 'GET') return;
-  const u = new URL(req.url);
-  if (u.origin !== location.origin) return;
-  if (req.mode === 'navigate') {
-    e.respondWith(
-      fetch(req, { cache: 'no-cache' })
-        .then(res => { if (res && res.ok) { const a = res.clone(), b = res.clone(); caches.open(CACHE).then(c => { c.put('index.html', a); c.put('./', b); }); } return res; })
-        .catch(() => caches.match('index.html').then(m => m || caches.match('./')))
-    );
+  const r = e.request, u = new URL(r.url);
+  if (r.method !== 'GET' || u.origin !== location.origin) return;           // Worker, Gemini, Open Food Facts: never cached
+  if (r.mode === 'navigate') {                                              // page: network first, fall back to the cached copy offline
+    e.respondWith(fetch(r).then(res => { const cp = res.clone(); caches.open(VER).then(c => c.put('index.html', cp)); return res; }).catch(() => caches.match('index.html').then(m => m || caches.match('./'))));
     return;
   }
-  e.respondWith(
-    fetch(req, { cache: 'no-cache' })
-      .then(res => { if (res && res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); } return res; })
-      .catch(() => caches.match(req))
-  );
+  e.respondWith(caches.match(r).then(hit => {                               // assets: cached copy now, refresh in the background
+    const net = fetch(r).then(res => { if (res && res.ok) { const cp = res.clone(); caches.open(VER).then(c => c.put(r, cp)); } return res; }).catch(() => hit);
+    return hit || net;
+  }));
 });
 
-/* Push: the server sends an empty push, then we fetch the message text for this device. */
-async function sha24(text) {
-  const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-  return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join('').slice(0, 24);
-}
-
 self.addEventListener('push', e => {
-  e.waitUntil((async () => {
-    let n = { title: 'Tracky', body: 'Open Tracky to see your updates.', tag: 'tracky' };
-    try {
-      const cfg = await (await caches.open('tracky-cfg')).match('cfg');
-      const base = cfg ? (await cfg.json()).url : '';
-      const sub = await self.registration.pushManager.getSubscription();
-      if (base && sub) {
-        const r = await fetch(base + '/push/msg?id=' + (await sha24(sub.endpoint)));
-        if (r.ok) n = Object.assign(n, await r.json());
-      }
-    } catch (err) { /* show the generic message */ }
-    await self.registration.showNotification(n.title || 'Tracky', {
-      body: n.body, tag: n.tag || 'tracky', icon: 'icons/icon-192.png', badge: 'icons/icon-192.png',
-    });
-  })());
+  let d = {}; try { d = e.data ? e.data.json() : {}; } catch (_) { try { d = {body: e.data.text()}; } catch (__) {} }
+  e.waitUntil(self.registration.showNotification(d.title || 'Tracky', {body: d.body || '', icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', tag: d.tag || 'tracky', renotify: false, data: {go: d.go || 'home'}}));
 });
 
 self.addEventListener('notificationclick', e => {
-  e.notification.close();
+  e.notification.close(); const go = (e.notification.data && e.notification.data.go) || 'home';
+  e.waitUntil(self.clients.matchAll({type: 'window', includeUncontrolled: true}).then(list => {
+    for (const c of list) if ('focus' in c) { c.postMessage({go}); return c.focus(); }
+    return self.clients.openWindow('./?go=' + encodeURIComponent(go));
+  }));
+});
+
+/* the browser rotated the push subscription: register the new one with the server */
+self.addEventListener('pushsubscriptionchange', e => {
   e.waitUntil((async () => {
-    const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    for (const c of all) { if ('focus' in c) return c.focus(); }
-    return self.clients.openWindow(self.registration.scope);
+    try {
+      const cfg = await (await (await caches.open('tracky-cfg')).match('cfg')).json(); if (!cfg || !cfg.url) return;
+      const key = (await (await fetch(cfg.url + '/vapid')).json()).publicKey, pad = '='.repeat((4 - key.length % 4) % 4);
+      const raw = atob((key + pad).replace(/-/g, '+').replace(/_/g, '/')), app = Uint8Array.from(raw, c => c.charCodeAt(0));
+      const sub = await self.registration.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: app});
+      await fetch(cfg.url + '/push/subscribe', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({sub: sub.toJSON(), id: cfg.id, state: {}})});
+    } catch (_) {}
   })());
 });
