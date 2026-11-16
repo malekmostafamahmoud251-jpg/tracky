@@ -1,5 +1,5 @@
 /* Tracky service worker: offline cache + phone push notifications */
-const VER = 'tracky-v30', SHELL = ['./', 'index.html', 'manifest.json', 'icons/icon-192.png'];
+const VER = 'tracky-v31', SHELL = ['./', 'index.html', 'manifest.json', 'icons/icon-192.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VER).then(c => Promise.all(SHELL.map(u => c.add(u).catch(() => {})))).then(() => self.skipWaiting()));
@@ -12,7 +12,7 @@ self.addEventListener('fetch', e => {
   const r = e.request, u = new URL(r.url);
   if (r.method !== 'GET' || u.origin !== location.origin) return;           // Worker, Gemini, Open Food Facts: never cached
   if (r.mode === 'navigate') {                                              // page: network first, fall back to the cached copy offline
-    e.respondWith(fetch(r).then(res => { const cp = res.clone(); caches.open(VER).then(c => c.put('index.html', cp)); return res; }).catch(() => caches.match('index.html').then(m => m || caches.match('./'))));
+    e.respondWith(fetch(r, {cache: 'no-cache'}).then(res => { if (res && res.ok) { const cp = res.clone(), cp2 = res.clone(); caches.open(VER).then(c => { c.put('index.html', cp); c.put('./', cp2); }); } return res; }).catch(() => caches.match('index.html').then(m => m || caches.match('./'))));
     return;
   }
   e.respondWith(caches.match(r).then(hit => {                               // assets: cached copy now, refresh in the background
