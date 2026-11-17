@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Tracky">
 <link rel="manifest" href="manifest.json"><link rel="icon" type="image/png" href="icons/icon-192.png"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>Tracky</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'"><noscript><link href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet"></noscript>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Cairo:wght@400;600;700&family=Barlow:wght@500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Cairo:wght@400;600;700&family=Barlow:wght@500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet"></noscript>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#f3f6fc;--card:#fff;--text:#1a2639;--sub:#4a5c72;--border:#e6edf6;--inbg:#fff;--inb:#cfddee;--ex:#f9fcff;--tool:#f8fbfe;--accent:#3a7bd5;--ok:#2a9d8f;--danger:#e63946}
@@ -154,7 +154,7 @@ button:active{transform:scale(.96)}.panel.active{animation:up .25s ease}
 .dots{display:flex;gap:.4rem}.dots i{width:22px;height:6px;border-radius:3px;background:rgba(255,255,255,.25)}.dots i.on{background:#ffd966}
 #introBody{flex:1;display:flex;flex-direction:column;justify-content:center;gap:1rem;padding:1rem 0;animation:up .35s ease}
 #stBar{position:sticky;top:0;z-index:3;background:var(--card);display:flex;gap:.4rem;overflow-x:auto;padding:.5rem 0 .6rem;margin-bottom:.4rem;scrollbar-width:none}#stBar::-webkit-scrollbar{display:none}
-#stBar .stchip{flex:0 0 auto;border:1.5px solid var(--border);background:var(--ex);color:var(--text);box-shadow:none;border-radius:2rem;padding:.4rem .85rem;font-weight:700;font-size:.82rem;min-height:36px;cursor:pointer}
+#stBar .stchip{flex:0 0 auto;border:1px solid var(--border)!important;background:var(--ex)!important;color:var(--sub)!important;box-shadow:none;border-radius:2rem;padding:.4rem .85rem;font-weight:700;font-size:.82rem;min-height:36px;cursor:pointer}
 #acctBox>label{display:none}#stFind{width:100%;margin:.2rem 0 .4rem}
 .stsec{margin:1.1rem 0 0;scroll-margin-top:3.6rem}.stsec>h4{font-size:1.02rem;margin:0 0 .5rem;display:flex;gap:.5rem;align-items:center}
 .stbody{background:var(--ex);border:1px solid var(--border);border-radius:1rem;padding:.9rem}.stbody>.fg{margin:0 0 1rem}.stbody>.fg:last-child{margin-bottom:0}
@@ -1224,6 +1224,198 @@ body.nf-nofab #fab{display:none!important}
 .nf-smart{width:100%;margin-top:8px}
 .nf-rem .nf-chk{margin:8px 0}
 .nf-rem input[type=time]{min-width:0;width:100%;padding:8px 4px;font-size:.8rem}
+/* ================= Tracky design system v3 (phase 1) =================
+   tokens -> base -> header/nav -> buttons/inputs/cards -> Home -> Train. Later rules win, so this block stays LAST. */
+:root{--sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:20px;--sp-6:24px;--sp-8:32px;--r-s:12px;--r-m:14px;--r-c:18px;--r-l:22px;--ds-ease:cubic-bezier(.2,.8,.2,1);--accent:#7C5CE6;--ok:#12A37B;--mute:#6b7a92}
+body.dark{--bg:#080D1B;--card:#111B30;--ex:#16223B;--tool:#16223B;--inbg:#0D1426;--inb:#2a3b5e;--border:#243453;--text:#F1F5FF;--sub:#9AA8C7;--mute:#65738F;--accent:#A78BFA;--ok:#20D6A0;--danger:#F87171;--ink:#F1F5FF;--accent-2:#8B5CF6}
+body{font-family:'Inter','Cairo','Tajawal',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;line-height:1.5}
+input,.badge,.hcard b,.hcard small,.homecard,.srow,.wkc,#activeWorkoutClock,.ring span,.exh{font-variant-numeric:tabular-nums}
+html,body{overflow-x:clip}svg.ic{display:block;flex:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{-webkit-tap-highlight-color:transparent}
+button:not(:disabled):active{transform:scale(.97)}
+button:disabled{opacity:.45}
+
+/* header */
+.appbar{position:sticky;top:0;height:calc(52px + env(safe-area-inset-top));padding:env(safe-area-inset-top) 16px 0;margin:0 -.8rem .4rem;font-size:1.1rem;font-weight:700;letter-spacing:-.01em;border-bottom:1px solid color-mix(in srgb,var(--border) 70%,transparent);background:color-mix(in srgb,var(--bg) 90%,transparent)}
+.appbar>span{display:flex;align-items:center;gap:var(--sp-2)}
+.appbar img{width:28px;height:28px;border-radius:8px}
+.appbar .gear{position:relative;width:40px;height:40px;min-width:40px;padding:0;border-radius:var(--r-s);display:grid;place-items:center;background:var(--card);border:1px solid var(--border);color:var(--sub);font-size:1rem;transition:transform .12s,background .2s,color .2s}
+.appbar .gear:hover{color:var(--text)}
+.appbar .gear svg{width:20px;height:20px}
+.appbar .gear{overflow:visible;line-height:0}.appbar .hbtn em{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--accent);color:#fff;font-style:normal;font-size:10px;font-weight:700;line-height:13px;text-align:center;border:2px solid var(--bg);box-sizing:border-box}
+
+/* bottom navigation */
+.tabs{background:color-mix(in srgb,var(--card) 96%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--border);padding:6px 6px calc(6px + env(safe-area-inset-bottom));box-shadow:none}
+.tabs>button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:54px;background:none;border:0;color:var(--mute);font-size:11px;font-weight:600;letter-spacing:.01em;transition:color .2s}
+.tabs>button i{width:46px;height:28px;border-radius:14px;display:grid;place-items:center;background:transparent;transition:background .25s var(--ds-ease),transform .25s var(--ds-ease);font-style:normal}
+.tabs>button i svg{width:22px;height:22px}
+.tabs>button.active{color:var(--accent)}
+.tabs>button.active i{background:color-mix(in srgb,var(--accent) 18%,transparent);transform:translateY(-1px)}
+body.dark .tabs>button.active i{background:color-mix(in srgb,var(--accent) 18%,transparent)}
+.app,.panel{padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+
+/* buttons */
+.startbtn,button.gold,.btn-primary{background:var(--ok);color:#04251b;border:0;border-radius:var(--r-m);min-height:50px;font-weight:800;font-size:1rem;letter-spacing:.005em;box-shadow:0 8px 20px -10px color-mix(in srgb,var(--ok) 70%,transparent)}
+button.sec{background:var(--ex);color:var(--text);border:1px solid var(--border);border-radius:var(--r-s);font-weight:600}
+button.tiny{min-height:38px;padding:0 var(--sp-4);font-size:.85rem}
+.addex{border:1.5px dashed color-mix(in srgb,var(--accent) 55%,var(--border));border-radius:var(--r-m);background:transparent;color:var(--accent);min-height:48px;font-weight:700}
+
+/* inputs */
+input[type=number],input[type=text],input[type=search],input[type=email],select.in,textarea.in,.in{min-height:46px;border-radius:var(--r-s);background:var(--inbg);border:1px solid var(--inb);color:var(--text);font-size:1rem;transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 24%,transparent)}
+
+/* cards */
+.card,.box,.hcard,.wkstrip,.qk{background:var(--card);border:1px solid var(--border);border-radius:var(--r-c);box-shadow:none!important}
+.card h2{font-size:1.2rem;font-weight:800;letter-spacing:-.01em}
+
+/* ---------- Home ---------- */
+.ghello{margin:var(--sp-2) 0 var(--sp-4)}
+.ghello b{font-size:1.55rem;font-weight:800;letter-spacing:-.02em}
+#homeBox>.homecard,.homecard{--text:#F1F5FF;--sub:#9AA8C7;color:var(--text);position:relative;overflow:hidden;padding:var(--sp-6);border-radius:var(--r-l);border:1px solid color-mix(in srgb,var(--accent) 38%,var(--border))!important;background:linear-gradient(155deg,var(--ex) 0%,var(--card) 62%)!important;margin:0 0 var(--sp-3)!important}
+body:not(.dark) #homeBox>.homecard{--text:#1a2639;--sub:#4a5c72}
+.homecard::before{content:"";position:absolute;right:-60px;top:-70px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--accent) 30%,transparent),transparent 68%);pointer-events:none}
+.homecard>*{position:relative}
+.homecard>small{display:inline-block;font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.homecard h2{font-size:2rem;font-weight:800;letter-spacing:-.02em;margin:var(--sp-1) 0 var(--sp-1);color:var(--text)}
+.homecard p{color:var(--sub);font-size:.92rem;margin-bottom:var(--sp-4)}
+.homecard .startbtn{width:100%}
+.homecard .sec{width:100%}
+.wkstrip{padding:var(--sp-4);margin:0 0 var(--sp-3)!important}
+.wkrow{display:flex;justify-content:space-between}
+.wkc small{font-size:.7rem;font-weight:700;color:var(--mute);text-transform:uppercase}
+.wkc span{width:34px;height:34px;border:1.5px solid var(--inb);color:#04251b;font-size:.9rem;transition:background .3s var(--ds-ease),border-color .3s}
+.wkc.on span{background:var(--ok);border-color:var(--ok)}
+.wkc.today small{color:var(--accent)}
+.wkc.fut{opacity:.4}
+.wkstrip>small{display:block;margin-top:var(--sp-3);font-size:.78rem;color:var(--sub);font-weight:600}
+.quick{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--sp-2);margin:0 0 var(--sp-3)!important}.ckbanner{margin:0 0 var(--sp-3)!important}
+.qk{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:76px;padding:0;color:var(--text);transition:transform .12s,border-color .2s,background .2s}
+.qk i{font-style:normal;display:grid;place-items:center;color:var(--accent)}
+.qk i svg{width:24px;height:24px}
+.qk span{font-size:.72rem;font-weight:600;color:var(--sub)}
+.qk:active{background:var(--ex)}
+.hgrid{gap:var(--sp-3);margin-bottom:var(--sp-3)}
+.hcard{padding:var(--sp-4)}
+.ckbanner{border-radius:var(--r-c);border:1px solid color-mix(in srgb,var(--accent) 45%,var(--border));background:var(--card)}
+
+/* ---------- Train ---------- */
+.activeWorkoutBar{border-radius:var(--r-c);border:1px solid var(--border);background:var(--card);border-left:3px solid var(--accent);padding:var(--sp-3) var(--sp-4)}
+#activeWorkoutClock{font-size:2rem;font-weight:800;letter-spacing:-.02em}
+.timerActions{display:flex;gap:var(--sp-2)}
+.dn-chip{background:var(--card)!important;border:1px solid var(--border)!important;border-radius:var(--r-s)!important;min-height:40px;font-weight:700;color:var(--sub)!important}
+.dn-chip.on,.dn-chip.active,.dn-chip[aria-selected=true]{background:var(--accent)!important;color:#fff!important;border-color:transparent!important}
+.ttools{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--sp-2);margin:var(--sp-3) 0}
+.ttools button,#trainTools button{display:flex;flex-direction:column;align-items:center;gap:4px;min-height:58px;padding:var(--sp-2) 0;border-radius:var(--r-m);background:var(--card)!important;border:1px solid var(--border)!important;color:var(--sub)!important;font-size:.74rem;font-weight:600}
+.ttools button svg{width:20px;height:20px;color:var(--accent)}
+.ex{background:var(--ex);border:1px solid var(--border);border-radius:var(--r-c);padding:var(--sp-4)}
+.exh{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);margin-bottom:var(--sp-3)}
+.exn{font-size:1.06rem;font-weight:700;letter-spacing:-.01em}
+.badge{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent);border:0;border-radius:var(--r-s);font-weight:700;font-size:.78rem;padding:4px 10px}
+.srow{display:grid;grid-template-columns:28px 1fr 1fr 48px;gap:var(--sp-2);align-items:center;margin-bottom:var(--sp-2)}
+.srow>small{text-align:center;color:var(--mute);font-weight:700;font-size:.78rem}
+.srow input[type=number],.srow input[type=text]{width:100%;min-width:0;height:48px;text-align:center;font-size:1.1rem;font-weight:700}
+.srow input[type=checkbox]{-webkit-appearance:none;appearance:none;width:44px;height:44px;margin:0 auto;border-radius:50%;border:2px solid var(--inb);background:transparent;cursor:pointer;display:grid;place-items:center;transition:background .2s var(--ds-ease),border-color .2s,transform .2s var(--ds-ease)}
+.srow input[type=checkbox]:checked{background:var(--ok);border-color:var(--ok);transform:scale(1.04)}
+.srow input[type=checkbox]:checked::after{content:"";width:12px;height:7px;border-left:3px solid #04251b;border-bottom:3px solid #04251b;transform:rotate(-45deg) translate(1px,-1px)}
+.srow.done input[type=number],.srow.done input[type=text]{border-color:color-mix(in srgb,var(--ok) 50%,var(--inb));background:color-mix(in srgb,var(--ok) 9%,var(--inbg))}
+.srow.done>small{color:var(--ok)}
+.moodrow button,.qn .qchip{border-radius:20px;background:var(--card);border:1px solid var(--border);color:var(--sub);font-weight:600;font-size:.8rem}
+@media (prefers-reduced-motion:reduce){*{transition-duration:.01ms!important}button:not(:disabled):active{transform:none}}
+/* ---------- design system v3 · phase 2: Food, Progress, Coach, Hero, modals ---------- */
+/* shared: sub-navigation chips, segmented tabs, section titles, tiles, chips, empty states */
+.subnav button,.seg button{min-height:40px;border-radius:var(--r-s);font-weight:700;font-size:.86rem;transition:background .2s,color .2s,border-color .2s}
+.subnav button{background:var(--card)!important;border:1px solid var(--border)!important;color:var(--sub)!important;padding:0 var(--sp-4)}
+.subnav button.on{background:var(--accent)!important;border-color:transparent!important;color:#fff!important}
+.seg{background:var(--card);border:1px solid var(--border);border-radius:var(--r-m);padding:4px}
+.seg button{color:var(--sub);background:transparent;border:0}
+.seg button.on{background:var(--accent);color:#fff}
+.box h3,.card h3{font-size:1.02rem;font-weight:800;letter-spacing:-.01em;color:var(--text);margin-bottom:var(--sp-3)}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-2)}
+.tile{background:var(--ex);border:1px solid var(--border);border-radius:var(--r-m);padding:var(--sp-3) var(--sp-2);text-align:center}
+.tile b{font-size:1.25rem;font-weight:800;letter-spacing:-.02em}
+.tile small{display:block;margin-top:2px;font-size:.68rem;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;line-height:1.3}
+.sug{min-height:36px;padding:0 var(--sp-3);border-radius:20px;background:var(--ex);border:1px solid var(--border);color:var(--sub);font-weight:600;font-size:.82rem}
+.sug.sel{background:var(--accent);border-color:transparent;color:#fff;box-shadow:none}
+.empty{color:var(--sub);text-align:center;padding:var(--sp-6) var(--sp-4);border:1px dashed var(--border);border-radius:var(--r-c);font-size:.9rem}
+.empty>i{display:block;font-style:normal;font-size:2rem;margin-bottom:var(--sp-2);opacity:.9}
+.insight{border-radius:var(--r-s);background:var(--ex);border-left:3px solid var(--accent);color:var(--text)}
+.skel{position:relative;overflow:hidden;background:var(--ex);border-radius:var(--r-s);min-height:16px}
+.skel::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--text) 8%,transparent),transparent);animation:dsShim 1.3s infinite}
+@keyframes dsShim{to{transform:translateX(100%)}}
+
+/* ---------- Food ---------- */
+.nf-date b{font-size:1.1rem;font-weight:800}
+.nf-date>button{width:44px;height:44px;border-radius:var(--r-m);background:var(--card);border:1px solid var(--border);color:var(--text)}
+.nf-week{display:flex;justify-content:space-between;gap:var(--sp-1)}
+.nf-week button{display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:0;color:var(--mute);font-weight:700;flex:1;min-height:56px}
+.nf-week button small{font-size:.68rem;text-transform:uppercase}
+.nf-week button i{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--inb);font-style:normal;background:transparent;color:var(--text);transition:background .2s,border-color .2s}
+.nf-week button i b{font-size:.85rem}
+.nf-week button.on i{background:var(--accent);border-color:var(--accent);color:#fff}
+.nf-week button.on small{color:var(--accent)}
+.nf-setup{border-radius:var(--r-c);border:1px dashed color-mix(in srgb,var(--accent) 55%,var(--border));background:var(--card)}
+.nf-setup button{background:var(--accent);color:#fff;border:0;border-radius:var(--r-s);min-height:42px;font-weight:700}
+.nf-sum{padding:var(--sp-5)}
+.nf-ring .bg{stroke:var(--ex);stroke-width:11}
+.nf-ring .fg{stroke:var(--accent);stroke-width:11;stroke-linecap:round}
+.nf-ring .big{font-size:1.9rem;font-weight:800;fill:var(--text);letter-spacing:-.02em}
+.nf-ring .sm{font-size:.7rem;fill:var(--sub);font-weight:600}
+.nf-eat b{font-size:1.35rem;font-weight:800;letter-spacing:-.02em}
+.nf-eat small{display:block;font-size:.72rem;color:var(--sub);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.nf-mb{display:grid;grid-template-columns:62px 1fr auto;align-items:center;gap:var(--sp-3);margin-top:var(--sp-2)}
+.nf-mb span{font-size:.8rem;color:var(--sub);font-weight:600}
+.nf-mb>div{height:8px;border-radius:6px;background:var(--ex);overflow:hidden}
+.nf-mb>div i{display:block;height:100%;border-radius:6px;background:var(--accent);transition:width .6s var(--ds-ease)}
+.nf-mb.p>div i{background:#60A5FA}.nf-mb.c>div i{background:#FBBF24}.nf-mb.f>div i{background:#F87171}
+.nf-mb b{font-size:.84rem;font-weight:700;min-width:76px;text-align:end}
+.nf-mb b small{font-weight:500;color:var(--mute)}
+.nf-big{display:flex;align-items:center;gap:var(--sp-3);min-height:52px;padding:0 var(--sp-4);border-radius:var(--r-m);background:var(--inbg);border:1px solid var(--inb);color:var(--sub);font-weight:500}
+.nf-big i{display:grid;place-items:center;font-style:normal;color:var(--accent)}
+.nf-ic{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--sp-2);margin-top:var(--sp-2)}
+.nf-ic button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:62px;padding:var(--sp-2) 0;border-radius:var(--r-m);background:var(--card);border:1px solid var(--border);color:var(--sub)}
+.nf-ic button i{display:grid;place-items:center;font-style:normal;color:var(--accent)}
+.nf-ic button small{font-size:.7rem;font-weight:600}
+.nf-fr{border-radius:var(--r-m);background:var(--card);border:1px solid var(--border);min-height:56px}
+.nf-fr b{font-weight:700}.nf-fr small{color:var(--sub)}
+
+/* ---------- Coach ---------- */
+.chat{border-radius:var(--r-l);border:1px solid var(--border);background:var(--card);overflow:hidden}
+.chat-h{background:var(--ex)!important;color:var(--text)!important;border-bottom:1px solid var(--border);padding:var(--sp-3) var(--sp-4);font-weight:800}
+.chat-h small{color:var(--accent);font-weight:600;margin-inline-start:6px}
+.chat-tools .icon{width:36px;height:36px;border-radius:var(--r-s);background:var(--card);border:1px solid var(--border)}
+.msg{max-width:88%;padding:var(--sp-3) var(--sp-4);border-radius:var(--r-c);line-height:1.6;font-size:.95rem}
+.msg.ai{background:var(--ex);border:1px solid var(--border);color:var(--text);border-end-start-radius:6px}
+.msg.user{background:var(--accent);color:#fff;border:0;border-end-end-radius:6px}
+.chat .chips{border-top:1px solid var(--border)}
+.chat .chips .sec{white-space:nowrap;border-radius:20px;background:var(--ex);font-size:.8rem}
+.chat-in{border-top:1px solid var(--border);padding:var(--sp-3);gap:var(--sp-2);align-items:flex-end}
+.chat-in textarea{border-radius:22px;background:var(--inbg);border:1px solid var(--inb);padding:12px var(--sp-4);min-height:46px}
+.chat-in .nf-mic{width:46px;height:46px;border-radius:50%;background:var(--ex);border:1px solid var(--border)}
+.chat-in button:last-child{width:46px;height:46px;border-radius:50%;background:var(--accent);color:#fff;border:0}
+
+/* ---------- Hero / progression ---------- */
+.hero{background:linear-gradient(155deg,var(--ex),var(--card))!important;border:1px solid color-mix(in srgb,var(--accent) 38%,var(--border));border-radius:var(--r-l);color:var(--text)!important}
+.hero .hs{background:var(--card)!important;border:1px solid var(--border);border-radius:var(--r-m)}
+.hero .hs b{margin-inline-end:6px;font-size:1.25rem;font-weight:800}
+.hero .hs small,.hero .hs span{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--sub)}
+.xpbar{height:8px;border-radius:6px;background:var(--ex)!important;overflow:hidden}
+.xpbar i,.xpbar>div{background:linear-gradient(90deg,var(--accent-2,#8B5CF6),var(--accent))!important;border-radius:6px}
+.emotebar button{border-radius:var(--r-m);background:var(--ex);border:1px solid var(--border)}
+.emotebar button.lock{opacity:.6}
+
+/* ---------- Modals & toasts ---------- */
+.overlay{background:rgba(4,8,20,.66);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:var(--r-l);box-shadow:0 28px 70px -24px rgba(0,0,0,.7);color:var(--text)}
+.modal h3{font-size:1.2rem;font-weight:800;letter-spacing:-.01em}
+.overlay.active .modal,.overlay.on .modal{animation:dsSheet .26s var(--ds-ease) both}
+@keyframes dsSheet{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+.modal .acts{display:flex;gap:var(--sp-2)}
+.modal .acts button{flex:1;min-height:48px;border-radius:var(--r-m);font-weight:700}
+.modal .acts .cancel{background:var(--ex);color:var(--text);border:1px solid var(--border)}
+.modal .acts .yes{background:var(--ok);color:#04251b;border:0}
+.toast{background:var(--ex)!important;color:var(--text)!important;border:1px solid var(--border);border-radius:var(--r-m);box-shadow:0 14px 34px -14px rgba(0,0,0,.6);font-weight:600}
+@media (prefers-reduced-motion:reduce){.overlay.active .modal,.overlay.on .modal,.skel::after{animation:none}}
 </style>
 </head>
 <body>
@@ -1527,6 +1719,6 @@ body.nf-nofab #fab{display:none!important}
 <script>try{var __r=JSON.parse(localStorage.getItem('trackyResume')||'null');if(__r&&Date.now()-__r.t<43200000)document.documentElement.classList.add('resume')}catch(e){}</script><div id="splash" aria-label="Tracky is loading"><div class="sp-glow"></div><div class="sp-logo"><i class="sp-ring"></i><i class="sp-ring r2"></i><img src="icons/icon-512.png" alt="Tracky logo"></div><div class="sp-word" aria-hidden="true"><i>T</i><i>R</i><i>A</i><i>C</i><i>K</i><i>Y</i></div><div class="sp-tag">Build · Track · Coach</div><div class="sp-bar"><i></i></div></div>
 <div class="toast" id="toast"></div>
 
-<script src="app.js?v=3e2741d3" defer></script>
+<script src="app.js?v=d30f5832" defer></script>
 </body>
 </html>

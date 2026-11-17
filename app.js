@@ -8353,6 +8353,44 @@ function stOrganize(){
   modal.scrollTop = 0;
 }
 { const _os3 = openSettings; openSettings = function(){ _os3.apply(this, arguments); try { stOrganize(); } catch(e){ console.error(e); } }; }
+
+/* ---------- design system v3: inline SVG icon set (Lucide-style, 24px grid, 2px round strokes) ---------- */
+const DSI = {
+  home:'<path d="M3 11 12 3l9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
+  dumbbell:'<path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/>',
+  utensils:'<path d="M7 3v8M4 3v5a3 3 0 0 0 6 0V3M7 11v10"/><path d="M17 21V3c-2.5 1.5-4 4.5-4 8h4"/>',
+  chart:'<path d="M5 21V11M12 21V4M19 21v-8"/>',
+  bot:'<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 8V5M9 13v1.5M15 13v1.5M2 13v3M22 13v3"/><circle cx="12" cy="3.8" r="1"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>',
+  back:'<path d="m15 18-6-6 6-6"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  sliders:'<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
+  bag:'<path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 7a3 3 0 0 1 6 0"/>',
+  plan:'<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4h6M9 11h6M9 15h4"/>',
+  activity:'<path d="M3 12h4l3-8 4 16 3-8h4"/>',
+  gamepad:'<rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 10v5M4.5 12.5h5M16 11h.01M18.5 14h.01"/>',
+  grid:'<rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/>',
+  mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+  timer:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/>',
+  camera:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
+  aid:'<rect x="3" y="3" width="18" height="18" rx="5"/><path d="M12 8v8M8 12h8"/>',
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  barcode:'<path d="M4 5v14M8 5v14M12 5v14M16 5v14M20 5v14"/>',
+  zap:'<path d="M13 2 4 14h7l-1 8 9-12h-7Z"/>'
+};
+const dsv = (n, s) => '<svg class="ic" viewBox="0 0 24 24" width="' + (s || 22) + '" height="' + (s || 22) + '" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + DSI[n] + '</svg>';
+function dsIcons(){
+  const set = (el, n, s) => { if (el && el.dataset.ic !== n){ el.dataset.ic = n; el.innerHTML = dsv(n, s); } };
+  const T = {home:'home', train:'dumbbell', food:'utensils', charts:'chart', aicoach:'bot', progress:'user'};
+  document.querySelectorAll('.tabs>button').forEach(b => { const m = T[b.dataset.tab]; if (m) set(b.querySelector('i'), m, 22); });
+  set($('backBtn'), 'back', 22); set($('findBtn'), 'search', 20); set($('moreBtn'), 'sliders', 20);
+  const sb = $('storeBtn'); if (sb && !sb.querySelector('svg')){ [...sb.childNodes].forEach(n => { if (n.nodeType === 3) n.remove(); }); sb.insertAdjacentHTML('afterbegin', dsv('bag', 20)); }
+  const Q = ['plan', 'activity', 'chart', 'gamepad', 'grid']; document.querySelectorAll('.quick .qk').forEach((q, i) => set(q.querySelector('i'), Q[i] || 'grid', 24));
+  const FQ = {'q-mic':'mic','q-text':'edit','q-photo':'camera','q-scan':'barcode','q-quick':'zap','q-search':'search'};
+  document.querySelectorAll('.nf-add button[data-a]').forEach(b => { const m = FQ[b.dataset.a], i = b.querySelector('i'); if (m && i) set(i, m, b.classList.contains('nf-big') ? 20 : 22); });
+  const TT = ['mic', 'timer', 'camera', 'aid']; document.querySelectorAll('#trainTools button').forEach((b, i) => { if (!b.dataset.ic && TT[i]){ b.dataset.ic = TT[i]; [...b.childNodes].forEach(n => { if (n.nodeType === 3) n.remove(); }); b.insertAdjacentHTML('afterbegin', dsv(TT[i], 20)); } });
+}
+{ let raf = 0; const run = () => { raf = 0; try { dsIcons(); } catch(e){} }; new MutationObserver(() => { if (!raf) raf = requestAnimationFrame(run); }).observe(document.body, {childList:true, subtree:true}); run(); }
   const tdDue = () => {
     if (settings.tdAsked || !settings.profileDone || !state.days.length) return false;
     const r = settings.rem; if (r && Array.isArray(r.days) && r.days.length && (r.on || Object.keys(r.map || {}).length)){ settings.tdAsked = true; save(); return false; }
