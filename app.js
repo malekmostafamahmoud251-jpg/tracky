@@ -2065,6 +2065,13 @@ Search settings…|دوّر في الإعدادات…|Chercher dans les réglag
 Advanced: own Gemini key (optional)|متقدم: مفتاح Gemini الخاص بيك (اختياري)|Avancé : ta propre clé Gemini (optionnel)
 New version ready|في نسخة جديدة جاهزة|Nouvelle version prête
 Reload|تحديث|Recharger
+Nutrition today|التغذية النهاردة|Nutrition du jour
+kcal left|سعرة متبقية|kcal restantes
+kcal over|سعرة زيادة|kcal en trop
+Protein|بروتين|Protéines
+Carbs|كارب|Glucides
+Fat|دهون|Lipides
+1 year|سنة|1 an
 `.split('\n').forEach(l => { const p = l.split('|'); if (p.length === 3){ I18N.ar[p[0]] = p[1]; I18N.fr[p[0]] = p[2]; } });
 const PATS = [
  [/^(\d+) sets × (.+) reps · (.+)kg$/, "$1 مجموعات × $2 تكرار · $3 كجم", "$1 séries × $2 reps · $3 kg"],
@@ -4585,10 +4592,11 @@ async function askViaServer(system, hist, userParts, onChunk, maxTokens){
     try { r = await fetch(APP_CONFIG.coachUrl, {method:'POST', headers:Object.assign({'Content-Type':'application/json'}, authHdr()), body}); }
     catch(e){ lastErr = new Error('Could not reach the coach. Check your connection.'); continue; }
     if (r.status === 401) throw new Error(tr('Sign in (Settings, Account) to use the coach.'));
-    if (r.status === 429) throw new Error('Daily coach limit reached. Try again tomorrow.');
+    if (r.status === 429) throw new Error(LANG === 'ar' ? 'خلصت رسائل الذكاء الاصطناعي النهاردة. هترجع بكرة.' : 'Daily AI limit reached. It resets tomorrow.');
     if (r.status >= 500){ lastErr = new Error('Coach is busy (' + r.status + '). Retrying failed.'); continue; }
     if (!r.ok) throw new Error('Coach server error ' + r.status + ' ' + await apiErr(r));
     _geminiRoute = 'server';
+    try { const ql = r.headers.get('X-Quota-Left'); if (ql !== null){ window._quotaLeft = +ql; if (+ql === 10 || +ql === 3) showToast('ℹ️ ' + (LANG === 'ar' ? 'باقي لك ' + ql + ' رسائل ذكاء اصطناعي النهاردة' : ql + ' AI messages left today')); } } catch(_){}
     let out = '';
     try { out = await streamGeminiResponse(r, onChunk); } catch(e){ lastErr = e; continue; }
     if (out && out.trim()) return out;
@@ -5282,7 +5290,7 @@ function renderPRs(){
 function renderWeekly(){
   const c = $('weeklyVolumeChart'), w = {};
   sessions.forEach(s => { const k = weekStart(localKey(s.date)); w[k] = (w[k] || 0) + (s.volume || 0); });
-  const arr = Object.entries(w).sort((a,b) => a[0].localeCompare(b[0])).slice(CH_RANGE === '30' ? -5 : CH_RANGE === '90' ? -13 : -26), cur = weekStart(todayKey());
+  const arr = Object.entries(w).sort((a,b) => a[0].localeCompare(b[0])).slice(CH_RANGE === '7' ? -2 : CH_RANGE === '30' ? -5 : CH_RANGE === '90' ? -13 : CH_RANGE === '365' ? -52 : -26), cur = weekStart(todayKey());
   if (!arr.length){ c.innerHTML = '<div class="empty">No data yet.</div>'; $('weeklyInsight').textContent = ''; return; }
   const max = Math.max(...arr.map(a => a[1]), 1);
   c.innerHTML = arr.map(([k,v]) => { const d = new Date(k); return `<div class="bw"><small>${toDisp(v) >= 1000 ? (toDisp(v) / 1000).toFixed(1) + 'k' : Math.round(toDisp(v))}</small><div class="bar1" style="height:${v / max * 100}%;background:${k === cur ? 'var(--accent)' : 'var(--ok)'}"></div><small>${d.getUTCMonth() + 1}/${d.getUTCDate()}</small></div>`; }).join('');
@@ -7574,18 +7582,18 @@ const nzAr = w => String(w).toLowerCase().replace(/[ً-ٰٟـ]/g, '').replace(/[
 const NUMW = (() => { const m = Object.create(null), add = (words, v) => words.split(/\s+/).forEach(w => { if (w) m[nzAr(w)] = v; });
   add('صفر zero zéro', 0); add('واحد واحده one un une', 1); add('اتنين اثنين اثنان اتنان two deux', 2); add('تلاته ثلاثه تلات ثلاث three trois', 3); add('اربعه أربعه اربع اربعة four quatre', 4); add('خمسه خمسة خمس five cinq', 5); add('سته ستة ست six', 6); add('سبعه سبعة سبع seven sept', 7); add('تمانيه ثمانيه تمنيه تمانية ثمانية تمن ثمان eight huit', 8); add('تسعه تسعة تسع nine neuf', 9); add('عشره عشرة عشر ten dix', 10);
   add('احداشر حداشر احد_عشر eleven onze', 11); add('اتناشر اثناعشر اتنا_عشر twelve douze', 12); add('تلتاشر ثلاثه_عشر thirteen treize', 13); add('اربعتاشر اربعه_عشر fourteen quatorze', 14); add('خمستاشر خمسه_عشر fifteen quinze', 15); add('ستاشر سته_عشر sixteen seize', 16); add('سبعتاشر سبعه_عشر seventeen', 17); add('تمنتاشر ثمانتاشر ثمانيه_عشر eighteen', 18); add('تسعتاشر تسعه_عشر nineteen', 19);
-  add('عشرين عشرون twenty vingt', 20); add('تلاتين ثلاثين thirty trente', 30); add('اربعين forty quarante', 40); add('خمسين fifty cinquante', 50); add('ستين sixty soixante', 60); add('سبعين seventy', 70); add('تمانين ثمانين eighty', 80); add('تسعين ninety', 90); add('ميتين مئتين مايتين', 200); return m; })();
+  add('عشرين عشرون twenty vingt', 20); add('تلتميه ثلثميه ثلاثمايه ثلاثمئه three_hundred', 300); add('ربعميه اربعمايه اربعمئه', 400); add('خمسميه خمسمايه خمسمئه', 500); add('تلاتين ثلاثين thirty trente', 30); add('اربعين forty quarante', 40); add('خمسين fifty cinquante', 50); add('ستين sixty soixante', 60); add('سبعين seventy', 70); add('تمانين ثمانين eighty', 80); add('تسعين ninety', 90); add('ميتين مئتين مايتين', 200); return m; })();
 const HUNDW = new Set(['ميه', 'مايه', 'مئه', 'hundred', 'cent', 'cents'].map(nzAr));
 const W_UNIT = /^(كيلو|كيلوجرام|كيلوغرام|كجم|كغ|كغم|كيلوات|kg|kgs|kilo|kilos|kilogram|kilograms|kilogrammes|lb|lbs|pound|pounds|باوند|livres)$/;
 const R_UNIT = /^(تكرار|تكرارات|تكراره|مره|مرات|مرا|عده|عدات|ريب|ريبس|rep|reps|repetition|repetitions|répétitions|répétition|times|fois)$/;
 const S_UNIT = /^(مجموعه|مجموعات|سيت|سيتات|set|sets|serie|series|séries|série)$/;
 const FILL = /^(سجل|سجلي|ضيف|اضف|log|add|record|enregistre|enregistrer|ajoute|و|and|et|of|de|من|على|ب|at|with|avec|à|a|the|le|la|un|في|by|x|×|بوزن|وزن|weight|poids)$/;
 const AL = [
-  [/بنش|بنج|bench|developpe couche|développé couché|chest press|ضغط صدر/, /bench press|chest press/, 10], [/مايل|مائل|انكلاين|انكلين|incline|incliné|incline/, /incline/, 8], [/ديكلاين|decline|décliné/, /decline/, 8],
-  [/سكوات|سكوت|سكواتس|squat/, /squat/, 10], [/ديد ?ليفت|dead ?lift|soulevé|souleve/, /deadlift/, 10], [/رومانيان|رومانيه|romanian|roumain|rdl/, /romanian|rdl/, 8],
+  [/بنش|بنج|بينش|بنشه|بانش|bench|ban?ch|developpe couche|développé couché|chest press|ضغط صدر/, /bench press|chest press/, 10], [/مايل|مائل|انكلاين|انكلين|incline|incliné|incline/, /incline/, 8], [/ديكلاين|decline|décliné/, /decline/, 8],
+  [/سكوات|سكوت|سكواتس|اسكوات|اسكوت|سكوا|squat|squad|skwat/, /squat/, 10], [/ديد ?ليفت|دد ?ليفت|ديدلفت|dead ?lift|dead ?left|soulevé|souleve/, /deadlift/, 10], [/رومانيان|رومانيه|romanian|roumain|rdl/, /romanian|rdl/, 8],
   [/اوفر ?هيد|ضغط كتف|ضغط اكتاف|ضغط الكتف|shoulder press|overhead|militaire|military/, /overhead press|shoulder press|military/, 10], [/عقله|pull ?up|traction|chin ?up/, /pull-?up|chin-?up/, 10],
   [/لات|lat ?pull|pulldown|pull ?down|سحب علوي|tirage vertical|tirage poitrine/, /pulldown|pull-?down/, 10], [/روينج|(^| )رو( |$)|row|rowing|tirage horizontal|سحب افقي/, /row/, 10],
-  [/كيرل|curl|بايسبس|باي سبس|biceps|bicep/, /curl/, 9], [/ترايسبس|تراي سبس|triceps|tricep|بوش داون|push ?down/, /tricep|pushdown|skull/, 10],
+  [/كيرل|كارل|كيرلز|curl|girl curl|بايسبس|باي سبس|biceps|bicep/, /curl/, 9], [/ترايسبس|تراي سبس|triceps|tricep|بوش داون|push ?down/, /tricep|pushdown|skull/, 10],
   [/ليج بريس|leg press|presse a cuisses|presse à cuisses/, /leg press/, 10], [/لانج|لانجز|lunge|fente/, /lunge|split squat/, 10], [/هيب ثراست|hip thrust|thrust/, /hip thrust/, 10],
   [/فلاي|fly|flye|رفرفه|ecarte|écarté|pec deck/, /fly|pec deck/, 9], [/رفرفه جانبيه|جانبي|lateral raise|laterale|latérale|élévation latérale/, /lateral raise/, 10], [/خلفي|rear delt|reverse fly|oiseau/, /rear|reverse fly/, 7],
   [/بلانك|plank|gainage/, /plank/, 10], [/ضغط|push ?up|pompe/, /push-?up/, 5], [/ليج كيرل|leg curl|ischio|hamstring/, /leg curl/, 10], [/ليج اكستنشن|leg extension|extension jambe/, /leg extension/, 10],
@@ -7608,7 +7616,9 @@ function voiceTokens(raw){
       const xv = val(x); if (HUNDW.has(x)){ pend = (pend && pend < 10 ? pend : 1) * 100; total += pend; pend = 0; }
       else if (xv !== null){ if (/^\d/.test(x) && j > i){ break; } if (/^\d/.test(x)){ total += xv; } else if (xv < 10 && pend === 0) pend = xv; else { total += pend + xv; pend = 0; } }
       else break; }
-    total += pend; out.push({n:total}); i = Math.max(j, i + 1);
+    total += pend; const PT = /^(point|dot|virgule|فاصله|فاصلة|نقطه|نقطة)$/;
+    if (j < w.length - 1 && PT.test(w[j]) && (val(w[j + 1]) !== null && val(w[j + 1]) < 10 || /^\d$/.test(w[j + 1]))){ total += val(w[j + 1]) / 10; j += 2; }
+    out.push({n:total}); i = Math.max(j, i + 1);
   }
   return out;
 }
@@ -7625,11 +7635,15 @@ function voiceParse(raw){
   res.text = words.filter(w => !FILL.test(w) && !W_UNIT.test(w) && !R_UNIT.test(w) && !S_UNIT.test(w)).join(' ');
   return res;
 }
+function vLev(a, b){ if (Math.abs(a.length - b.length) > 2) return 9; const d = []; for (let i = 0; i <= a.length; i++){ d[i] = [i]; } for (let j = 1; j <= b.length; j++) d[0][j] = j; for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); return d[a.length][b.length]; }
 function voiceScore(spoken, name){
   const sp = nzAr(spoken), nm = name.toLowerCase(); let sc = 0;
   AL.forEach(([re, key, w]) => { if (re.test(sp)){ const hit = key.test(nm); const mod = AL_MOD.has(key.source.replace(/[^a-z]/g, '')); if (hit) sc += w; else if (mod) sc -= 3; } });
   if (/incline|decline/.test(nm) && !/مايل|مائل|انكل|incline|decline|ديكلاين/.test(sp)) sc -= 6;
   nm.split(/[^a-z]+/).filter(x => x.length >= 4).forEach(x => { if (sp.includes(x)) sc += 3; });
+  const spT = sp.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  nzAr(name).split(/[^\u0600-\u06FF]+/).filter(x => x.length >= 3).forEach(x => { if (spT.some(t => t === x || (t.length > 3 && x.length > 3 && (t.includes(x) || x.includes(t))))) sc += 4; });
+  nm.split(/[^a-z]+/).filter(x => x.length >= 5).forEach(x => { if (!sp.includes(x) && spT.some(t => /^[a-z]+$/.test(t) && t.length >= 5 && vLev(t, x) <= (x.length >= 8 ? 2 : 1))) sc += 2.5; });
   return sc;
 }
 function voiceFind(text){
@@ -7695,17 +7709,17 @@ function voiceStart(){
   const eng = settings.voiceEngine || 'auto';
   if (eng === 'cloud' || (!SRC && eng !== 'device')) return voiceCloudStart();
   if (!SRC) return vSay('⚠️ ' + tr('Voice recognition is not available in this browser. Type the phrase below, or use the microphone key on your phone keyboard.'), 'bad');
-  let rec; try { rec = new SRC(); rec.lang = voiceLang(); rec.interimResults = true; rec.maxAlternatives = 3; rec.continuous = false; } catch(e){ return eng === 'auto' ? voiceCloudStart() : vSay('⚠️ ' + String((e && e.message) || e), 'bad'); }
+  let rec; try { rec = new SRC(); rec.lang = voiceLang(); rec.interimResults = true; rec.maxAlternatives = 5; rec.continuous = false; } catch(e){ return eng === 'auto' ? voiceCloudStart() : vSay('⚠️ ' + String((e && e.message) || e), 'bad'); }
   VREC = rec;
   const fall = why => { if (rec._fell) return; rec._fell = true; rec._stop = true; clearTimeout(rec._wd); try { rec.abort(); } catch(e){} if (VREC === rec) VREC = null; vMicOn(false);
     if (eng === 'auto' && vCanCloud()){ vSay('☁️ ' + tr('Switching to the cloud microphone…')); voiceCloudStart(); } else vSay('⚠️ ' + why, 'bad'); };
   rec.onstart = () => { rec._started = true; clearTimeout(rec._wd); vMicOn(true); vSay('🎙️ ' + tr('Listening…')); };
-  rec.onresult = e => { let fin = null, interim = ''; for (let i = e.resultIndex; i < e.results.length; i++){ const r = e.results[i]; if (r.isFinal) fin = [...r].map(a => a.transcript); else interim += r[0].transcript; } vSay(fin ? fin[0] : interim); if (fin){ rec._got = true; voiceHandle(fin); } };
+  rec.onresult = e => { let fin = null, interim = ''; for (let i = e.resultIndex; i < e.results.length; i++){ const r = e.results[i]; if (r.isFinal) fin = [...r].map(a => a.transcript); else interim += r[0].transcript; } vSay(fin ? fin[0] : interim); clearTimeout(rec._sil); if (fin){ rec._got = true; voiceHandle(fin); } else if (interim) rec._sil = setTimeout(() => { try { rec.stop(); } catch(_){} }, 1700); };
   rec.onerror = e => { VERR++; const er = e && e.error;
     if (er === 'not-allowed' || er === 'service-not-allowed' || er === 'network' || er === 'language-not-supported' || er === 'audio-capture'){ if (er === 'language-not-supported') fall(tr('This language is not supported by your speech engine')); else if (er === 'not-allowed' || er === 'service-not-allowed') fall(tr('Microphone permission is blocked')); else fall(String(er)); }
     else if (er === 'no-speech') vSay(tr('Did not hear anything. Tap the mic and try again.'));
     else if (er !== 'aborted') vSay('⚠️ ' + er, 'bad'); };
-  rec.onend = () => { clearTimeout(rec._wd); if (VREC === rec){ VREC = null; vMicOn(false); } if (rec._fell || rec._stop) return;
+  rec.onend = () => { clearTimeout(rec._wd); clearTimeout(rec._sil); if (VREC === rec){ VREC = null; vMicOn(false); } if (rec._fell || rec._stop) return;
     if (settings.voiceKeep && !VT && VERR < 2 && vOpen()) setTimeout(() => { if (vOpen() && !VON && !VREC && !VCLOUD && !VBUSY) voiceStart(); }, 400); };
   rec._wd = setTimeout(() => { if (!rec._started && !rec._stop) fall(tr('The microphone did not start.')); }, 3500);
   try { rec.start(); } catch(e){ fall(String((e && e.message) || e)); }
@@ -7728,8 +7742,9 @@ async function voiceCloudStart(){
   const C = VCLOUD = {stream, ctx, src, proc, mute, chunks:[], speech:false, quiet:0, t0:performance.now(), done:false, rate:ctx.sampleRate};
   proc.onaudioprocess = e => { if (C.done) return; const d = e.inputBuffer.getChannelData(0); C.chunks.push(new Float32Array(d)); let s = 0; for (let i = 0; i < d.length; i++) s += d[i] * d[i];
     const rms = Math.sqrt(s / d.length), dt = d.length / C.rate, el = performance.now() - C.t0;
-    if (rms > .015){ C.speech = true; C.quiet = 0; } else if (C.speech) C.quiet += dt;
-    if ((C.speech && C.quiet > 1.3) || el > 10000 || (!C.speech && el > 6500)) setTimeout(() => voiceCloudStop(true), 0); };
+    if (el < 500){ C.floor = Math.max(C.floor || 0, rms); } const th = Math.max(.015, (C.floor || 0) * 2.6);
+    if (rms > th){ C.speech = true; C.quiet = 0; } else if (C.speech) C.quiet += dt;
+    if ((C.speech && C.quiet > 1.5) || el > 14000 || (!C.speech && el > 7000)) setTimeout(() => voiceCloudStop(true), 0); };
   src.connect(proc); proc.connect(mute); mute.connect(ctx.destination);
   VBUSY = false; vMicOn(true); vSay('🎙️ ' + tr('Listening… tap the mic when you finish'));
 }
@@ -8376,13 +8391,17 @@ const DSI = {
   aid:'<rect x="3" y="3" width="18" height="18" rx="5"/><path d="M12 8v8M8 12h8"/>',
   edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   barcode:'<path d="M4 5v14M8 5v14M12 5v14M16 5v14M20 5v14"/>',
-  zap:'<path d="M13 2 4 14h7l-1 8 9-12h-7Z"/>'
+  zap:'<path d="M13 2 4 14h7l-1 8 9-12h-7Z"/>',
+  trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  type:'<path d="M4 7V5h16v2M12 5v14M9 19h6"/>'
 };
 const dsv = (n, s) => '<svg class="ic" viewBox="0 0 24 24" width="' + (s || 22) + '" height="' + (s || 22) + '" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + DSI[n] + '</svg>';
 function dsIcons(){
   const set = (el, n, s) => { if (el && el.dataset.ic !== n){ el.dataset.ic = n; el.innerHTML = dsv(n, s); } };
   const T = {home:'home', train:'dumbbell', food:'utensils', charts:'chart', aicoach:'bot', progress:'user'};
   document.querySelectorAll('.tabs>button').forEach(b => { const m = T[b.dataset.tab]; if (m) set(b.querySelector('i'), m, 22); });
+  [['coachAbbr', 'type'], ['coachClear', 'trash']].forEach(([i, n]) => { const b = $(i); if (b && b.dataset.ic !== n){ b.dataset.ic = n; b.innerHTML = dsv(n, 18); } });
+  const ch = document.querySelector('.chat-h > span'); if (ch && !ch.dataset.ic){ ch.dataset.ic = 1; if (ch.firstChild && ch.firstChild.nodeType === 3) ch.firstChild.textContent = ch.firstChild.textContent.replace('🤖', '').trimStart(); ch.insertAdjacentHTML('afterbegin', dsv('bot', 20)); }
   set($('backBtn'), 'back', 22); set($('findBtn'), 'search', 20); set($('moreBtn'), 'sliders', 20);
   const sb = $('storeBtn'); if (sb && !sb.querySelector('svg')){ [...sb.childNodes].forEach(n => { if (n.nodeType === 3) n.remove(); }); sb.insertAdjacentHTML('afterbegin', dsv('bag', 20)); }
   const Q = ['plan', 'activity', 'chart', 'gamepad', 'grid']; document.querySelectorAll('.quick .qk').forEach((q, i) => set(q.querySelector('i'), Q[i] || 'grid', 24));
@@ -8391,6 +8410,7 @@ function dsIcons(){
   const TT = ['mic', 'timer', 'camera', 'aid']; document.querySelectorAll('#trainTools button').forEach((b, i) => { if (!b.dataset.ic && TT[i]){ b.dataset.ic = TT[i]; [...b.childNodes].forEach(n => { if (n.nodeType === 3) n.remove(); }); b.insertAdjacentHTML('afterbegin', dsv(TT[i], 20)); } });
 }
 { let raf = 0; const run = () => { raf = 0; try { dsIcons(); } catch(e){} }; new MutationObserver(() => { if (!raf) raf = requestAnimationFrame(run); }).observe(document.body, {childList:true, subtree:true}); run(); }
+
   const tdDue = () => {
     if (settings.tdAsked || !settings.profileDone || !state.days.length) return false;
     const r = settings.rem; if (r && Array.isArray(r.days) && r.days.length && (r.on || Object.keys(r.map || {}).length)){ settings.tdAsked = true; save(); return false; }
@@ -8561,6 +8581,16 @@ function dsIcons(){
       return say('❓ <span>Which one?</span> ' + plan.steps[0].amb.map((c, i) => `<button type="button" class="sec tiny" data-vc="${i}">${escapeHTML(c.ex.name)}</button>`).join(' '), true); }
     const lines = voiceCommit(plan.steps); say(lines.join('<br>') + ' <button type="button" id="vUndo" class="sec tiny">↩ ' + escapeHTML(tr('Undo')) + '</button>', true);
     if ($('vUndo')) $('vUndo').onclick = () => { const h = VHIST.shift(); if (h){ voiceUndo(h.b, h.undo); renderVHist(); } if ($('vRes')) $('vRes').innerHTML = ''; };
+  };
+  const _vh1 = voiceHandle;
+  voiceHandle = function(alts){
+    if (VT || alts._ai || !coachReady() || navigator.onLine === false) return _vh1(alts);
+    if (VCMD_UNDO.test(norm(alts[0])) || alts.some(a => { try { return voicePlan(a).ok; } catch(_){ return false; } })) return _vh1(alts);
+    const out = $('vRes'); if (out) out.innerHTML = '<div class="vres">⏳ ' + escapeHTML(tr('Understanding…')) + '</div>';
+    const names = [...document.querySelectorAll('#workoutGrid .ex')].map(it => { const d = state.days.find(x => x.id === it.dataset.d), e = d && d.exercises[+it.dataset.i]; return e && e.name; }).filter(Boolean);
+    const sys = 'You convert a noisy gym voice transcript (Egyptian Arabic, English or French, often mis-heard) into a clean command. Reply with ONE line only.';
+    const q = 'Exercises on screen: ' + (names.join(', ') || '(none)') + '\nTranscript: ' + alts.slice(0, 3).join(' / ') + '\nOutput format: "<exact exercise name from the list> <weight> kg <reps> reps" and add " <n> sets" if sets are said; separate several sets with " then ". Use digits. If the transcript is not a workout log, reply exactly: NONE';
+    let acc = ''; askCoach(sys, [], q, p => { acc = p; }, 120).then(t => { t = String(t || acc || '').split('\n')[0].replace(/["“”`]/g, '').trim(); const a = [t]; a._ai = 1; if (!t || /^none$/i.test(t)) _vh1(alts); else _vh1(a.concat(alts)); }).catch(() => _vh1(alts));
   };
   document.addEventListener('click', e => {
     const c = e.target.closest('[data-vc]'), u = e.target.closest('[data-vu]');
@@ -9292,24 +9322,42 @@ function pkgGrams(p){
   const m = q.match(/(?:(\d+(?:\.\d+)?)\s*[x×]\s*)?(\d+(?:\.\d+)?)\s*([a-zA-Z\u0600-\u06FF]+)/); if (!m || !U[m[3]]) return 0;
   const g = Math.round((+m[1] || 1) * +m[2] * U[m[3]]); return g > 0 && g <= 20000 ? g : 0;
 }
+const bcValid = c => { c = String(c || ''); if (!/^\d{8}$|^\d{12,14}$/.test(c)) return c.length >= 6; const d = c.split('').map(Number), k = d.pop(); let s = 0; d.reverse().forEach((x, i) => s += x * (i % 2 ? 1 : 3)); return (10 - s % 10) % 10 === k; };
+const bcVariants = c => { const o = [c]; if (c.length === 12) o.push('0' + c); if (c.length === 13 && c[0] === '0') o.push(c.slice(1)); if (c.length === 14 && c[0] === '0') o.push(c.slice(1)); if (c.length === 8) o.push(c.padStart(13, '0')); return [...new Set(o)]; };
+function bcLocal(code){ const V = bcVariants(code); return Object.values(NU.custom || {}).find(f => f && (V.includes(String(f.bc || '')) || V.some(v => f.k === 'off_' + v))) || null; }
+const OFF_FIELDS = 'product_name,product_name_ar,product_name_en,generic_name,brands,nutriments,serving_quantity,quantity,product_quantity,product_quantity_unit';
+async function offGet(url){
+  for (let i = 0; i < 2; i++){
+    const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 8000);
+    try { const r = await fetch(url, {signal:ctl.signal}); if (r.status === 404) return {status:0}; if (!r.ok) throw new Error('HTTP ' + r.status); return await r.json(); }
+    catch(e){ if (i) throw e; await new Promise(z => setTimeout(z, 400)); }
+    finally { clearTimeout(tm); }
+  }
+}
 async function offLookup(code){
   code = String(code || '').replace(/\D/g, ''); if (code.length < 6) throw new Error(tr('Enter a valid barcode.'));
-  const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 9000);
+  const mine = bcLocal(code); if (mine) return mine;
   try {
-    const r = await fetch('https://world.openfoodfacts.org/api/v2/product/' + code + '.json?fields=product_name,product_name_ar,brands,nutriments,serving_quantity,quantity,product_quantity,product_quantity_unit', {signal:ctl.signal});
-    if (!r.ok) throw new Error('HTTP ' + r.status); const j = await r.json();
-    if (j.status !== 1 || !j.product) throw new Error(tr('Product not found. Create it manually or photograph its label.'));
-    const p = j.product, n = p.nutriments || {}; let cal = +n['energy-kcal_100g']; if (!isFinite(cal) && isFinite(+n['energy_100g'])) cal = +n['energy_100g'] / 4.184;
-    if (!isFinite(cal)) throw new Error(tr('This product has no nutrition data. Photograph its label instead.'));
-    const nm = (p.product_name || p.product_name_ar || '').trim() || 'Product ' + code, br = (p.brands || '').split(',')[0].trim(), sq = +p.serving_quantity;
-    const f = {k:'off_' + code, ar:p.product_name_ar || nm, en:(br && !nm.toLowerCase().includes(br.toLowerCase()) ? br + ' ' : '') + nm, e:'🏷️', cal:Math.round(cal), p:r1(+n.proteins_100g || 0), c:r1(+n.carbohydrates_100g || 0), f:r1(+n.fat_100g || 0), cat:'custom', al:br};
+    let p = null, net = false;
+    for (const c of bcVariants(code)){
+      for (const host of ['world.openfoodfacts.org', 'world.openfoodfacts.net']){
+        try { const j = await offGet('https://' + host + '/api/v2/product/' + c + '.json?fields=' + OFF_FIELDS); if (j && j.status === 1 && j.product){ p = j.product; break; } } catch(e){ net = true; }
+        if (p) break;
+      }
+      if (p) break;
+    }
+    if (!p){ if (net) throw new Error(tr('The lookup timed out. Check your internet connection.')); const e = new Error(tr('Product not found. Create it manually or photograph its label.')); e.nf = true; throw e; }
+    const n = p.nutriments || {}; let cal = +n['energy-kcal_100g']; if (!isFinite(cal) && isFinite(+n['energy_100g'])) cal = +n['energy_100g'] / 4.184;
+    const nm = (p.product_name || p.product_name_ar || p.product_name_en || p.generic_name || '').trim() || 'Product ' + code, br = (p.brands || '').split(',')[0].trim();
+    if (!isFinite(cal)){ const e = new Error(tr('This product has no nutrition data. Photograph its label instead.')); e.nf = true; e.name = nm; throw e; }
+    const sq = +p.serving_quantity;
+    const f = {k:'off_' + code, bc:code, ar:p.product_name_ar || nm, en:(br && !nm.toLowerCase().includes(br.toLowerCase()) ? br + ' ' : '') + nm, e:'🏷️', cal:Math.round(cal), p:r1(+n.proteins_100g || 0), c:r1(+n.carbohydrates_100g || 0), f:r1(+n.fat_100g || 0), cat:'custom', al:br};
     const pk = pkgGrams(p), L2 = [];
     if (pk > 0) L2.push(['package (' + pk + ' g)', 'العبوة كلها (' + pk + ' جم)', pk]);
     if (sq > 0 && sq < 2000 && Math.round(sq) !== pk) L2.push(['serving (' + Math.round(sq) + ' g)', 'حصة (' + Math.round(sq) + ' جم)', Math.round(sq)]);
     if (L2.length){ f.svs = L2; f.sv = [L2[0][0], L2[0][2]]; }
     return f;
   } catch(e){ if (e.name === 'AbortError') throw new Error(tr('The lookup timed out. Check your internet connection.')); if (/Failed to fetch|NetworkError|Load failed/i.test(String(e.message))) throw new Error(tr('No internet connection.')); throw e; }
-  finally { clearTimeout(tm); }
 }
 
 /* ================= UI ================= */
@@ -9469,7 +9517,7 @@ function renderFM(){
     if (st === 'photo') h += `<div class="nf-ph"><div class="nf-modes">${[['food', '🍽️', 'Meal photo'], ['label', '🏷️', 'Nutrition label']].map(([k, e, l]) => `<button type="button" data-tone="none" data-a="kind" data-v="${k}" class="${FM.kind === k ? 'on' : ''}">${e} ${I(l)}</button>`).join('')}</div>${FM.img ? `<img class="nf-pv" src="data:image/jpeg;base64,${FM.img}" alt="">` : `<label class="nf-pick">📸 ${I('Take or choose a photo')}<input type="file" id="nfFile" accept="image/*" hidden></label>`}<input type="text" id="nfPt" class="in" placeholder="${E(I(FM.kind === 'label' ? 'How much did you eat? (optional)' : 'Anything the AI should know? (optional)'))}" value="${E(FM.ptxt || '')}" style="direction:auto;text-align:start">${FM.err ? `<div class="nf-err">${E(FM.err)}</div>` : ''}<button type="button" data-a="analyze"${FM.busy || !FM.img ? ' disabled' : ''}>${FM.busy ? '⏳ ' + I('Analyzing…') : '✨ ' + I('Analyze')}</button>${FM.img ? `<button type="button" class="sec" data-tone="none" data-a="reimg">${I('Choose another photo')}</button>` : ''}<small class="insight2">${I('The AI gives an estimate. Check the amounts before you save.')}</small></div>`;
   }
   if (st === 'scan'){
-    h = `<h2>🏷️ <span>${I('Scan a barcode')}</span></h2>${stageTabs()}${mealChips()}<div class="nf-scan"><div class="vw"><video id="nfV" playsinline muted></video><i class="ln"></i></div><small id="nfScanMsg" class="insight2">${I('Point the camera at the barcode, or type the numbers below.')}</small><div class="nf-bc"><input type="text" id="nfBC" class="in" inputmode="numeric" placeholder="6221234567890" autocomplete="off" style="direction:ltr"><button type="button" data-a="bclook">${I('Look up')}</button></div>${FM.err ? `<div class="nf-err">${E(FM.err)}</div>` : ''}${FM.busy ? `<div class="nf-busy"><i></i> ${I('Looking it up...')}</div>` : ''}</div>`;
+    h = `<h2>🏷️ <span>${I('Scan a barcode')}</span></h2>${stageTabs()}${mealChips()}<div class="nf-scan"><div class="vw"><video id="nfV" playsinline muted></video><i class="ln"></i></div><small id="nfScanMsg" class="insight2">${I('Point the camera at the barcode, or type the numbers below.')}</small><div class="nf-bc"><input type="text" id="nfBC" class="in" inputmode="numeric" placeholder="6221234567890" autocomplete="off" style="direction:ltr"><button type="button" data-a="bclook">${I('Look up')}</button></div><div class="nf-bcx"><button type="button" class="sec" data-tone="none" data-a="bcpic">🖼️ ${LANG === 'ar' ? 'صورة باركود من المعرض' : 'Barcode from a photo'}</button><input type="file" id="nfBCf" accept="image/*" hidden></div>${FM.err ? `<div class="nf-err">${E(FM.err)}</div>` : ''}${FM.nf && FM.bc ? `<div class="nf-bcx"><button type="button" data-tone="none" data-a="bcmake">✍️ ${LANG === 'ar' ? 'أضفه بنفسك (وهفتكر الباركود)' : 'Add it yourself (barcode remembered)'}</button><button type="button" class="sec" data-tone="none" data-a="bcphoto">📸 ${I('Photo')}</button></div>` : ''}${FM.busy ? `<div class="nf-busy"><i></i> ${I('Looking it up...')}</div>` : ''}</div>`;
   }
   else if (st === 'amount'){
     const f = FM.f, sv = servs(f), g = cur(), v = per(f, g), ed = !!FM.edit, fav = NU.fav.includes(f.k);
@@ -9557,12 +9605,15 @@ function fmClick(e){
   else if (a === 'deli'){ const undo = delItem(FM.date, FM.edit.id); closeModal(MODAL); showToast('🗑️ ' + I('Deleted'), undo); }
   else if (a === 'smartq'){ smartFetch(FM.q); fmList(); }
   else if (a === 'cfnew'){ FM.cf = {n:FM.q || ''}; FM.stage = 'create'; renderFM(); }
-  else if (a === 'cfsave'){ const n = $('cN').value.trim(), cal = +$('cK').value; if (!n){ FM.err = I('Give it a name.'); return renderFM(); } if (!(cal >= 0) || $('cK').value === ''){ FM.err = I('Enter the calories per 100 g.'); FM.cf = {n, e:$('cE').value}; return renderFM(); }
-    const k = 'c_' + uid(), sv = +$('cS').value, f = {k, ar:hasAr(n) ? n : '', en:hasAr(n) ? '' : n, e:$('cE').value.trim() || '🍽️', cal:clamp(cal, 0, 1000), p:clamp(+$('cP').value || 0, 0, 100), c:clamp(+$('cC').value || 0, 0, 100), f:clamp(+$('cF').value || 0, 0, 100), cat:'custom', al:''};
+  else if (a === 'cfsave'){ const n = $('cN').value.trim(), cal = +$('cK').value; if (!n){ FM.err = I('Give it a name.'); return renderFM(); } if (!(cal >= 0) || $('cK').value === ''){ FM.err = I('Enter the calories per 100 g.'); FM.cf = {n, e:$('cE').value, bc:(FM.cf || {}).bc}; return renderFM(); }
+    const k = 'c_' + uid(), sv = +$('cS').value, f = {k, ar:hasAr(n) ? n : '', en:hasAr(n) ? '' : n, e:$('cE').value.trim() || '🍽️', cal:clamp(cal, 0, 1000), p:clamp(+$('cP').value || 0, 0, 100), c:clamp(+$('cC').value || 0, 0, 100), f:clamp(+$('cF').value || 0, 0, 100), cat:'custom', al:''}; if (FM.cf && FM.cf.bc) f.bc = FM.cf.bc;
     if (sv > 0) f.sv = [LANG === 'ar' ? 'حصة' : 'serving', sv]; if (!f.ar) f.ar = n; if (!f.en) f.en = n; NU.custom[k] = f; idx(f); nSave(); contributeFood(f); refresh();
     if (FM.date && $(MODAL).classList.contains('active') && !FM.fromGoals){ FM.f = f; FM.sv = f.sv ? 0 : -1; FM.qty = 1; FM.g = f.sv ? f.sv[1] : 100; FM.stage = 'amount'; FM.cf = null; FM.err = ''; renderFM(); } else closeModal(MODAL); }
   else if (a === 'askai'){ FM.text = FM.q; FM.stage = 'text'; renderFM(); setTimeout(fmAnalyze, 50); }
   else if (a === 'combo'){ const u = addCombo(el.dataset.id, FM.meal, FM.date); if (u){ closeModal(MODAL); showToast('✅ ' + I('Added'), u); try { buzz(10); } catch(_){} } }
+  else if (a === 'bcpic'){ const i = $('nfBCf'); if (i){ i.onchange = () => { const f = i.files && i.files[0]; i.value = ''; scanImageFile(f); }; i.click(); } }
+  else if (a === 'bcmake'){ FM.cf = {n:FM.bcName || '', bc:FM.bc}; FM.stage = 'create'; FM.err = ''; renderFM(); }
+  else if (a === 'bcphoto'){ FM.err = ''; FM.stage = 'photo'; renderFM(); }
   else if (a === 'bclook'){ const c = ($('nfBC') || {}).value || ''; scanLookup(c); }
   else if (a === 'analyze') fmAnalyze();
   else if (a === 'kind'){ FM.kind = v; renderFM(); }
@@ -9575,27 +9626,61 @@ function fmClick(e){
 /* ---------- barcode scanner ---------- */
 let SCN = null;
 function scanStop(){ if (!SCN) return; SCN.on = false; try { SCN.stream && SCN.stream.getTracks().forEach(t => t.stop()); } catch(_){} SCN = null; }
+let _zx = null;
+async function zxLoad(){ if (_zx) return _zx; await new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js'; s.onload = ok; s.onerror = no; document.head.appendChild(s); }); return _zx = window.ZXing; }
+async function zxDecode(src){ /* src: canvas; returns digits or '' */
+  const Z = await zxLoad(), hints = new Map(); hints.set(Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.EAN_13, Z.BarcodeFormat.EAN_8, Z.BarcodeFormat.UPC_A, Z.BarcodeFormat.UPC_E, Z.BarcodeFormat.CODE_128]); hints.set(Z.DecodeHintType.TRY_HARDER, true);
+  const rd = new Z.MultiFormatReader(); rd.setHints(hints);
+  const g = src.getContext('2d').getImageData(0, 0, src.width, src.height), lum = new Uint8ClampedArray(src.width * src.height);
+  for (let i = 0, j = 0; i < g.data.length; i += 4, j++) lum[j] = (g.data[i] * 306 + g.data[i + 1] * 601 + g.data[i + 2] * 117) >> 10;
+  for (const inv of [false, true]){ try { const bmp = new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.RGBLuminanceSource(lum, src.width, src.height))); return rd.decode(bmp).getText(); } catch(_){} break; }
+  return '';
+}
+async function scanImageFile(f){
+  if (!f || !FM) return; const msg = $('nfScanMsg'); if (msg) msg.textContent = I('Looking it up...');
+  try {
+    const bm = await createImageBitmap(f), tries = [1, .6, .35]; let code = '';
+    for (const sc of tries){ const c = document.createElement('canvas'); c.width = Math.round(bm.width * sc); c.height = Math.round(bm.height * sc); c.getContext('2d').drawImage(bm, 0, 0, c.width, c.height);
+      if ('BarcodeDetector' in window){ try { const d = new BarcodeDetector(), r = await d.detect(c); const x = r.find(q => bcValid(String(q.rawValue).replace(/\D/g, ''))); if (x){ code = x.rawValue; break; } } catch(_){} }
+      else { try { code = await zxDecode(c); } catch(_){} if (code) break; } }
+    if (code) return scanLookup(code);
+    FM.err = LANG === 'ar' ? 'مش قادر أقرا الباركود من الصورة. قرّب وخلي الإضاءة كويسة، أو اكتب الأرقام.' : 'Could not read a barcode in that photo. Get closer with good light, or type the numbers.'; renderFM();
+  } catch(e){ FM.err = String(e.message || e); renderFM(); }
+}
 async function scanStart(){
   scanStop(); const v = $('nfV'); if (!v) return; const msg = $('nfScanMsg');
   const fail = t => { const w = v.closest('.vw'); if (w) w.style.display = 'none'; if (msg && t) msg.textContent = t; };
-  if (!('BarcodeDetector' in window) || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){ fail(I('This browser cannot scan barcodes. Type the numbers below.')); return; }
-  const me = SCN = {on:true, stream:null};
+  if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){ fail(I('This browser cannot scan barcodes. Type the numbers below.')); return; }
+  const me = SCN = {on:true, stream:null, seen:{}}, native = 'BarcodeDetector' in window;
   try {
-    let det; try { det = new BarcodeDetector({formats:['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128']}); } catch(_){ det = new BarcodeDetector(); }
-    me.stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}, audio:false});
+    let det = null; if (native){ try { det = new BarcodeDetector({formats:['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128']}); } catch(_){ det = new BarcodeDetector(); } }
+    else { try { await zxLoad(); } catch(_){ fail(I('This browser cannot scan barcodes. Type the numbers below.')); return; } }
+    me.stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}}, audio:false});
     if (!me.on || SCN !== me){ me.stream.getTracks().forEach(t => t.stop()); return; }
+    const tr0 = me.stream.getVideoTracks()[0]; try { const cp = tr0.getCapabilities ? tr0.getCapabilities() : {}, adv = []; if (cp.focusMode && cp.focusMode.includes('continuous')) adv.push({focusMode:'continuous'}); if (cp.zoom){ adv.push({zoom:Math.min(cp.zoom.max, Math.max(cp.zoom.min, 1.6))}); } if (adv.length) await tr0.applyConstraints({advanced:adv}); me.torch = !!cp.torch; } catch(_){}
     v.srcObject = me.stream; await v.play().catch(() => {});
-    const loop = async () => { if (!me.on || SCN !== me || !FM || FM.stage !== 'scan') return; try { const r = await det.detect(v); if (r && r.length && r[0].rawValue){ const code = r[0].rawValue; scanStop(); scanLookup(code); return; } } catch(_){} setTimeout(loop, 250); };
+    const cv = document.createElement('canvas'), t0 = Date.now(); let hinted = false;
+    const loop = async () => {
+      if (!me.on || SCN !== me || !FM || FM.stage !== 'scan') return;
+      try {
+        let code = '';
+        if (det){ const r = await det.detect(v); const x = (r || []).map(q => String(q.rawValue || '').replace(/\D/g, '')).find(bcValid); code = x || ''; }
+        else if (v.videoWidth){ const w = Math.min(1280, v.videoWidth), k = w / v.videoWidth; cv.width = w; cv.height = Math.round(v.videoHeight * k); cv.getContext('2d', {willReadFrequently:true}).drawImage(v, 0, 0, cv.width, cv.height); code = String(await zxDecode(cv)).replace(/\D/g, ''); if (!bcValid(code)) code = ''; }
+        if (code){ me.seen[code] = (me.seen[code] || 0) + 1; if (me.seen[code] >= 2 || code.length >= 12){ try { navigator.vibrate && navigator.vibrate(40); } catch(_){} scanStop(); scanLookup(code); return; } }
+      } catch(_){}
+      if (!hinted && Date.now() - t0 > 9000){ hinted = true; const m = $('nfScanMsg'); if (m) m.textContent = LANG === 'ar' ? 'لسه مش قادر يقرا: ثبّت الموبايل على بعد 10–15 سم، وفّر إضاءة، أو صوّر الباركود من المعرض، أو اكتب الأرقام.' : 'Still nothing: hold steady 10–15 cm away with good light, pick a photo of the barcode, or type the numbers.'; }
+      setTimeout(loop, native ? 160 : 320);
+    };
     loop();
   } catch(e){ fail(I('Camera not available. Type the barcode numbers below.')); }
 }
 async function scanLookup(code){
   if (!FM) return; code = String(code || '').replace(/\D/g, ''); if (code.length < 6){ FM.err = I('Enter a valid barcode.'); renderFM(); return; }
-  FM.busy = true; FM.err = ''; scanStop(); renderFM(); const keep = $('nfBC'); if (keep) keep.value = code;
+  FM.busy = true; FM.err = ''; FM.nf = false; FM.bc = code; scanStop(); renderFM(); const keep = $('nfBC'); if (keep) keep.value = code;
   try {
     const f = await offLookup(code); if (!FM) return; NU.custom[f.k] = f; idx(f); NU.recent = [f.k].concat(NU.recent.filter(x => x !== f.k)).slice(0, 12); nSave();
     FM.busy = false; FM.f = f; FM.sv = f.sv ? 0 : -1; FM.qty = 1; FM.g = f.sv ? f.sv[1] : 100; FM.stage = 'amount'; FM.edit = null; renderFM();
-  } catch(e){ if (!FM) return; FM.busy = false; FM.err = String(e.message || e); renderFM(); setTimeout(() => { const i = $('nfBC'); if (i) i.value = code; }, 0); }
+  } catch(e){ if (!FM) return; FM.busy = false; FM.nf = !!e.nf; FM.bcName = e.nf && e.name !== 'Error' ? e.name : ''; FM.err = String(e.message || e); renderFM(); setTimeout(() => { const i = $('nfBC'); if (i) i.value = code; }, 0); }
 }
 function comboModal(key){
   const k = FS.date, L = peek(k).meals.filter(m => m.meal === key || (!MEALMAP[m.meal] && key === 'snack')); if (!L.length) return;
@@ -9691,7 +9776,7 @@ function homeCard(){
   const box = $('homeBox'); if (!box || !nutriActive()) return; const old = box.querySelector('.nf-home'); if (old) old.remove();
   const k = todayKey(), tot = sumM(peek(k).meals), tg = targetFor(k), left = Math.round(tg.kcal - tot.cal), pr = Math.min(100, tot.cal / tg.kcal * 100), pp = Math.min(100, tot.p / tg.p * 100);
   const el = document.createElement('div'); el.className = 'nf-home'; el.setAttribute('role', 'button'); el.tabIndex = 0;
-  el.innerHTML = `<div class="hd"><b>🍽️ ${I('Food today')}</b><span>${I('Open')} ›</span></div><div class="hb"><div class="k"><b>${fmt(Math.abs(left))}</b><small>${I(left >= 0 ? 'kcal left' : 'kcal over')}</small></div><div class="bs"><div class="r"><span>${I('Calories')}</span><div><i style="width:${pr.toFixed(0)}%"></i></div></div><div class="r"><span>${I('Protein')}</span><div class="p"><i style="width:${pp.toFixed(0)}%"></i></div><small>${fmt(tot.p)}/${fmt(tg.p)}g</small></div></div></div>${peek(k).meals.length ? '' : `<small class="nf-hint">${I('Tap to log your first meal')}</small>`}`;
+  el.innerHTML = `<div class="hd"><b>🍽️ ${I('Food today')}</b><span>${I('Open')} ›</span></div><div class="hb"><div class="k"><b>${fmt(Math.abs(left))}</b><small>${I(left >= 0 ? 'kcal left' : 'kcal over')}</small></div><div class="bs"><div class="r"><span>${I('Calories')}</span><div><i style="width:${pr.toFixed(0)}%"></i></div></div><div class="r"><span>${I('Protein')}</span><div class="p"><i style="width:${pp.toFixed(0)}%"></i></div><small>${fmt(tot.p)}/${fmt(tg.p)}g</small></div><div class="r"><span>${I('Carbs')}</span><div class="c"><i style="width:${Math.min(100, tot.c / Math.max(1, tg.c) * 100).toFixed(0)}%"></i></div><small>${fmt(tot.c)}/${fmt(tg.c)}g</small></div><div class="r"><span>${I('Fat')}</span><div class="f"><i style="width:${Math.min(100, tot.f / Math.max(1, tg.f) * 100).toFixed(0)}%"></i></div><small>${fmt(tot.f)}/${fmt(tg.f)}g</small></div></div></div>${peek(k).meals.length ? '' : `<small class="nf-hint">${I('Tap to log your first meal')}</small>`}`;
   el.onclick = () => document.querySelector('.tab[data-tab="food"]').click(); el.onkeydown = ev => { if (ev.key === 'Enter') el.click(); };
   const anchor = box.querySelector('.wkstrip') || box.querySelector('.homecard'); if (anchor) anchor.after(el); else box.appendChild(el);
 }
@@ -10197,6 +10282,7 @@ const EXTRA_RULES = [
 "FRESH DATA FIRST: your context has the sections CURRENT WORKING WEIGHTS, WEEKLY TRACKING and NOTES TIMELINE, read from the app seconds ago. The NEWEST logged session of an exercise is what the user lifts NOW. The all-time best and the weights written in the plan are history or targets and are often outdated: never present them as the current weight. Example: if the data says Lateral Raise Cable NOW 17.5kg, say 17.5kg even if 20kg appears as an old best. If the user states a weight or fact that differs from the context, trust the user, say you updated your picture, and offer update_exercise (plan) and set_exercise_note or add_note actions. If you are unsure the context is current or you need more history, call get_exercise_history, get_weekly_report or get_notes first.",
 "WEEKLY REPORTS: when the user asks about progress, a week, a comparison or how training is going, answer with a short Markdown table, newest week first: week, sessions, sets, volume, change versus the previous week, and the main lifts' top weights. Mark the current week as partial and never compare a partial week to a full one as if it were a drop. Then explain in plain words: what improved, what regressed, the likely reason (use the notes, sleep, diet and body weight around those dates), and exactly what to do next week (one to three actions).",
 "NOTES ANALYSIS: treat every note as data. Read the notes together with the weights and dates: extract pain or injury (what, which side, how often), fatigue, sleep, mood, technique cues, equipment or setup changes, and the stated reason for a load change. Find patterns across weeks (the same pain returning, loads dropping after poor sleep, an exercise always marked heavy), say when a note explains a weight drop, and when notes contradict the plan propose a concrete change. Quote short snippets with their dates. Give the newest note the most weight. For repeated or worsening pain, advise reducing or swapping the movement and seeing a qualified clinician; do not diagnose.",
+"STYLE (important): the user finds long, pushy replies annoying. Answer exactly what was asked, short by default. Do not end every reply with a question, an offer or a suggestion list; add at most one useful next step and only when it really matters. Do not repeat what the user said, do not re-explain things already covered in this chat, no warnings or motivational lines, and never ask permission in text because the app shows a Yes/No card for changes.",
 "FULL CONTROL WITH CONFIRMATION: you can change anything in the app with actions (plan, workouts, past sessions, notes, goals, profile, settings, food, water, navigation). Every change is shown to the user as a card with Yes and No, and nothing happens until they tap Yes, so say what you propose in plain words, group related changes in one reply, and never claim something is already done. After a confirmed change, if useful, suggest the one next thing to update."
 ].join('\n\n');
 COACH_RULES = NEW_RULES + '\n\n' + EXTRA_RULES + actionGuide();
@@ -10205,6 +10291,6 @@ window.coachRound = coachRound; window.offerActs = offerActs;
 /* ---------- init ---------- */
 nLoad(); renderFood(); try { renderHome(); } catch(e){}
 
-window.NUT = {dump:() => JSON.stringify(NU), load:o => { if (!o || typeof o !== 'object' || Array.isArray(o)) return; try { localStorage.setItem(NK, JSON.stringify(o)); } catch(e){} nLoad(); try { refresh(); } catch(e){} }, _t:{parseMeal, searchFoods, targetFor, adaptive, statsFor, ACT, parseActs, NU:() => NU}, report:openReport, open:st => { openFood({stage:st}); }, active:nutriActive, mealsToday:() => peek(todayKey()).meals.length, protPct:() => { const t = targetFor(todayKey()); return Math.round(sumM(peek(todayKey()).meals).p / t.p * 100); }};
+window.NUT = {dump:() => JSON.stringify(NU), load:o => { if (!o || typeof o !== 'object' || Array.isArray(o)) return; try { localStorage.setItem(NK, JSON.stringify(o)); } catch(e){} nLoad(); try { refresh(); } catch(e){} }, _t:{bcValid, offLookup, parseMeal, searchFoods, targetFor, adaptive, statsFor, ACT, parseActs, NU:() => NU}, report:openReport, open:st => { openFood({stage:st}); }, active:nutriActive, mealsToday:() => peek(todayKey()).meals.length, protPct:() => { const t = targetFor(todayKey()); return Math.round(sumM(peek(todayKey()).meals).p / t.p * 100); }};
 
 })();

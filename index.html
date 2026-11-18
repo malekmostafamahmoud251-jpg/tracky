@@ -1365,7 +1365,7 @@ body:not(.dark) #homeBox>.homecard{--text:#1a2639;--sub:#4a5c72}
 .nf-eat small{display:block;font-size:.72rem;color:var(--sub);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
 .nf-mb{display:grid;grid-template-columns:62px 1fr auto;align-items:center;gap:var(--sp-3);margin-top:var(--sp-2)}
 .nf-mb span{font-size:.8rem;color:var(--sub);font-weight:600}
-.nf-mb>div{height:8px;border-radius:6px;background:var(--ex);overflow:hidden}
+.nf-mb>div{display:block;width:100%;min-width:60px;height:8px;border-radius:6px;background:var(--ex);overflow:hidden}
 .nf-mb>div i{display:block;height:100%;border-radius:6px;background:var(--accent);transition:width .6s var(--ds-ease)}
 .nf-mb.p>div i{background:#60A5FA}.nf-mb.c>div i{background:#FBBF24}.nf-mb.f>div i{background:#F87171}
 .nf-mb b{font-size:.84rem;font-weight:700;min-width:76px;text-align:end}
@@ -1416,6 +1416,20 @@ body:not(.dark) #homeBox>.homecard{--text:#1a2639;--sub:#4a5c72}
 .modal .acts .yes{background:var(--ok);color:#04251b;border:0}
 .toast{background:var(--ex)!important;color:var(--text)!important;border:1px solid var(--border);border-radius:var(--r-m);box-shadow:0 14px 34px -14px rgba(0,0,0,.6);font-weight:600}
 @media (prefers-reduced-motion:reduce){.overlay.active .modal,.overlay.on .modal,.skel::after{animation:none}}
+
+/* compact add button on Food */
+body:has([data-panel="food"].active) #fab{width:56px;padding:0;border-radius:50%;justify-content:center}
+body:has([data-panel="food"].active) #fab #fabLbl{display:none}
+.nf-home{margin:0 0 var(--sp-3)!important;padding:var(--sp-4)!important;border-radius:var(--r-c)!important;border:1px solid var(--border)!important;background:var(--card)!important}
+.nf-home .hd b{font-size:1.02rem;font-weight:800}
+.nf-home .k b{font-size:1.8rem;font-weight:800;letter-spacing:-.02em}
+.nf-home .r>div{height:8px!important;background:var(--ex)!important;border-radius:6px}
+.nf-home .r>div i{background:linear-gradient(90deg,var(--accent-2,#8B5CF6),var(--accent))!important;border-radius:6px}
+.nf-home .r>div.p i{background:#60A5FA!important}.nf-home .r>div.c i{background:#FBBF24!important}.nf-home .r>div.f i{background:#F87171!important}
+.nf-mb{grid-template-columns:58px minmax(30px,1fr) auto!important}.nf-mb>div{min-width:0!important}.nf-mb b{min-width:0!important;white-space:nowrap}
+.nf-bcx{display:flex;gap:var(--sp-2);flex-wrap:wrap;margin-top:var(--sp-2)}.nf-bcx button{flex:1;min-height:44px}
+body:has([data-panel="food"].active) #fab{display:none!important}
+.chat-h{color:#fff!important;background:linear-gradient(135deg,#4F46E5,#7C3AED)!important}.chat-h *{color:inherit!important}.chat-h>span:first-child{display:flex;align-items:center;gap:8px;font-weight:800}.chat-h .icon{background:rgba(255,255,255,.18)!important;border:0!important;width:36px;height:36px;border-radius:12px;display:grid;place-items:center}.chat-h #coachMode{display:none}
 </style>
 </head>
 <body>
@@ -1511,7 +1525,7 @@ body:not(.dark) #homeBox>.homecard{--text:#1a2639;--sub:#4a5c72}
 <div class="hviews" id="histViews"></div><div class="exchips" id="histFilters"></div><div id="sessionLogList"></div></div></div>
 
 <div class="panel" data-panel="charts">
-  <div class="box" style="padding:.8rem 1rem"><div id="rangeChips" style="display:flex;gap:.5rem;flex-wrap:wrap"><button class="sug" data-r="30">30 days</button><button class="sug" data-r="90">90 days</button><button class="sug sel" data-r="all">All</button></div></div>
+  <div class="box" style="padding:.8rem 1rem"><div id="rangeChips" style="display:flex;gap:.5rem;flex-wrap:wrap"><button class="sug" data-r="7">7 days</button><button class="sug" data-r="30">30 days</button><button class="sug" data-r="90">90 days</button><button class="sug" data-r="365">1 year</button><button class="sug sel" data-r="all">All</button></div></div>
   <div class="box"><h3>💡 This week at a glance</h3><div id="insights"></div></div>
   <div class="box"><h3>📋 Summary</h3><div id="anSum"></div></div>
   <div class="box"><h3>📊 Strength Progress</h3>
@@ -1719,6 +1733,6 @@ body:not(.dark) #homeBox>.homecard{--text:#1a2639;--sub:#4a5c72}
 <script>try{var __r=JSON.parse(localStorage.getItem('trackyResume')||'null');if(__r&&Date.now()-__r.t<43200000)document.documentElement.classList.add('resume')}catch(e){}</script><div id="splash" aria-label="Tracky is loading"><div class="sp-glow"></div><div class="sp-logo"><i class="sp-ring"></i><i class="sp-ring r2"></i><img src="icons/icon-512.png" alt="Tracky logo"></div><div class="sp-word" aria-hidden="true"><i>T</i><i>R</i><i>A</i><i>C</i><i>K</i><i>Y</i></div><div class="sp-tag">Build · Track · Coach</div><div class="sp-bar"><i></i></div></div>
 <div class="toast" id="toast"></div>
 
-<script src="app.js?v=d30f5832" defer></script>
+<script src="app.js?v=4dfd8feb" defer></script>
 </body>
 </html>
