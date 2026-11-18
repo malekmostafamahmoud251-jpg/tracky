@@ -4603,6 +4603,7 @@ async function askViaServer(system, hist, userParts, onChunk, maxTokens){
     if (r.status >= 500){ lastErr = new Error('Coach is busy (' + r.status + '). Retrying failed.'); continue; }
     if (!r.ok) throw new Error('Coach server error ' + r.status + ' ' + await apiErr(r));
     _geminiRoute = 'server';
+    try { if (r.headers.get('X-AI-Engine') === 'backup' && !window._bkShown){ window._bkShown = 1; showToast('ℹ️ ' + (LANG === 'ar' ? 'الكوتش شغال بالذكاء الاحتياطي دلوقتي (مفيش تحليل صور)' : 'Coach is using the backup AI right now (no image analysis)')); } } catch(_){}
     try { const ql = r.headers.get('X-Quota-Left'); if (ql !== null){ window._quotaLeft = +ql; if (+ql === 10 || +ql === 3) showToast('ℹ️ ' + (LANG === 'ar' ? 'باقي لك ' + ql + ' رسائل ذكاء اصطناعي النهاردة' : ql + ' AI messages left today')); } } catch(_){}
     let out = '';
     try { out = await streamGeminiResponse(r, onChunk); } catch(e){ lastErr = e; continue; }
@@ -5073,15 +5074,20 @@ function coachFail(text, msg){
   const keep = document.createElement('small'); keep.className = 'insight2'; keep.style.display = 'block'; keep.textContent = 'Your message was kept. Nothing was lost.'; d.appendChild(keep);
 }
 function mdLite(t){
-  let h = escapeHTML(String(t)).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`([^`]+)`/g, '<code>$1</code>');
+  let h = escapeHTML(String(t)).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`([^`]+)`/g, '<code>$1</code>').replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<i>$2</i>');
   const out = []; let list = null;
   h.split('\n').forEach(ln => {
     let m;
+    if (/^\s*\|.*\|\s*$/.test(ln)){ if (list !== 'tb'){ if (list) out.push('</' + list + '>'); out.push('<div class="mdt"><table>'); list = 'tb'; }
+      if (/^\s*\|[\s:|-]+\|\s*$/.test(ln)) return; const cells = ln.trim().replace(/^\||\|$/g, '').split('|'), first = out[out.length - 1] === '<div class="mdt"><table>';
+      out.push('<tr>' + cells.map(c => first ? '<th>' + c.trim() + '</th>' : '<td>' + c.trim() + '</td>').join('') + '</tr>'); return; }
+    if (list === 'tb'){ out.push('</table></div>'); list = null; }
+    if (/^\s*(-{3,}|\*{3,})\s*$/.test(ln)){ if (list){ out.push('</' + list + '>'); list = null; } out.push('<hr>'); return; }
     if ((m = /^\s*[-*•]\s+(.*)$/.exec(ln))){ if (list !== 'ul'){ if (list) out.push('</' + list + '>'); out.push('<ul>'); list = 'ul'; } out.push('<li>' + m[1] + '</li>'); }
     else if ((m = /^\s*\d+[.)]\s+(.*)$/.exec(ln))){ if (list !== 'ol'){ if (list) out.push('</' + list + '>'); out.push('<ol>'); list = 'ol'; } out.push('<li>' + m[1] + '</li>'); }
     else { if (list){ out.push('</' + list + '>'); list = null; } if ((m = /^#{1,4}\s+(.*)$/.exec(ln))) out.push('<h5>' + m[1] + '</h5>'); else if (!ln.trim()) out.push('<div class="gap"></div>'); else out.push('<div>' + ln + '</div>'); }
   });
-  if (list) out.push('</' + list + '>'); return out.join('');
+  if (list) out.push(list === 'tb' ? '</table></div>' : '</' + list + '>'); return out.join('');
 }
 function addMsg(type, text){
   const d = document.createElement('div'); d.className = `msg ${type}`;
@@ -8453,7 +8459,11 @@ const DSI = {
   up:'<path d="M12 19V5M6 11l6-6 6 6"/>',
   x:'<path d="M6 6l12 12M18 6 6 18"/>',
   trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
-  type:'<path d="M4 7V5h16v2M12 5v14M9 19h6"/>'
+  type:'<path d="M4 7V5h16v2M12 5v14M9 19h6"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  copy:'<rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/>',
+  refresh:'<path d="M20 11a8 8 0 0 0-14-4L4 9M4 4v5h5M4 13a8 8 0 0 0 14 4l2-2M20 20v-5h-5"/>',
+  note:'<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/>'
 };
 const dsv = (n, s) => '<svg class="ic" viewBox="0 0 24 24" width="' + (s || 22) + '" height="' + (s || 22) + '" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + DSI[n] + '</svg>';
 function dsIcons(){
@@ -8464,6 +8474,7 @@ function dsIcons(){
   const ch = document.querySelector('.chat-h > span'); if (ch){ [...ch.childNodes].forEach(n => { if (n.nodeType === 3 && n.textContent.includes('🤖')) n.textContent = n.textContent.replace('🤖', '').trim() + ' '; }); if (!ch.querySelector(':scope > svg')) ch.insertAdjacentHTML('afterbegin', dsv('bot', 20)); }
   const CE = {'📊':'chart','📆':'calendar','💪':'dumbbell','🔍':'search','📸':'camera','📅':'calendar','📈':'trend','♨️':'flame','🤕':'aid','🍗':'utensils','🦵':'activity','😴':'moon','🔤':'type'};
   document.querySelectorAll('.chat .chips button').forEach(b => { if (b.dataset.ic) return; const t = b.textContent.trim(), em = Object.keys(CE).find(k => t.startsWith(k)); if (!em) return; b.dataset.ic = 1; b.dataset.q ? 0 : 0; const rest = t.slice(em.length).trim(); b.innerHTML = dsv(CE[em], 16) + '<span></span>'; b.lastChild.textContent = rest; b.style.display = 'inline-flex'; b.style.alignItems = 'center'; b.style.gap = '6px'; });
+  const MA = {copy:'copy', regen:'refresh', note:'note'}; document.querySelectorAll('#chatMessages .macts button[data-ma]').forEach(b => { if (!b.dataset.ic && MA[b.dataset.ma]){ b.dataset.ic = 1; b.innerHTML = dsv(MA[b.dataset.ma], 16); } });
   const am = $('aiMic'); if (am && am.dataset.ic !== 'mic'){ am.dataset.ic = 'mic'; am.innerHTML = dsv('mic', 20); }
   const as = $('aiSend'); if (as && as.dataset.ic !== 'up'){ as.dataset.ic = 'up'; as.innerHTML = dsv('up', 20); }
   set($('backBtn'), 'back', 22); set($('findBtn'), 'search', 20); set($('moreBtn'), 'sliders', 20);
@@ -8473,6 +8484,38 @@ function dsIcons(){
   document.querySelectorAll('.nf-add button[data-a]').forEach(b => { const m = FQ[b.dataset.a], i = b.querySelector('i'); if (m && i) set(i, m, b.classList.contains('nf-big') ? 20 : 22); });
   const TT = ['mic', 'timer', 'camera', 'aid']; document.querySelectorAll('#trainTools button').forEach((b, i) => { if (!b.dataset.ic && TT[i]){ b.dataset.ic = TT[i]; [...b.childNodes].forEach(n => { if (n.nodeType === 3) n.remove(); }); b.insertAdjacentHTML('afterbegin', dsv(TT[i], 20)); } });
 }
+
+/* ---------- coach: previous conversations (kept on this device, last 20) ---------- */
+(function(){
+  const KEY = 'trackyChats', ar = () => LANG === 'ar';
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch(e){ return []; } };
+  const store = a => { try { localStorage.setItem(KEY, JSON.stringify(a.slice(0, 20))); } catch(e){} };
+  const cur = () => [...$('chatMessages').children].map(d => ({t:d.classList.contains('user') ? 'user' : 'ai', x:d.dataset.raw || ''})).filter(m => m.x && !m.x.startsWith('⚠️') && !m.x.startsWith('…'));
+  const archive = m => { const u = m.find(x => x.t === 'user'); if (!u) return; const a = load(); a.unshift({id:Date.now(), title:u.x.slice(0, 60), ts:Date.now(), n:m.length, m:m.slice(-40)}); store(a); };
+  const clr = $('coachClear'), tools = clr && clr.parentNode; if (!tools) return;
+  const old = clr.onclick;
+  clr.onclick = async function(){ const before = cur(); await old.apply(this, arguments); if (!cur().some(x => x.t === 'user')) archive(before); };
+  const hb = document.createElement('button'); hb.type = 'button'; hb.className = 'icon'; hb.id = 'coachHist'; hb.setAttribute('aria-label', ar() ? 'المحادثات السابقة' : 'Previous chats'); hb.innerHTML = dsv('clock', 18); tools.insertBefore(hb, clr);
+  if (!$('modalChats')) document.body.insertAdjacentHTML('beforeend', '<div class="overlay" id="modalChats"><div class="modal" id="chatsBox" style="max-height:80vh;overflow-y:auto"></div></div>');
+  $('modalChats').addEventListener('click', e => { if (e.target === $('modalChats')) closeModal('modalChats'); });
+  const render = () => {
+    const a = load(), box = $('chatsBox'), L = ar();
+    box.innerHTML = '<style>.chl{display:flex;gap:.5rem;align-items:center;padding:.6rem .2rem;border-bottom:1px solid var(--border)}.chl .go{flex:1;min-width:0;text-align:start;background:transparent;box-shadow:none;padding:.2rem;border:0;color:inherit}.chl .go b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.chl .go small{opacity:.7}.chl .dl{width:34px;height:34px;min-height:34px;padding:0;background:transparent;box-shadow:none;border:0;opacity:.7}.chl .dl svg{display:block;margin:auto}</style>' +
+      '<h3 style="margin:0 0 .6rem">' + (L ? 'المحادثات السابقة' : 'Previous chats') + '</h3>' +
+      (a.length ? a.map((c, i) => '<div class="chl"><button type="button" class="go" data-i="' + i + '"><b></b><small>' + new Date(c.ts).toLocaleDateString(L ? 'ar-EG' : undefined, {day:'numeric', month:'short'}) + ' · ' + (c.n || c.m.length) + (L ? ' رسالة' : ' msgs') + '</small></button><button type="button" class="dl" data-d="' + i + '" aria-label="Delete">' + dsv('trash', 18) + '</button></div>').join('')
+        : '<p style="opacity:.75;margin:1rem 0">' + (L ? 'مفيش محادثات قديمة لسه. لما تمسح محادثة أو تبدأ جديدة هتتحفظ هنا.' : 'No saved chats yet. When you clear a chat or start a new one it is kept here.') + '</p>') +
+      '<button type="button" id="chatNew" class="sec" style="width:100%;margin-top:.8rem">' + (L ? '+ محادثة جديدة' : '+ New chat') + '</button>';
+    a.forEach((c, i) => { box.querySelector('.go[data-i="' + i + '"] b').textContent = c.title; });
+  };
+  hb.onclick = () => { render(); $('modalChats').classList.add('active'); };
+  $('chatsBox').addEventListener('click', e => {
+    const d = e.target.closest('[data-d]'), g = e.target.closest('.go'), n = e.target.closest('#chatNew');
+    if (d){ const a = load(); a.splice(+d.dataset.d, 1); store(a); render(); return; }
+    if (n){ archive(cur()); $('chatMessages').innerHTML = ''; addMsg('ai', ar() ? 'محادثة جديدة. اسألني أي حاجة.' : 'New chat. Ask me anything.'); saveChat(); closeModal('modalChats'); return; }
+    if (g){ const a = load(), c = a.splice(+g.dataset.i, 1)[0]; if (!c) return; store(a); archive(cur());
+      $('chatMessages').innerHTML = ''; c.m.forEach(m => addMsg(m.t, m.x)); saveChat(); closeModal('modalChats'); }
+  });
+})();
 
 /* ---------- every pop-up / sheet gets its own exit button (✕), plus Esc ---------- */
 (function(){
