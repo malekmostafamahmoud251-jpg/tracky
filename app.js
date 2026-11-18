@@ -2076,6 +2076,9 @@ App version|النسخة|Version
 Update now|حدّث دلوقتي|Mettre à jour
 Clears the saved copy and loads the newest version. Your data stays.|بيمسح النسخة المحفوظة ويحمّل أحدث نسخة. بياناتك زي ما هي.|Efface la copie enregistrée et charge la dernière version. Vos données restent.
 Review before logging|راجع قبل التسجيل|Vérifier avant d'enregistrer
+Time to log your breakfast|وقت تسجّل فطارك|C'est l'heure de noter votre petit-déjeuner
+Time to log your lunch|وقت تسجّل غداك|C'est l'heure de noter votre déjeuner
+Time to log your dinner|وقت تسجّل عشاك|C'est l'heure de noter votre dîner
 `.split('\n').forEach(l => { const p = l.split('|'); if (p.length === 3){ I18N.ar[p[0]] = p[1]; I18N.fr[p[0]] = p[2]; } });
 const PATS = [
  [/^(\d+) sets × (.+) reps · (.+)kg$/, "$1 مجموعات × $2 تكرار · $3 كجم", "$1 séries × $2 reps · $3 kg"],
@@ -5649,11 +5652,12 @@ function renderSteps(){
   b.innerHTML = `<div class="box"><h3>👣 Steps today</h3><div class="stepnum"><b id="stepN">${n.toLocaleString()}</b><small>/ ${goal.toLocaleString()}</small></div><div class="qbar"><i id="stepBar" style="width:${Math.min(100, n / goal * 100)}%"></i></div>
     <div class="stepmeta"><span>🚶 <b id="stepK">${stepKcal(n)}</b> kcal</span><span>🏋️ <b id="stepG">${gymKcalDay(k)}</b> kcal</span><span>🔥 <b id="stepT">${stepKcal(n) + gymKcalDay(k)}</b> total</span><span>📏 <b id="stepKm">${stepKm(n).toFixed(2)}</b> km</span></div>
     <div class="stepbars">${d7.map(x => `<div><i style="height:${Math.round(x[1] / mx * 100)}%"></i><small>${x[0]}</small></div>`).join('')}</div>
-    <div class="stepacts"><button type="button" class="sec tiny" data-st="toggle">${STEP.on ? '⏸ Stop counting' : '▶ Start counting'}</button><button type="button" class="sec tiny" data-st="add">＋ Add steps</button><button type="button" class="sec tiny" data-st="goal">🎯 Goal</button><button type="button" class="sec tiny" data-st="notif">${progress.stepNotif ? '📌 Notification bar: On' : '📌 Notification bar: Off'}</button></div>
-    <small class="stepnote">${STEP.on ? 'Counting… keep Tracky open with the screen on. Counting pauses when the screen is off.' : 'Counts steps from your phone motion sensor while Tracky is open. Calories are an estimate from your weight and height.'}</small></div>`;
+    <div class="stepacts">${NATIVE.ok ? (NATIVE.st && NATIVE.st.granted ? '' : '<button type="button" class="sec tiny" data-st="native">' + (LANG === 'ar' ? '🔓 فعّل العدّ في الخلفية' : '🔓 Enable background steps') + '</button>') : `<button type="button" class="sec tiny" data-st="toggle">${STEP.on ? '⏸ Stop counting' : '▶ Start counting'}</button>`}<button type="button" class="sec tiny" data-st="add">＋ Add steps</button><button type="button" class="sec tiny" data-st="goal">🎯 Goal</button>${NATIVE.ok ? '' : `<button type="button" class="sec tiny" data-st="notif">${progress.stepNotif ? '📌 Notification bar: On' : '📌 Notification bar: Off'}</button>`}</div>
+    <small class="stepnote">${NATIVE.ok ? (NATIVE.st && NATIVE.st.granted ? (LANG === 'ar' ? '✅ الخطوات بتتحسب في الخلفية حتى لو التطبيق أو الموبايل مقفول. الرقم بيتحدّث لما تفتح التطبيق.' : '✅ Steps are counted in the background, even with the app closed or the phone locked. The number updates when you open Tracky.') : (LANG === 'ar' ? 'محتاج إذن النشاط البدني عشان العدّ يشتغل في الخلفية.' : 'Needs the activity permission to count in the background.')) : STEP.on ? 'Counting… keep Tracky open with the screen on. Counting pauses when the screen is off.' : 'Counts steps from your phone motion sensor while Tracky is open. Calories are an estimate from your weight and height.'}</small></div>`;
 }
 document.addEventListener('click', e => { const t = e.target.closest('[data-st]'); if (!t) return; const a = t.dataset.st;
   if (a === 'toggle') (STEP.on ? stepStop() : stepStart());
+  else if (a === 'native') nativeEnable();
   else if (a === 'add'){ const v = parseInt(prompt('Steps to add today'), 10); if (v > 0 && v < 100000){ addSteps(v); save(); renderSteps(); } }
   else if (a === 'notif') stepNotifToggle();
   else if (a === 'goal'){ const v = parseInt(prompt('Daily step goal', stepGoal()), 10); if (v >= 1000 && v <= 100000){ progress.stepGoal = v; save(); renderSteps(); } } });
@@ -5666,6 +5670,45 @@ async function stepNotify(){
     await reg.showNotification('👣 ' + n.toLocaleString() + ' / ' + stepGoal().toLocaleString() + ' steps', {body:'🔥 ' + (w + g) + ' kcal (walking ' + w + ' · gym ' + g + ') · 📏 ' + stepKm(n).toFixed(2) + ' km', tag:'tracky-steps', renotify:false, silent:true, requireInteraction:true, icon:'icons/icon-192.png', badge:'icons/icon-192.png'}); } catch(e){}
 }
 async function stepNotifyClose(){ try { const reg = await navigator.serviceWorker.ready; (await reg.getNotifications({tag:'tracky-steps'})).forEach(n => n.close()); } catch(e){} }
+/* ---------- Android app (Capacitor) bridge: background steps + scheduled local reminders. Does nothing in a normal browser. ---------- */
+const NATIVE = (() => { const C = window.Capacitor; return {ok: !!(C && C.isNativePlatform && C.isNativePlatform()), ped: () => C && C.Plugins && C.Plugins.TrackyPedometer, ln: () => C && C.Plugins && C.Plugins.LocalNotifications, st: null}; })();
+async function stepNativeSync(){
+  const P = NATIVE.ok && NATIVE.ped(); if (!P) return;
+  try {
+    const st = await P.status(), was = NATIVE.st && NATIVE.st.granted; NATIVE.st = st; if (!st.available || !st.granted){ if (was) renderSteps(); return; }
+    await P.schedule(); const r = await P.getDays(), D = (r && r.days) || {}; progress.steps = progress.steps || {}; progress.stepsNat = progress.stepsNat || {}; let ch = false;
+    Object.keys(D).forEach(k => { const nat = +D[k] || 0, prev = +progress.stepsNat[k] || 0; if (nat > prev){ progress.steps[k] = (progress.steps[k] || 0) + (nat - prev); progress.stepsNat[k] = nat; ch = true; } });
+    if (ch){ save(); stepLive(); } if (!was) renderSteps();
+  } catch(e){}
+}
+async function nativeEnable(){
+  const P = NATIVE.ped(), LN = NATIVE.ln();
+  try { if (P) await P.requestPermission(); } catch(e){}
+  try { if (LN) await LN.requestPermissions(); } catch(e){}
+  progress.nativeAsked = 1; save(); await stepNativeSync(); nativeReminders(); renderSteps();
+}
+let _nrT = 0; const nativeRemindersSoon = () => { clearTimeout(_nrT); _nrT = setTimeout(nativeReminders, 4000); };
+async function nativeReminders(){
+  const LN = NATIVE.ok && NATIVE.ln(); if (!LN || !settings || !settings.profileDone) return;
+  try {
+    const perm = await LN.checkPermissions(); if (perm.display !== 'granted') return;
+    const pend = await LN.getPending(); if (pend && pend.notifications && pend.notifications.length) await LN.cancel({notifications: pend.notifications.map(n => ({id:n.id}))});
+    const out = [], now = new Date(), W = weekState(), r = settings.rem || {}, fr = (window.NUT && NUT.remPlan) ? NUT.remPlan() : [], MSG = {b:'Time to log your breakfast', l:'Time to log your lunch', d:'Time to log your dinner'};
+    for (let i = 0; i < 7; i++){
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i), wd = d.getDay();
+      const at = hm => { const [hh, mm] = String(hm || '').split(':').map(Number); if (!isFinite(hh)) return null; const t = new Date(d.getFullYear(), d.getMonth(), d.getDate(), hh, mm || 0, 0); return t > now ? t : null; };
+      if (r.on && Array.isArray(r.days) && r.days.includes(wd) && !(i === 0 && W.todayDone)){ const t = at(r.time || '18:00'); if (t) out.push({id:1000 + i, title:'Tracky 💪', body:dayMsg(wd) || tr('Time to train! Keep your streak alive.'), schedule:{at:t, allowWhileIdle:true}}); }
+      fr.forEach((f, j) => { if (i === 0 && f.done) return; const t = at(f.t); if (t) out.push({id:2000 + i * 10 + j, title:'Tracky 🍽️', body:tr(MSG[f.k]), schedule:{at:t, allowWhileIdle:true}}); });
+    }
+    if (out.length) await LN.schedule({notifications:out});
+  } catch(e){}
+}
+if (NATIVE.ok){
+  setTimeout(() => { stepNativeSync(); nativeReminders(); }, 2500);
+  setTimeout(() => { if (settings && settings.profileDone && !progress.nativeAsked) showConfirm(LANG === 'ar' ? 'عشان الخطوات تتحسب والتطبيق مقفول وتوصلك التذكيرات في ميعادها، محتاج إذن النشاط البدني والإشعارات. تسمح؟' : 'To count steps while the app is closed and send reminders on time, Tracky needs the activity and notification permissions. Allow?', 'Tracky').then(y => { if (y) nativeEnable(); else { progress.nativeAsked = 1; save(); } }); }, 6000);
+  setInterval(() => { if (!document.hidden) stepNativeSync(); }, 20000);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) nativeRemindersSoon(); else stepNativeSync(); });
+}
 async function stepNotifToggle(){
   if (progress.stepNotif){ progress.stepNotif = false; save(); stepNotifyClose(); return renderSteps(); }
   if (!('Notification' in window)) return showToast('⚠️ This browser cannot show notifications');
@@ -8445,6 +8488,16 @@ function dsIcons(){
   let raf = 0; new MutationObserver(() => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; try { fix(); } catch(e){} }); }).observe(document.body, {childList:true, subtree:true}); fix();
   document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; const a = [...document.querySelectorAll('.overlay.active:not(.conf)')].pop(); if (a){ const x = a.querySelector('.mx'); if (x) x.click(); } });
 })();
+
+/* exercise progress: thin bar + "done/total" per exercise card */
+(function(){
+  const upd = () => document.querySelectorAll('#workoutGrid .ex').forEach(ex => {
+    const c = [...ex.querySelectorAll('input[data-f="done"]')], n = c.length, d = c.filter(x => x.checked).length; if (!n) return;
+    ex.style.setProperty('--prog', (d / n * 100).toFixed(0) + '%'); ex.dataset.prog = d + '/' + n; ex.classList.toggle('ex-done', d === n);
+  });
+  document.addEventListener('change', e => { if (e.target && e.target.matches && e.target.matches('input[data-f="done"]')) upd(); });
+  let raf = 0; new MutationObserver(() => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; upd(); }); }).observe(document.body, {childList:true, subtree:true}); upd();
+})();
 { let raf = 0; const run = () => { raf = 0; try { dsIcons(); } catch(e){} }; new MutationObserver(() => { if (!raf) raf = requestAnimationFrame(run); }).observe(document.body, {childList:true, subtree:true}); run(); }
 
   const tdDue = () => {
@@ -10359,6 +10412,6 @@ window.coachRound = coachRound; window.offerActs = offerActs;
 /* ---------- init ---------- */
 nLoad(); renderFood(); try { renderHome(); } catch(e){}
 
-window.NUT = {dump:() => JSON.stringify(NU), load:o => { if (!o || typeof o !== 'object' || Array.isArray(o)) return; try { localStorage.setItem(NK, JSON.stringify(o)); } catch(e){} nLoad(); try { refresh(); } catch(e){} }, _t:{bcValid, offLookup, parseMeal, searchFoods, targetFor, adaptive, statsFor, ACT, parseActs, NU:() => NU}, report:openReport, open:st => { openFood({stage:st}); }, active:nutriActive, mealsToday:() => peek(todayKey()).meals.length, protPct:() => { const t = targetFor(todayKey()); return Math.round(sumM(peek(todayKey()).meals).p / t.p * 100); }};
+window.NUT = {dump:() => JSON.stringify(NU), load:o => { if (!o || typeof o !== 'object' || Array.isArray(o)) return; try { localStorage.setItem(NK, JSON.stringify(o)); } catch(e){} nLoad(); try { refresh(); } catch(e){} }, _t:{bcValid, offLookup, parseMeal, searchFoods, targetFor, adaptive, statsFor, ACT, parseActs, NU:() => NU}, report:openReport, open:st => { openFood({stage:st}); }, active:nutriActive, mealsToday:() => peek(todayKey()).meals.length, remPlan:() => { const r = NU.set && NU.set.rem; if (!r || !r.on) return []; const have = {}; peek(todayKey()).meals.forEach(m => { have[m.meal] = 1; }); return [['b', 'breakfast'], ['l', 'lunch'], ['d', 'dinner']].map(([k, m]) => ({k, t:r[k], done:!!have[m]})); }, protPct:() => { const t = targetFor(todayKey()); return Math.round(sumM(peek(todayKey()).meals).p / t.p * 100); }};
 
 })();

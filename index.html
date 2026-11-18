@@ -1434,6 +1434,13 @@ body:has([data-panel="food"].active) #fab{display:none!important}
 .overlay>*>.mx{position:absolute!important;top:10px;inset-inline-end:10px;width:36px!important;height:36px!important;min-height:36px!important;padding:0!important;border-radius:12px!important;display:grid!important;place-items:center;background:var(--ex)!important;color:var(--sub)!important;border:1px solid var(--border)!important;box-shadow:none!important;z-index:5;cursor:pointer}
 .overlay>*>.mx:active{transform:scale(.94)}
 .overlay>*>h2,.overlay>*>h3{padding-inline-end:44px}
+.overlay input[type=checkbox]{width:22px!important;height:22px!important;min-height:0!important;flex:none;accent-color:var(--accent);margin:0;border-radius:6px}.overlay label:has(>input[type=checkbox]){display:flex;align-items:center;gap:12px;padding:8px 0;line-height:1.35}
+.srow input[type=checkbox]::before{content:none!important}
+#workoutGrid .ex{position:relative;overflow:hidden}
+#workoutGrid .ex::before{content:"";position:absolute;inset-inline:0;top:0;height:3px;background:linear-gradient(90deg,var(--ok) var(--prog,0%),transparent var(--prog,0%));opacity:.9;transition:background .3s var(--ds-ease)}
+#workoutGrid .ex[data-prog]::after{content:attr(data-prog);position:absolute;top:10px;inset-inline-end:12px;font-size:.68rem;font-weight:700;color:var(--mute);font-variant-numeric:tabular-nums;pointer-events:none;opacity:0}
+#workoutGrid .ex.ex-done{border-color:rgba(32,214,160,.45)!important}
+input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;cursor:pointer;margin-inline-start:6px;background:var(--mute) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M7 7l10 10M17 7 7 17'/%3E%3C/svg%3E") center/11px no-repeat}
 </style>
 </head>
 <body>
@@ -1737,6 +1744,6 @@ body:has([data-panel="food"].active) #fab{display:none!important}
 <script>try{var __r=JSON.parse(localStorage.getItem('trackyResume')||'null');if(__r&&Date.now()-__r.t<43200000)document.documentElement.classList.add('resume')}catch(e){}</script><div id="splash" aria-label="Tracky is loading"><div class="sp-glow"></div><div class="sp-logo"><i class="sp-ring"></i><i class="sp-ring r2"></i><img src="icons/icon-512.png" alt="Tracky logo"></div><div class="sp-word" aria-hidden="true"><i>T</i><i>R</i><i>A</i><i>C</i><i>K</i><i>Y</i></div><div class="sp-tag">Build · Track · Coach</div><div class="sp-bar"><i></i></div></div>
 <div class="toast" id="toast"></div>
 
-<script src="app.js?v=f2e76214" defer></script>
+<script src="app.js?v=9edff378" defer></script>
 </body>
 </html>
