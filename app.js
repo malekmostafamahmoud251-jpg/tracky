@@ -2072,6 +2072,10 @@ Protein|بروتين|Protéines
 Carbs|كارب|Glucides
 Fat|دهون|Lipides
 1 year|سنة|1 an
+App version|النسخة|Version
+Update now|حدّث دلوقتي|Mettre à jour
+Clears the saved copy and loads the newest version. Your data stays.|بيمسح النسخة المحفوظة ويحمّل أحدث نسخة. بياناتك زي ما هي.|Efface la copie enregistrée et charge la dernière version. Vos données restent.
+Review before logging|راجع قبل التسجيل|Vérifier avant d'enregistrer
 `.split('\n').forEach(l => { const p = l.split('|'); if (p.length === 3){ I18N.ar[p[0]] = p[1]; I18N.fr[p[0]] = p[2]; } });
 const PATS = [
  [/^(\d+) sets × (.+) reps · (.+)kg$/, "$1 مجموعات × $2 تكرار · $3 كجم", "$1 séries × $2 reps · $3 kg"],
@@ -7692,12 +7696,14 @@ function openVoice(){
     <div class="vrow"><input type="text" id="vIn" class="shin" placeholder="Or type here" autocomplete="off" style="direction:auto;text-align:start"><button type="button" id="vGo">✅ <span>Log</span></button></div>
     <div class="vrow"><label class="vlab"><span>Language</span> <select id="vLang" class="in">${[['', 'Auto'], ['ar-EG', 'العربية (مصر)'], ['ar-SA', 'العربية (السعودية)'], ['en-US', 'English'], ['fr-FR', 'Français']].map(([v, l]) => `<option value="${v}"${(settings.voiceLang || '') === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
     <label class="vlab"><span>Engine</span> <select id="vEng" class="in">${[['auto', 'Auto'], ['device', 'Device (free)'], ['cloud', 'Cloud (AI)']].map(([v, l]) => `<option value="${v}"${eng === v ? ' selected' : ''}>${escapeHTML(tr(l))}</option>`).join('')}</select></label></div>
+    <div class="vrow"><label class="vlab"><input type="checkbox" id="vConf"${settings.voiceConfirm !== false ? ' checked' : ''}> <span>Review before logging</span></label></div>
     <div class="vrow"><label class="vlab"><input type="checkbox" id="vKeep"${settings.voiceKeep ? ' checked' : ''}> <span>Keep listening</span></label></div>
     <div id="vRes"></div><small class="insight2"><span>Accuracy depends on your phone's speech engine and the gym noise. Always glance at the set before you move on.</span></small>
     <div class="stepacts" style="justify-content:center;margin-top:.6rem"><button type="button" id="vClose"><span>Close</span></button></div>`;
   $('vLang').onchange = e => { settings.voiceLang = e.target.value; save(); };
   $('vEng').onchange = e => { settings.voiceEngine = e.target.value; save(); };
   $('vKeep').onchange = e => { settings.voiceKeep = e.target.checked; save(); };
+  $('vConf').onchange = e => { settings.voiceConfirm = e.target.checked; save(); };
   $('vGo').onclick = () => { const v = $('vIn').value.trim(); if (v){ voiceHandle([v]); $('vIn').value = ''; } };
   $('vIn').onkeydown = e => { if (e.key === 'Enter') $('vGo').click(); };
   $('vClose').onclick = () => closeModal('modalVoice');
@@ -8057,7 +8063,7 @@ const flush = () => { save(); saveDraft(); saveChat(); pushStateNow(true); };
 document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
 addEventListener('pagehide', flush);
 try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e){}
-if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js', {updateViaCache:'none'}).then(r => { try { r.update(); } catch(e){} }).catch(() => {});
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js', {updateViaCache:'none'}).then(r => { try { r.update(); document.addEventListener('visibilitychange', () => { if (!document.hidden) try { r.update(); } catch(e){} }); setInterval(() => { try { r.update(); } catch(e){} }, 30 * 60 * 1000); } catch(e){} }).catch(() => {});
 
 /* ---------- v18b: monthly season + store v2 ---------- */
 const SEASON_TH = [15, 40, 70, 110, 160, 220, 290, 370], SEASON_KIND = ['Badge', 'Badge', 'Frame', 'Badge', 'Champion', 'Aura', 'Badge', 'Crown'], SEASON_SLOT = {Badge:'badge', Frame:'frame', Aura:'aura', Champion:'title', Crown:'title'};
@@ -8323,6 +8329,11 @@ function stOrganize(){
   const T = (k, d) => { const v = tr(k); return v || d; };
   if (!modal.dataset.org){
     modal.dataset.org = '1';
+    if (!$('appVerBox')){ const vb = document.createElement('div'); vb.className = 'fg'; vb.id = 'appVerBox';
+      vb.innerHTML = '<label data-k="App version"></label><div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap"><b id="appVerTxt">…</b><button type="button" class="sec" id="appUpdBtn" data-k="Update now"></button></div><small style="color:var(--sub)" data-k="Clears the saved copy and loads the newest version. Your data stays."></small>'; modal.appendChild(vb);
+      const upd = $('appUpdBtn'); upd.onclick = async () => { upd.disabled = true; try { const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r => r.unregister())); const ks = await caches.keys(); await Promise.all(ks.filter(k => k.startsWith('tracky-v')).map(k => caches.delete(k))); } catch(_){} location.replace(location.pathname + '?r=' + Date.now()); };
+      try { caches.keys().then(ks => { const v = ks.filter(k => k.startsWith('tracky-v')).sort().pop(); $('appVerTxt').textContent = v ? v.replace('tracky-', '') : 'web'; }); } catch(_){}
+    }
     const fgs = [...modal.querySelectorAll(':scope > .fg')], has = (f, sel) => !!f.querySelector(sel);
     const pick = fn => fgs.filter(f => !f.dataset.taken && fn(f)).map(f => (f.dataset.taken = '1', f));
     const SEC = [
@@ -8392,6 +8403,12 @@ const DSI = {
   edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   barcode:'<path d="M4 5v14M8 5v14M12 5v14M16 5v14M20 5v14"/>',
   zap:'<path d="M13 2 4 14h7l-1 8 9-12h-7Z"/>',
+  calendar:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/>',
+  flame:'<path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9Z"/>',
+  trend:'<path d="m3 17 6-6 4 4 8-8M15 7h6v6"/>',
+  moon:'<path d="M20 14A8 8 0 1 1 10 4a6.5 6.5 0 0 0 10 10Z"/>',
+  up:'<path d="M12 19V5M6 11l6-6 6 6"/>',
+  x:'<path d="M6 6l12 12M18 6 6 18"/>',
   trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
   type:'<path d="M4 7V5h16v2M12 5v14M9 19h6"/>'
 };
@@ -8400,8 +8417,12 @@ function dsIcons(){
   const set = (el, n, s) => { if (el && el.dataset.ic !== n){ el.dataset.ic = n; el.innerHTML = dsv(n, s); } };
   const T = {home:'home', train:'dumbbell', food:'utensils', charts:'chart', aicoach:'bot', progress:'user'};
   document.querySelectorAll('.tabs>button').forEach(b => { const m = T[b.dataset.tab]; if (m) set(b.querySelector('i'), m, 22); });
-  [['coachAbbr', 'type'], ['coachClear', 'trash']].forEach(([i, n]) => { const b = $(i); if (b && b.dataset.ic !== n){ b.dataset.ic = n; b.innerHTML = dsv(n, 18); } });
-  const ch = document.querySelector('.chat-h > span'); if (ch && !ch.dataset.ic){ ch.dataset.ic = 1; if (ch.firstChild && ch.firstChild.nodeType === 3) ch.firstChild.textContent = ch.firstChild.textContent.replace('🤖', '').trimStart(); ch.insertAdjacentHTML('afterbegin', dsv('bot', 20)); }
+  [['coachAbbr', 'type'], ['coachClear', 'trash']].forEach(([i, n]) => { const b = $(i); if (b && !b.querySelector('svg')){ b.innerHTML = dsv(n, 18); } });
+  const ch = document.querySelector('.chat-h > span'); if (ch){ [...ch.childNodes].forEach(n => { if (n.nodeType === 3 && n.textContent.includes('🤖')) n.textContent = n.textContent.replace('🤖', '').trim() + ' '; }); if (!ch.querySelector(':scope > svg')) ch.insertAdjacentHTML('afterbegin', dsv('bot', 20)); }
+  const CE = {'📊':'chart','📆':'calendar','💪':'dumbbell','🔍':'search','📸':'camera','📅':'calendar','📈':'trend','♨️':'flame','🤕':'aid','🍗':'utensils','🦵':'activity','😴':'moon','🔤':'type'};
+  document.querySelectorAll('.chat .chips button').forEach(b => { if (b.dataset.ic) return; const t = b.textContent.trim(), em = Object.keys(CE).find(k => t.startsWith(k)); if (!em) return; b.dataset.ic = 1; b.dataset.q ? 0 : 0; const rest = t.slice(em.length).trim(); b.innerHTML = dsv(CE[em], 16) + '<span></span>'; b.lastChild.textContent = rest; b.style.display = 'inline-flex'; b.style.alignItems = 'center'; b.style.gap = '6px'; });
+  const am = $('aiMic'); if (am && am.dataset.ic !== 'mic'){ am.dataset.ic = 'mic'; am.innerHTML = dsv('mic', 20); }
+  const as = $('aiSend'); if (as && as.dataset.ic !== 'up'){ as.dataset.ic = 'up'; as.innerHTML = dsv('up', 20); }
   set($('backBtn'), 'back', 22); set($('findBtn'), 'search', 20); set($('moreBtn'), 'sliders', 20);
   const sb = $('storeBtn'); if (sb && !sb.querySelector('svg')){ [...sb.childNodes].forEach(n => { if (n.nodeType === 3) n.remove(); }); sb.insertAdjacentHTML('afterbegin', dsv('bag', 20)); }
   const Q = ['plan', 'activity', 'chart', 'gamepad', 'grid']; document.querySelectorAll('.quick .qk').forEach((q, i) => set(q.querySelector('i'), Q[i] || 'grid', 24));
@@ -8409,6 +8430,21 @@ function dsIcons(){
   document.querySelectorAll('.nf-add button[data-a]').forEach(b => { const m = FQ[b.dataset.a], i = b.querySelector('i'); if (m && i) set(i, m, b.classList.contains('nf-big') ? 20 : 22); });
   const TT = ['mic', 'timer', 'camera', 'aid']; document.querySelectorAll('#trainTools button').forEach((b, i) => { if (!b.dataset.ic && TT[i]){ b.dataset.ic = TT[i]; [...b.childNodes].forEach(n => { if (n.nodeType === 3) n.remove(); }); b.insertAdjacentHTML('afterbegin', dsv(TT[i], 20)); } });
 }
+
+/* ---------- every pop-up / sheet gets its own exit button (✕), plus Esc ---------- */
+(function(){
+  const fix = () => {
+    document.querySelectorAll('.overlay:not(.conf)').forEach(o => {
+      const box = o.firstElementChild; if (!box || box.querySelector(':scope > .mx')) return;
+      if (getComputedStyle(box).position === 'static') box.style.position = 'relative';
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'mx'; b.setAttribute('aria-label', LANG === 'ar' ? 'إغلاق' : 'Close'); b.innerHTML = dsv('x', 18);
+      b.addEventListener('click', ev => { ev.stopPropagation(); if (o.id) closeModal(o.id); else o.classList.remove('active'); try { buzz(6); } catch(_){} });
+      box.prepend(b);
+    });
+  };
+  let raf = 0; new MutationObserver(() => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; try { fix(); } catch(e){} }); }).observe(document.body, {childList:true, subtree:true}); fix();
+  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; const a = [...document.querySelectorAll('.overlay.active:not(.conf)')].pop(); if (a){ const x = a.querySelector('.mx'); if (x) x.click(); } });
+})();
 { let raf = 0; const run = () => { raf = 0; try { dsIcons(); } catch(e){} }; new MutationObserver(() => { if (!raf) raf = requestAnimationFrame(run); }).observe(document.body, {childList:true, subtree:true}); run(); }
 
   const tdDue = () => {
@@ -8591,6 +8627,35 @@ function dsIcons(){
     const sys = 'You convert a noisy gym voice transcript (Egyptian Arabic, English or French, often mis-heard) into a clean command. Reply with ONE line only.';
     const q = 'Exercises on screen: ' + (names.join(', ') || '(none)') + '\nTranscript: ' + alts.slice(0, 3).join(' / ') + '\nOutput format: "<exact exercise name from the list> <weight> kg <reps> reps" and add " <n> sets" if sets are said; separate several sets with " then ". Use digits. If the transcript is not a workout log, reply exactly: NONE';
     let acc = ''; askCoach(sys, [], q, p => { acc = p; }, 120).then(t => { t = String(t || acc || '').split('\n')[0].replace(/["“”`]/g, '').trim(); const a = [t]; a._ai = 1; if (!t || /^none$/i.test(t)) _vh1(alts); else _vh1(a.concat(alts)); }).catch(() => _vh1(alts));
+  };
+  /* ---- confirm step (same idea as the food voice log): transcript -> AI cleans it using the exercises on screen -> editable preview -> Confirm ---- */
+  const _vh2 = voiceHandle, isAr = () => LANG === 'ar';
+  const aiClean = alts => new Promise(res => {
+    if (!coachReady() || navigator.onLine === false) return res(null);
+    const exs = [...document.querySelectorAll('#workoutGrid .ex')].map(it => { const d = state.days.find(x => x.id === it.dataset.d), e = d && d.exercises[+it.dataset.i]; return e ? e.name + (e.weight ? ' (plan ' + e.weight + ' kg x ' + e.reps + ')' : '') : null; }).filter(Boolean);
+    const sys = 'You convert a noisy gym voice transcript (Egyptian Arabic, English or French; speech engines often mis-hear exercise names and numbers) into one clean command line. Reply with ONE line only, no explanation.';
+    const q = 'Exercises on screen: ' + (exs.join('; ') || '(none)') + '\nTranscript alternatives: ' + alts.slice(0, 4).join(' / ') + '\nOutput: "<exact exercise name from the list> <weight> kg <reps> reps" and add " <n> sets" if several sets are said; separate different sets/exercises with " then ". Digits only. Keep "same again" / "undo" as the English words same again / undo. If it is not a workout log, reply exactly: NONE';
+    let acc = '', done = false; const fin = t => { if (done) return; done = true; t = String(t || acc || '').split('\n')[0].replace(/["“”`]/g, '').trim(); res(!t || /^none$/i.test(t) ? null : t); };
+    setTimeout(() => fin(''), 6000); askCoach(sys, [], q, p => { acc = p; }, 120).then(fin).catch(() => fin(''));
+  });
+  const prevHTML = (text, alts) => {
+    let plan = null; for (const a of [text].concat(alts || [])){ try { const p = voicePlan(a); if (p.ok){ plan = p; break; } if (!plan && p.steps.length) plan = p; } catch(_){} }
+    const lines = !plan || !plan.steps.length ? ['<div class="vres bad">⚠️ ' + (isAr() ? 'مفهمتش. عدّل الجملة تحت.' : 'Not understood. Edit the sentence below.') + '</div>'] : plan.steps.map(s => s.b ? '<div class="vres ok">✅ ' + escapeHTML(vLabel(s.b, s.r)) + (s.amb ? ' <small>(' + (isAr() ? 'أكتر من تمرينة تنفع' : 'several match') + ')</small>' : '') + '</div>' : '<div class="vres bad">⚠️ ' + escapeHTML(s.sg) + ' — ' + (isAr() ? 'مش لاقي التمرينة في اليوم المعروض' : 'no matching exercise on screen') + '</div>');
+    return {html: lines.join(''), ok: !!(plan && plan.steps.length && plan.ok)};
+  };
+  function showPreview(text, alts){
+    const out = $('vRes'); if (!out) return;
+    const draw = () => { const v = ($('vPin') || {value:text}).value, P = prevHTML(v, alts); $('vPrev').innerHTML = P.html; $('vOk').disabled = !P.ok; };
+    out.innerHTML = '<div class="vprev"><label class="vlab"><span>' + (isAr() ? 'اللي فهمته (تقدر تعدّله)' : 'What I heard (you can edit)') + '</span></label><input id="vPin" class="shin" dir="auto" style="text-align:start"><div id="vPrev"></div><div class="vrow"><button type="button" id="vOk">✅ ' + (isAr() ? 'سجّل' : 'Confirm') + '</button><button type="button" id="vNo" class="sec">✕ ' + (isAr() ? 'إلغاء' : 'Cancel') + '</button></div></div>';
+    $('vPin').value = text; draw(); let tm = 0; $('vPin').oninput = () => { clearTimeout(tm); tm = setTimeout(draw, 250); };
+    $('vNo').onclick = () => { out.innerHTML = ''; };
+    $('vOk').onclick = () => { const a = [$('vPin').value.trim()]; if (!a[0]) return; a._conf = a._ai = 1; _vh2(a); };
+  }
+  voiceHandle = function(alts){
+    if (VT || alts._conf || settings.voiceConfirm === false) return _vh2(alts);
+    if (VCMD_UNDO.test(norm(alts[0]))) return _vh2(alts);
+    const out = $('vRes'); if (out) out.innerHTML = '<div class="vres">⏳ ' + (isAr() ? 'بفهم كلامك…' : 'Understanding…') + '</div>';
+    aiClean(alts).then(t => { const text = t || alts[0]; if (VCMD_UNDO.test(norm(text)) || /^(same again|undo)$/i.test(text.trim())) { const a = [text]; a._conf = a._ai = 1; return _vh2(a); } showPreview(text, alts); });
   };
   document.addEventListener('click', e => {
     const c = e.target.closest('[data-vc]'), u = e.target.closest('[data-vu]');
@@ -9628,12 +9693,15 @@ let SCN = null;
 function scanStop(){ if (!SCN) return; SCN.on = false; try { SCN.stream && SCN.stream.getTracks().forEach(t => t.stop()); } catch(_){} SCN = null; }
 let _zx = null;
 async function zxLoad(){ if (_zx) return _zx; await new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js'; s.onload = ok; s.onerror = no; document.head.appendChild(s); }); return _zx = window.ZXing; }
-async function zxDecode(src){ /* src: canvas; returns digits or '' */
+async function zxDecode(src){ /* src: canvas; tries upright and rotated (barcodes are often held sideways); returns digits or '' */
   const Z = await zxLoad(), hints = new Map(); hints.set(Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.EAN_13, Z.BarcodeFormat.EAN_8, Z.BarcodeFormat.UPC_A, Z.BarcodeFormat.UPC_E, Z.BarcodeFormat.CODE_128]); hints.set(Z.DecodeHintType.TRY_HARDER, true);
   const rd = new Z.MultiFormatReader(); rd.setHints(hints);
-  const g = src.getContext('2d').getImageData(0, 0, src.width, src.height), lum = new Uint8ClampedArray(src.width * src.height);
-  for (let i = 0, j = 0; i < g.data.length; i += 4, j++) lum[j] = (g.data[i] * 306 + g.data[i + 1] * 601 + g.data[i + 2] * 117) >> 10;
-  for (const inv of [false, true]){ try { const bmp = new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.RGBLuminanceSource(lum, src.width, src.height))); return rd.decode(bmp).getText(); } catch(_){} break; }
+  for (const deg of [0, 90, 270]){
+    let c = src; if (deg){ c = document.createElement('canvas'); c.width = src.height; c.height = src.width; const x = c.getContext('2d'); x.translate(c.width / 2, c.height / 2); x.rotate(deg * Math.PI / 180); x.drawImage(src, -src.width / 2, -src.height / 2); }
+    const g = c.getContext('2d').getImageData(0, 0, c.width, c.height), lum = new Uint8ClampedArray(c.width * c.height);
+    for (let i = 0, j = 0; i < g.data.length; i += 4, j++) lum[j] = (g.data[i] * 306 + g.data[i + 1] * 601 + g.data[i + 2] * 117) >> 10;
+    try { const t = rd.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.RGBLuminanceSource(lum, c.width, c.height)))).getText(); if (t) return t; } catch(_){}
+  }
   return '';
 }
 async function scanImageFile(f){
@@ -9885,7 +9953,7 @@ function nudgeHtml(k){
 }
 
 function goTo(g){ const map = {train:'train', food:'food', home:'home', report:'progress'}, b = document.querySelector('.tab[data-tab="' + (map[g] || 'home') + '"]'); if (b) b.click(); if (g === 'report'){ try { showReport(-1); } catch(e){} } }
-try { if (navigator.serviceWorker) navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.go) goTo(e.data.go); if (e.data && e.data.update && !$('updBar')){ const d = document.createElement('div'); d.id = 'updBar'; d.innerHTML = '<span>🔄 ' + escapeHTML(tr('New version ready')) + '</span><button type="button">' + escapeHTML(tr('Reload')) + '</button><i>✕</i>'; d.querySelector('button').onclick = () => location.reload(); d.querySelector('i').onclick = () => d.remove(); document.body.appendChild(d); } }); const g0 = new URLSearchParams(location.search).get('go'); if (g0) setTimeout(() => goTo(g0), 900); } catch(e){}
+try { if (navigator.serviceWorker) navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.go) goTo(e.data.go); if (e.data && e.data.update && !$('updBar')){ if (performance.now() < 20000 && !workoutTimerStartedAt && !document.querySelector('.overlay.active') && !(document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName))){ location.reload(); return; } const d = document.createElement('div'); d.id = 'updBar'; d.innerHTML = '<span>🔄 ' + escapeHTML(tr('New version ready')) + '</span><button type="button">' + escapeHTML(tr('Reload')) + '</button><i>✕</i>'; d.querySelector('button').onclick = () => location.reload(); d.querySelector('i').onclick = () => d.remove(); document.body.appendChild(d); } }); const g0 = new URLSearchParams(location.search).get('go'); if (g0) setTimeout(() => goTo(g0), 900); } catch(e){}
 
 
 /* feature finder entries (v9 DEST is private, so add keyword aliases through the search box fallback) */

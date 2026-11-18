@@ -1,5 +1,5 @@
 /* Tracky service worker: instant start from cache, silent update in the background, push notifications */
-const VER = 'tracky-v40', SHELL = ['manifest.json', 'icons/icon-192.png', 'icons/icon-512.png'];
+const VER = 'tracky-v44', SHELL = ['manifest.json', 'icons/icon-192.png', 'icons/icon-512.png'];
 const ABS = u => new URL(u, self.registration.scope).href;
 
 /* store index.html and the app script it points to (script first, so the page never references a missing file) */
@@ -22,7 +22,11 @@ self.addEventListener('install', e => {
   })());
 });
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('tracky-v') && k !== VER).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil((async () => {
+    const ks = await caches.keys(), old = ks.filter(k => k.startsWith('tracky-v') && k !== VER);
+    await Promise.all(old.map(k => caches.delete(k))); await self.clients.claim();
+    if (old.length) (await self.clients.matchAll({type: 'window', includeUncontrolled: true})).forEach(x => x.postMessage({update: true}));   // a new version just took over: tell open pages
+  })());
 });
 
 self.addEventListener('fetch', e => {
