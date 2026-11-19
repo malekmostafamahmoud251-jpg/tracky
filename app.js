@@ -5245,7 +5245,8 @@ function lineChart(pts, opt = {}){
     trend = `<line x1="${X(0)}" y1="${Y(my - sl * mi)}" x2="${X(n - 1)}" y2="${Y(my + sl * (n - 1 - mi))}" stroke="var(--sub)" stroke-width="1.5" stroke-dasharray="4 4"/>`; }
   const dots = pts.map((p,i) => `<circle cx="${X(i)}" cy="${Y(p.y)}" r="${p.pr ? 5 : (i === n - 1 ? 5 : 3)}" fill="${p.pr ? '#f5a623' : 'var(--accent)'}"/>`).join('');
   const xl = [0, n - 1].filter((v,i,a) => a.indexOf(v) === i).map(i => `<text x="${X(i)}" y="${H - 6}" text-anchor="${i ? 'end' : 'start'}" font-size="9" fill="var(--sub)">${pts[i].x}</text>`).join('');
-  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;direction:ltr">${grid}${line}${trend}${dots}${xl}<text x="${X(n - 1)}" y="${+Y(pts[n - 1].y) - 9}" text-anchor="end" font-size="10" font-weight="700" fill="var(--text)">${Math.round(pts[n - 1].y)} kg</text></svg>`;
+  const P = escapeHTML(JSON.stringify(pts.map((p, i) => ({x:String(p.x), cx:+X(i), cy:+Y(p.y), v:+toDisp(p.y).toFixed(1)}))));
+  return `<svg class="lc" data-p="${P}" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;direction:ltr">${grid}${line}${trend}${dots}${xl}<text x="${X(n - 1)}" y="${+Y(pts[n - 1].y) - 9}" text-anchor="end" font-size="10" font-weight="700" fill="var(--text)">${Math.round(toDisp(pts[n - 1].y))} ${unitName()}</text><g class="lct" pointer-events="none"></g></svg>`;
 }
 function renderExerciseChart(){
   const ex = $('chartExerciseSelect').value, c = $('exerciseChart'), ins = $('exerciseInsight'); c.innerHTML = ''; ins.textContent = '';
@@ -5893,10 +5894,11 @@ function ghostUpdate(){
   document.querySelectorAll('#workoutGrid .ex').forEach(item => { const day = state.days.find(d => d.id === item.dataset.d); if (!day) return; const ex = (day.exercises || [])[+item.dataset.i], o = ex && r.per[day.id + '_' + ex.name]; let g = item.querySelector('.ghost');
     if (!o || !o.g){ if (g) g.remove(); return; }
     if (!g){ g = document.createElement('div'); g.className = 'ghost'; const h = item.querySelector('.exh'); if (h) h.after(g); else item.prepend(g); }
-    const diff = o.y - o.gg; g.innerHTML = '👻 ' + o.g.sets.map(s => toDisp(s.weight) + '×' + s.reps).join(' · ') + (o.y ? ` <b class="${diff >= 0 ? 'up' : 'dn'}">${diff >= 0 ? '+' : '−'}${Math.abs(Math.round(toDisp(diff)))}</b>` : ''); });
+    const diff = o.y - o.gg; g.innerHTML = '<svg class="gico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V10a7 7 0 0 1 14 0v11l-3-2-2 2-2-2-2 2-2-2z"/></svg> ' + o.g.sets.map(s => toDisp(s.weight) + '×' + s.reps).join(' · ') + (o.y ? ` <b class="${diff >= 0 ? 'up' : 'dn'}">${diff >= 0 ? '+' : '−'}${Math.abs(Math.round(toDisp(diff)))}</b>` : ''); });
   bar.style.display = r.full > 0 ? '' : 'none'; if (r.full <= 0) return;
   const pct = Math.min(100, Math.round(r.you / r.full * 100)), gp = Math.min(100, Math.round(r.gst / r.full * 100));
-  bar.innerHTML = `<b>👻 Ghost race</b> <span>${r.n ? (r.you >= r.gst ? 'You are ahead' : 'The ghost is ahead') : 'Tick sets to start the race'}</span><div class="gbar"><i class="you" style="width:${pct}%"></i><i class="gst" style="left:${gp}%"></i></div><small>You ${Math.round(toDisp(r.you)).toLocaleString()} · 👻 ${Math.round(toDisp(r.gst)).toLocaleString()} · target ${Math.round(toDisp(r.full)).toLocaleString()}</small>`;
+  const GI = '<svg class="gico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V10a7 7 0 0 1 14 0v11l-3-2-2 2-2-2-2 2-2-2z"/><path d="M9.5 10h.01M14.5 10h.01"/></svg>', ahead = r.you >= r.gst, N = v => Math.round(toDisp(v)).toLocaleString();
+  bar.innerHTML = `<div class="gh-h"><b>${GI} Ghost race</b><span class="gh-st ${r.n ? (ahead ? 'up' : 'dn') : ''}">${r.n ? (ahead ? 'You are ahead' : 'The ghost is ahead') : 'Tick sets to start the race'}</span></div><div class="gh-l"><em>You</em><div class="gbar"><i class="you" style="width:${pct}%"></i></div><span>${N(r.you)}</span></div><div class="gh-l"><em>Ghost</em><div class="gbar"><i class="gz" style="width:${gp}%"></i></div><span>${N(r.gst)}</span></div><small>target ${N(r.full)}</small>`;
 }
 { const _us = updateStats; updateStats = function(){ _us(); try { ghostUpdate(); } catch(e){} }; const _rt = renderTrain; renderTrain = function(){ _rt(); try { ghostUpdate(); } catch(e){} };
   const _ls = logSession; logSession = async function(dayId){ const r = ghostScore(dayId || null), n0 = sessions.length; await _ls.apply(this, arguments);
@@ -8460,6 +8462,9 @@ const DSI = {
   x:'<path d="M6 6l12 12M18 6 6 18"/>',
   trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
   type:'<path d="M4 7V5h16v2M12 5v14M9 19h6"/>',
+  shield:'<path d="M12 3 5 6v5c0 5 3 8 7 10 4-2 7-5 7-10V6z"/><path d="m9 12 2 2 4-4"/>',
+  check:'<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+  target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
   clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   copy:'<rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/>',
   refresh:'<path d="M20 11a8 8 0 0 0-14-4L4 9M4 4v5h5M4 13a8 8 0 0 0 14 4l2-2M20 20v-5h-5"/>',
@@ -8474,6 +8479,14 @@ function dsIcons(){
   const ch = document.querySelector('.chat-h > span'); if (ch){ [...ch.childNodes].forEach(n => { if (n.nodeType === 3 && n.textContent.includes('🤖')) n.textContent = n.textContent.replace('🤖', '').trim() + ' '; }); if (!ch.querySelector(':scope > svg')) ch.insertAdjacentHTML('afterbegin', dsv('bot', 20)); }
   const CE = {'📊':'chart','📆':'calendar','💪':'dumbbell','🔍':'search','📸':'camera','📅':'calendar','📈':'trend','♨️':'flame','🤕':'aid','🍗':'utensils','🦵':'activity','😴':'moon','🔤':'type'};
   document.querySelectorAll('.chat .chips button').forEach(b => { if (b.dataset.ic) return; const t = b.textContent.trim(), em = Object.keys(CE).find(k => t.startsWith(k)); if (!em) return; b.dataset.ic = 1; b.dataset.q ? 0 : 0; const rest = t.slice(em.length).trim(); b.innerHTML = dsv(CE[em], 16) + '<span></span>'; b.lastChild.textContent = rest; b.style.display = 'inline-flex'; b.style.alignItems = 'center'; b.style.gap = '6px'; });
+  document.querySelectorAll('.hero .hs').forEach((h, i) => { if (h.dataset.ic) return; h.dataset.ic = 1; [...h.childNodes].forEach(n => { if (n.nodeType === 3) n.remove(); }); h.insertAdjacentHTML('afterbegin', dsv(['flame', 'dumbbell', 'shield'][i] || 'zap', 22)); });
+  const GE = {'🛠️':'plan','🧮':'grid','🏃':'activity','✅':'check','🍽️':'utensils','📈':'trend','🤖':'bot','🎯':'target','🛍️':'bag','📅':'calendar'};
+  document.querySelectorAll('.panel button, .tabs ~ * button').forEach(b => {
+    if (b.id === 'aiSend' || b.id === 'aiMic' || b.closest('#chatMessages')) return;
+    if (b.dataset.gi){ if (!b.querySelector('svg')) b.insertAdjacentHTML('afterbegin', dsv(b.dataset.gi, 16) + ' '); return; }
+    const t = b.textContent.trim(), em = Object.keys(GE).find(k => t.startsWith(k)); if (!em || b.querySelector('svg') || b.children.length > 1) return;
+    b.dataset.gi = GE[em]; b.textContent = t.slice(em.length).trim(); b.insertAdjacentHTML('afterbegin', dsv(GE[em], 16) + ' '); b.style.display = b.style.display || 'inline-flex'; b.style.alignItems = 'center'; b.style.justifyContent = b.style.justifyContent || 'center'; b.style.gap = '6px';
+  });
   const MA = {copy:'copy', regen:'refresh', note:'note'}; document.querySelectorAll('#chatMessages .macts button[data-ma]').forEach(b => { if (!b.dataset.ic && MA[b.dataset.ma]){ b.dataset.ic = 1; b.innerHTML = dsv(MA[b.dataset.ma], 16); } });
   const am = $('aiMic'); if (am && am.dataset.ic !== 'mic'){ am.dataset.ic = 'mic'; am.innerHTML = dsv('mic', 20); }
   const as = $('aiSend'); if (as && as.dataset.ic !== 'up'){ as.dataset.ic = 'up'; as.innerHTML = dsv('up', 20); }
@@ -8515,6 +8528,19 @@ function dsIcons(){
     if (g){ const a = load(), c = a.splice(+g.dataset.i, 1)[0]; if (!c) return; store(a); archive(cur());
       $('chatMessages').innerHTML = ''; c.m.forEach(m => addMsg(m.t, m.x)); saveChat(); closeModal('modalChats'); }
   });
+})();
+
+/* ---------- interactive charts: touch / hover a line chart to read the exact value ---------- */
+(function(){
+  const show = (svg, ev) => {
+    let P; try { P = JSON.parse(svg.dataset.p || '[]'); } catch(e){ return; } if (!P.length) return;
+    const r = svg.getBoundingClientRect(), W = svg.viewBox.baseVal.width, x = (ev.clientX - r.left) / r.width * W; let b = P[0]; P.forEach(p => { if (Math.abs(p.cx - x) < Math.abs(b.cx - x)) b = p; });
+    const label = b.x + ' · ' + b.v + ' ' + unitName(), tw = label.length * 5.4 + 14, tx = Math.min(Math.max(b.cx - tw / 2, 2), W - tw - 2), ty = Math.max(b.cy - 32, 2), g = svg.querySelector('.lct'); if (!g) return;
+    g.innerHTML = `<line x1="${b.cx}" x2="${b.cx}" y1="8" y2="126" stroke="var(--accent)" stroke-dasharray="3 3" opacity=".6"/><circle cx="${b.cx}" cy="${b.cy}" r="6" fill="var(--card)" stroke="var(--accent)" stroke-width="2.5"/><rect x="${tx}" y="${ty}" width="${tw}" height="18" rx="6" fill="var(--text)"/><text x="${tx + tw / 2}" y="${ty + 12.5}" text-anchor="middle" font-size="10" font-weight="700" fill="var(--card)">${escapeHTML(label)}</text>`;
+  };
+  const clear = keep => document.querySelectorAll('svg.lc .lct').forEach(g => { if (g.parentNode !== keep) g.innerHTML = ''; });
+  document.addEventListener('pointerdown', e => { const svg = e.target.closest && e.target.closest('svg.lc'); clear(svg); if (svg) show(svg, e); });
+  document.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && !e.buttons && !(e.target.closest && e.target.closest('svg.lc'))) return; const svg = e.target.closest && e.target.closest('svg.lc'); if (svg && (e.pointerType !== 'mouse' || true)) show(svg, e); });
 })();
 
 /* ---------- every pop-up / sheet gets its own exit button (✕), plus Esc ---------- */
