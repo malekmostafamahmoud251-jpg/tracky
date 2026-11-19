@@ -4586,11 +4586,12 @@ async function geminiInteractions(key, model, system, hist, userText, errors){
   const t = grab(j.steps || j.outputs || j, []).join('').trim(); return t || null;
 }
 
+function engTag(el){ try { if (window._eng !== 'backup' || !el || el.querySelector('.engtag')) return; window._eng = ''; const t = document.createElement('div'); t.className = 'engtag'; t.textContent = (LANG === 'ar' ? 'رد من الذكاء الاحتياطي' : 'Backup AI reply'); el.appendChild(t); } catch(_){} }
 /* Shared coach: the request goes to your own server, which holds the key. */
 async function askViaServer(system, hist, userParts, onChunk, maxTokens){
   const temp = (typeof window._askTemp === 'number') ? window._askTemp : 0.7;
   const body = JSON.stringify({systemInstruction:{parts:[{text:system}]}, contents:hist.concat([{role:'user', parts:userParts}]),
-    generationConfig:{temperature:temp, topP:0.95, maxOutputTokens:Math.min(8192, Math.max(maxTokens || 4096, 2048))}});
+    generationConfig:Object.assign({temperature:temp, topP:0.95, maxOutputTokens:Math.min(8192, Math.max(maxTokens || 4096, 2048))}, window._askGen || {})});
   if (!settings.aiConsent){ if (!(await showConfirm(privacyText(), '🔒 ' + tr('Send data to the AI?')))) throw new Error(tr('The coach needs your OK to send data to the AI.')); settings.aiConsent = true; save(); }
   let lastErr = null;
   for (let attempt = 0; attempt < 3; attempt++){
@@ -4603,6 +4604,7 @@ async function askViaServer(system, hist, userParts, onChunk, maxTokens){
     if (r.status >= 500){ lastErr = new Error('Coach is busy (' + r.status + '). Retrying failed.'); continue; }
     if (!r.ok) throw new Error('Coach server error ' + r.status + ' ' + await apiErr(r));
     _geminiRoute = 'server';
+    window._eng = r.headers.get('X-AI-Engine') === 'backup' ? 'backup' : '';
     try { if (r.headers.get('X-AI-Engine') === 'backup' && !window._bkShown){ window._bkShown = 1; showToast('ℹ️ ' + (LANG === 'ar' ? 'الكوتش شغال بالذكاء الاحتياطي دلوقتي (مفيش تحليل صور)' : 'Coach is using the backup AI right now (no image analysis)')); } } catch(_){}
     try { const ql = r.headers.get('X-Quota-Left'); if (ql !== null){ window._quotaLeft = +ql; if (+ql === 10 || +ql === 3) showToast('ℹ️ ' + (LANG === 'ar' ? 'باقي لك ' + ql + ' رسائل ذكاء اصطناعي النهاردة' : ql + ' AI messages left today')); } } catch(_){}
     let out = '';
@@ -5099,6 +5101,7 @@ function finishAi(bubble, full){
   const clean = cleanPlan(full); setMsg(bubble, clean); bubble.dataset.raw = clean;
   const bar = document.createElement('div'); bar.className = 'macts';
   bar.innerHTML = '<button type="button" data-ma="copy" aria-label="Copy">📋</button><button type="button" data-ma="regen" aria-label="Regenerate">🔄</button><button type="button" data-ma="note" aria-label="Save to notes">📝</button>'; bubble.appendChild(bar);
+  engTag(bubble);
   document.querySelectorAll('#chatMessages .qfu').forEach(x => x.remove());
   const fu = followUps(full); if (fu.length){ const w = document.createElement('div'); w.className = 'qfu'; w.innerHTML = fu.map(q => `<button type="button" class="sec tiny">${escapeHTML(q)}</button>`).join(''); bubble.after(w); }
   $('chatMessages').scrollTop = 1e9;
@@ -9435,16 +9438,16 @@ function parseMeal(text){
 function jsonOf(text){
   let s = String(text || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim(); const a = s.indexOf('{'), b = s.lastIndexOf('}'); if (a < 0 || b < a) return null;
   s = s.slice(a, b + 1); try { return JSON.parse(s); } catch(e){ try { return JSON.parse(s.replace(/,\s*([}\]])/g, '$1')); } catch(_){ return null; } } }
-const NUTRI_SYS = 'You are the nutrition estimator inside a gym tracking app. Estimate calories and macros for the foods the user describes or shows. Reply with ONLY one JSON object, no markdown: {"type":"food"|"label","items":[{"name":"...","name_ar":"...","grams":number,"cal":number,"p":number,"c":number,"f":number,"emoji":"one emoji"}],"note":"one short sentence, optional"}. cal, p, c, f are for the WHOLE amount of that item (not per 100 g). Use realistic portion sizes; the user often eats Egyptian food (koshary, ful, taameya, molokhia, hawawshi, fattah, mahshi, baladi bread...) so use typical Egyptian recipes and portions. Write "name" in the language the user used (English if unsure) and always add "name_ar" in Arabic. Split the text into separate items only when the user lists separate foods. For a nutrition label, read the values on the pack and scale them to the amount the user says (or one serving). If nothing edible or readable is found return {"items":[]}.';
+const NUTRI_SYS = 'You are the nutrition estimator inside a gym tracking app. Estimate calories and macros for the foods the user describes or shows. Reply with ONLY one JSON object, no markdown: {"type":"food"|"label","items":[{"name":"...","name_ar":"...","grams":number,"cal":number,"p":number,"c":number,"f":number,"emoji":"one emoji"}],"note":"one short sentence, optional"}. cal, p, c, f are for the WHOLE amount of that item (not per 100 g). RULES: (1) Use ONLY what is visible in the photo or written by the user; never add foods that are not shown. (2) For a NUTRITION LABEL: read the table exactly. Find the serving size and the pack/net weight on the pack. If the user states an amount use it; otherwise use the WHOLE PACK (net weight) when it is printed, else one serving. Scale the per-100 g (or per-serving) numbers to that amount, set "grams" to that amount, and write the amount in "note" (for example "Whole pack 200 g"). Return one item for the product, named from the brand/product name on the pack. (3) For a MEAL PHOTO: list every visible food as a separate item, estimate grams from the plate size, and use typical Egyptian recipes and portions (koshary, ful, taameya, molokhia, hawawshi, fattah, mahshi, baladi bread...). (4) Write "name" in the language the user used (English if unsure) and always add "name_ar" in Arabic. (5) If nothing edible or readable is found return {"items":[]}.';
 async function askFood(text, imgB64, hints){
   if (!coachReady()) throw new Error(tr('Connect the AI coach in Settings (Gemini key) to analyze meals with AI.'));
   const parts = []; let msg = 'User text: ' + (text || '(none)') + '\nToday is ' + todayKey() + '.';
   if (hints && hints.length) msg += '\nKnown per-100g values from the app database (prefer these when they match): ' + hints.map(f => `${f.en}: ${f.cal} kcal, P${f.p} C${f.c} F${f.f}`).join('; ') + '.';
-  const prev = window._askTemp; window._askTemp = .2;
-  try { const out = await askCoach(NUTRI_SYS, [], msg, () => {}, 2048, imgB64 ? [{t:'Meal or label photo:', d:imgB64}] : null);
+  const prev = window._askTemp, prevG = window._askGen; window._askTemp = .2; window._askGen = {responseMimeType:'application/json', thinkingConfig:{thinkingBudget:0}};
+  try { const out = await askCoach(NUTRI_SYS, [], msg, () => {}, 4096, imgB64 ? [{t:'Meal or label photo:', d:imgB64}] : null);
     const j = jsonOf(out); if (!j || !Array.isArray(j.items)) throw new Error(tr('The AI answer could not be read. Try again or describe the meal differently.'));
     return {type:j.type === 'label' ? 'label' : 'food', note:String(j.note || '').slice(0, 200), items:j.items.slice(0, 12).filter(x => x && (x.name || x.name_ar) && isFinite(+x.cal || +x.p + +x.c + +x.f)).map(x => mkRaw(x, null, imgB64 ? 'photo' : 'ai'))}; }
-  finally { window._askTemp = prev === undefined ? null : prev; }
+  finally { window._askTemp = prev === undefined ? null : prev; window._askGen = prevG; }
 }
 
 /* ---------- insights ---------- */
@@ -9504,7 +9507,7 @@ function addCombo(id, meal, date){
 /* package weight in grams (ml counts as g) from Open Food Facts: product_quantity, else the quantity text like "200 g", "1.5 L", "6 x 50 g" */
 function pkgGrams(p){
   const pq = +p.product_quantity; if (pq > 0 && pq <= 20000){ const u = String(p.product_quantity_unit || '').toLowerCase(); return Math.round(u === 'kg' || u === 'l' ? pq * 1000 : pq); }
-  const q = String(p.quantity || '').toLowerCase().replace(',', '.').replace(/\s+/g, ' '); if (!q) return 0;
+  const q = String(p.quantity || p.serving_size || '').toLowerCase().replace(',', '.').replace(/\s+/g, ' '); if (!q) return 0;
   const U = {g:1, gr:1, gram:1, grams:1, جم:1, جرام:1, غ:1, kg:1000, كجم:1000, كيلو:1000, ml:1, مل:1, cl:10, dl:100, l:1000, ltr:1000, لتر:1000, oz:28.35, lb:453.6};
   const m = q.match(/(?:(\d+(?:\.\d+)?)\s*[x×]\s*)?(\d+(?:\.\d+)?)\s*([a-zA-Z\u0600-\u06FF]+)/); if (!m || !U[m[3]]) return 0;
   const g = Math.round((+m[1] || 1) * +m[2] * U[m[3]]); return g > 0 && g <= 20000 ? g : 0;
@@ -9512,7 +9515,7 @@ function pkgGrams(p){
 const bcValid = c => { c = String(c || ''); if (!/^\d{8}$|^\d{12,14}$/.test(c)) return c.length >= 6; const d = c.split('').map(Number), k = d.pop(); let s = 0; d.reverse().forEach((x, i) => s += x * (i % 2 ? 1 : 3)); return (10 - s % 10) % 10 === k; };
 const bcVariants = c => { const o = [c]; if (c.length === 12) o.push('0' + c); if (c.length === 13 && c[0] === '0') o.push(c.slice(1)); if (c.length === 14 && c[0] === '0') o.push(c.slice(1)); if (c.length === 8) o.push(c.padStart(13, '0')); return [...new Set(o)]; };
 function bcLocal(code){ const V = bcVariants(code); return Object.values(NU.custom || {}).find(f => f && (V.includes(String(f.bc || '')) || V.some(v => f.k === 'off_' + v))) || null; }
-const OFF_FIELDS = 'product_name,product_name_ar,product_name_en,generic_name,brands,nutriments,serving_quantity,quantity,product_quantity,product_quantity_unit';
+const OFF_FIELDS = 'serving_size,product_name,product_name_ar,product_name_en,generic_name,brands,nutriments,serving_quantity,quantity,product_quantity,product_quantity_unit';
 async function offGet(url){
   for (let i = 0; i < 2; i++){
     const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 8000);
@@ -9542,7 +9545,7 @@ async function offLookup(code){
     const pk = pkgGrams(p), L2 = [];
     if (pk > 0) L2.push(['package (' + pk + ' g)', 'العبوة كلها (' + pk + ' جم)', pk]);
     if (sq > 0 && sq < 2000 && Math.round(sq) !== pk) L2.push(['serving (' + Math.round(sq) + ' g)', 'حصة (' + Math.round(sq) + ' جم)', Math.round(sq)]);
-    if (L2.length){ f.svs = L2; f.sv = [L2[0][0], L2[0][2]]; }
+    if (L2.length){ f.svs = L2; f.sv = [L2[0][0], L2[0][2]]; } else f.nopk = 1;
     return f;
   } catch(e){ if (e.name === 'AbortError') throw new Error(tr('The lookup timed out. Check your internet connection.')); if (/Failed to fetch|NetworkError|Load failed/i.test(String(e.message))) throw new Error(tr('No internet connection.')); throw e; }
 }
@@ -9588,7 +9591,7 @@ function dayView(){
   });
   h += `<div class="card nf-water"><div class="wh"><b>💧 ${I('Water')}</b><span>${w} / ${wt}</span></div><div class="wg">${Array.from({length:Math.max(wt, w)}, (_, i) => `<i class="${i < w ? 'on' : ''}" data-a="wset" data-n="${i + 1}"></i>`).join('')}</div><div class="wb"><button type="button" class="sec tiny" data-tone="none" data-a="wm">− 1</button><button type="button" class="tiny" data-a="wp">+ 1</button></div></div>`;
   if (d.meals.length) h += `<button type="button" class="nf-rpb" data-tone="none" data-a="report">📋 <b>${I('Daily report')}</b><small>${I('Macros, vitamins and minerals')}</small><i>›</i></button>`;
-  if (isT){ const IN = insights(); window._ins = IN; if (IN.length) h += `<div class="card nf-insc"><div class="ih"><b>💡 ${I('Insights')}</b><button type="button" data-tone="none" data-a="insall">${I('See all')} ›</button></div>${insHtml(IN, 1)}</div>`; }
+  if (isT){ const IN = insights().filter(x => hasGoal() || !/no calorie goal|ما حددتش هدف/.test(x.t)); window._ins = IN; if (IN.length) h += `<div class="card nf-insc"><div class="ih"><b>💡 ${I('Insights')}</b><button type="button" data-tone="none" data-a="insall">${I('See all')} ›</button></div>${insHtml(IN, 1)}</div>`; }
   return h;
 }
 function barChart(rows, key, tgKey, colour){
@@ -9709,6 +9712,7 @@ function renderFM(){
   else if (st === 'amount'){
     const f = FM.f, sv = servs(f), g = cur(), v = per(f, g), ed = !!FM.edit, fav = NU.fav.includes(f.k);
     h = `<div class="nf-ah">${ed ? '' : back}<h2>${E(f.e)} <span>${E(fname(f))}</span></h2><button type="button" class="nf-fav${fav ? ' on' : ''}" data-tone="none" data-a="fav" aria-label="Favorite">${fav ? '★' : '☆'}</button></div>
+    ${!sv.length && f.bc ? `<div class="nf-pk"><small>${LANG === 'ar' ? 'وزن العبوة مش معروف. اكتبه مرة واحدة وهفتكره للمنتج ده:' : 'Package weight is unknown. Enter it once and it is remembered:'}</small><div><input type="number" id="nfPk" class="in" inputmode="numeric" min="1" placeholder="${LANG === 'ar' ? 'جرام' : 'grams'}"><button type="button" data-tone="none" data-a="setpk">${LANG === 'ar' ? 'حفظ' : 'Save'}</button></div></div>` : ''}
     ${sv.length ? `<div class="nf-sv">${sv.map((s, i) => `<button type="button" data-tone="none" data-a="sv" data-i="${i}" class="${FM.sv === i ? 'on' : ''}">${E(svLabel(s))}<small>${s[2]} g</small></button>`).join('')}</div>` : ''}
     <div class="nf-amt">${FM.sv >= 0 ? `<button type="button" data-tone="none" data-a="qm">−</button><input type="number" id="nfQty" class="in" value="${FM.qty}" step="0.5" min="0.5" inputmode="decimal"><button type="button" data-tone="none" data-a="qp">+</button><span>×</span>` : ''}<label><input type="number" id="nfG" class="in" value="${g}" min="1" inputmode="numeric"><small>g</small></label></div>
     <div class="nf-mx"><div class="k"><b>${fmt(v.cal)}</b><small>${I('kcal')}</small></div><div><b>${fmt(v.p)}</b><small>${I('Protein')}</small></div><div><b>${fmt(v.c)}</b><small>${I('Carbs')}</small></div><div><b>${fmt(v.f)}</b><small>${I('Fat')}</small></div></div>${mealChips()}
@@ -9798,6 +9802,7 @@ function fmClick(e){
     if (FM.date && $(MODAL).classList.contains('active') && !FM.fromGoals){ FM.f = f; FM.sv = f.sv ? 0 : -1; FM.qty = 1; FM.g = f.sv ? f.sv[1] : 100; FM.stage = 'amount'; FM.cf = null; FM.err = ''; renderFM(); } else closeModal(MODAL); }
   else if (a === 'askai'){ FM.text = FM.q; FM.stage = 'text'; renderFM(); setTimeout(fmAnalyze, 50); }
   else if (a === 'combo'){ const u = addCombo(el.dataset.id, FM.meal, FM.date); if (u){ closeModal(MODAL); showToast('✅ ' + I('Added'), u); try { buzz(10); } catch(_){} } }
+  else if (a === 'setpk'){ const n = Math.round(+($('nfPk') || {}).value || 0); if (!(n >= 1 && n <= 20000)) return; const f = FM.f; f.svs = [['package (' + n + ' g)', 'العبوة كلها (' + n + ' جم)', n]]; f.sv = [f.svs[0][0], n]; delete f.nopk; if (NU.custom[f.k]) NU.custom[f.k] = f; nSave(); FM.sv = 0; FM.qty = 1; FM.g = n; renderFM(); }
   else if (a === 'bcpic'){ const i = $('nfBCf'); if (i){ i.onchange = () => { const f = i.files && i.files[0]; i.value = ''; scanImageFile(f); }; i.click(); } }
   else if (a === 'bcmake'){ FM.cf = {n:FM.bcName || '', bc:FM.bc}; FM.stage = 'create'; FM.err = ''; renderFM(); }
   else if (a === 'bcphoto'){ FM.err = ''; FM.stage = 'photo'; renderFM(); }
@@ -9806,10 +9811,16 @@ function fmClick(e){
   else if (a === 'kind'){ FM.kind = v; renderFM(); }
   else if (a === 'reimg'){ FM.img = null; renderFM(); }
   else if (a === 'rvon'){ FM.rev[+el.dataset.i].on = el.checked; reviewLive(); }
-  else if (a === 'addall'){ const on = FM.rev.filter(r => r.on).map(r => Object.assign(r.it, {meal:FM.meal})); if (on.length) doAdd(on, '✅ ' + I('Added') + ' ' + on.length); }
+  else if (a === 'addall'){ const on = FM.rev.filter(r => r.on).map(r => Object.assign(r.it, {meal:FM.meal})); if (on.length === 1 && FM.kind === 'label' && FM.bc) { try { rememberLabelProduct(on[0], FM.bc); } catch(_){} } if (on.length) doAdd(on, '✅ ' + I('Added') + ' ' + on.length); }
   else if (a === 'mic') micToggle();
 }
 
+/* a label photographed for an unknown barcode becomes the user's own product, so the next scan finds it */
+function rememberLabelProduct(it, code){
+  if (!it || !(it.g > 0) || !(it.cal >= 0) || (NU.custom['off_' + code] || bcLocal(code))) return; const k100 = 100 / it.g, g = Math.round(it.g), nm = String(it.n || it.na || 'Product ' + code);
+  const f = {k:'off_' + code, bc:code, ar:it.na || nm, en:nm, e:'🏷️', cal:Math.round(it.cal * k100), p:r1(it.p * k100), c:r1(it.c * k100), f:r1(it.f * k100), cat:'custom', al:'', svs:[['package (' + g + ' g)', 'العبوة كلها (' + g + ' جم)', g]], sv:['package (' + g + ' g)', g]};
+  NU.custom[f.k] = f; idx(f); nSave();
+}
 /* ---------- barcode scanner ---------- */
 let SCN = null;
 function scanStop(){ if (!SCN) return; SCN.on = false; try { SCN.stream && SCN.stream.getTracks().forEach(t => t.stop()); } catch(_){} SCN = null; }
@@ -10308,6 +10319,7 @@ const FOOD_RULES = [
 "HOW TO ANSWER: lead with the answer. When the user tells you what they ate, log it with actions right away and give the totals in one line; do not ask about details you can estimate, state your assumption briefly (for example 'assumed 200 g cooked rice'). If a food is missing from the database, estimate it yourself and save it as a custom food. If a photo is attached, identify every food, estimate grams from the plate, and log them. Use the user's real numbers (today's totals, targets, 7-day averages, weight trend) and be specific: foods, grams, meal timing, swaps. Keep replies short unless they ask for a plan. Reply in the user's language and dialect (Egyptian Arabic if they write Egyptian). No lectures, no generic tips.",
 "NUTRITION RULES: cooking method matters (raw vs cooked weight, fried vs grilled); say which you assumed. Fat loss: moderate deficit, protein about 1.8-2.2 g per kg; muscle gain: small surplus; adjust from the weight trend, not formulas alone. Never suggest crash diets, extreme restriction, dehydration or laxatives. If the user shows signs of an eating disorder or a medical condition, be kind and suggest a professional. Do not diagnose.",
 "CONNECTION WITH THE MAIN COACH: if the diet suggests the training plan should change (for example a deficit that is too aggressive for their volume, low protein on a bulk, or no fuel on training days), say so and tell the user to ask the main Coach in the Coach tab to adjust the plan. Training facts in your context are for reference; do not edit their workout plan yourself.",
+"PHOTOS (strict): when a photo is attached, the photo is the ONLY source for what the user is asking about. Never mention, calculate or log foods that are not visible in the photo, and never use the diary, saved meals, custom foods or earlier messages to guess what the photo contains. If it is a NUTRITION LABEL: read it exactly, state the serving size and the pack weight you read, give calories and macros for the amount the user says (or the whole pack if a net weight is printed, else one serving), and show the numbers per 100 g as well. If it is a MEAL: list each visible food with estimated grams and the calories and macros of each, then the total. If you cannot read something say exactly what you could not read and ask for a clearer photo; do not make numbers up. After analyzing, offer to log it with a log_food action and let the user confirm; do not log it silently. The photo stays available in the next messages of the conversation, so when the user says things like 'calculate what is in the photo' use that same photo.",
 "SCOPE: food, nutrition, hydration, supplements and body-weight goals. For anything else say briefly that you focus on food and that the main Coach can help.",
 "STYLE: Reply in the user's language and dialect (Egyptian Arabic if they write Egyptian). Be brief and concrete: give the number first (kcal and protein), then one practical tip. When the food is in the database prefer its exact values; for restaurant or branded items give a realistic average and say it is an estimate. For a dish, split it into ingredients when logging so the macros are honest. Never invent data that is not in the context.",
 "FOLLOW-UPS: end normal answers with up to three short next messages the user might tap: [[Q]]one|two|three[[/Q]] in the user's language. Skip for one-line action confirmations."
@@ -10326,24 +10338,26 @@ function foodCtx(){
   const ins = insights().slice(0, 6); if (ins.length) L.push('Auto insights: ' + ins.map(x => x.t).join(' | '));
   return L.join('\n');
 }
-const FCH = {el:null, busy:false, img:null, drafted:''};
+function foodCtxLite(){ const k = todayKey(), tg = targetFor(k), tot = sumM(peek(k).meals); return `Today is ${k}.\n` + (hasGoal() ? `Daily goal: ${tg.kcal} kcal, protein ${tg.p} g, carbs ${tg.c} g, fat ${tg.f} g. ` : '') + `Eaten so far today: ${Math.round(tot.cal)} kcal, P ${Math.round(tot.p)} g (use only to say what remains after adding the photo item).`; }
+const FCH = {el:null, busy:false, img:null, last:null, drafted:''};
 const fcSave = () => { const L = [...FCH.el.querySelectorAll('#fcMsgs .msg')].filter(x => x.dataset.raw && x.dataset.raw !== '…' && !x.dataset.tmp).map(x => ({r:x.classList.contains('user') ? 'u' : 'a', t:String(x.dataset.raw).slice(0, 4000)})); NU.chat = L.slice(-40); nSave(); };
 function fcAdd(type, text, tmp){ const box = FCH.el.querySelector('#fcMsgs'), d = document.createElement('div'); d.className = 'msg ' + type; if (text === '…') d.innerHTML = '<span class="dots"><i></i><i></i><i></i></span>'; else d.innerHTML = mdLite(text); d.dataset.raw = text; if (tmp) d.dataset.tmp = 1; box.appendChild(d); box.scrollTop = 1e9; return d; }
 const fcSet = (d, t) => { d.innerHTML = mdLite(t); d.dataset.raw = t; const b = FCH.el.querySelector('#fcMsgs'); b.scrollTop = 1e9; };
 function fcHist(){ return (NU.chat || []).slice(-16).map(m => ({role:m.r === 'u' ? 'user' : 'model', parts:[{text:String(m.t).replace(/\n\[(Actions|User)[^\]]*\]/g, '')}]})); }
 async function fcSend(over){
   if (FCH.busy) return; const ta = FCH.el.querySelector('#fcIn'), text = String(typeof over === 'string' ? over : ta.value).trim(), img = FCH.img; if (!text && !img) return;
-  const msg = text || T('Analyze this photo and log what I ate.', 'حلل الصورة دي وسجل اللي أكلته.');
+  const msg = text || T('Analyze this photo: read the label or identify the food, then give me the calories and macros.', 'حلل الصورة دي: اقرا الجدول أو اتعرّف على الأكل، وهات السعرات والماكروز.');
+  if (img) FCH.last = {d:img, n:4}; let useImg = img; if (!useImg && FCH.last && FCH.last.n > 0){ useImg = FCH.last.d; FCH.last.n--; }
   FCH.el.querySelectorAll('.qfu').forEach(x => x.remove()); const hist = fcHist();
   const ub = fcAdd('user', (img ? '📷 ' : '') + msg); if (img){ const im = document.createElement('img'); im.src = 'data:image/jpeg;base64,' + img; im.className = 'fc-img'; ub.prepend(im); }
   ta.value = ''; FCH.drafted = ''; FCH.img = null; fcSizeIn(); fcThumb(); fcSave();
   if (!coachReady()){ fcAdd('ai', '⚠️ ' + T('Add your Gemini API key in Settings to use the Food AI.', 'ضيف مفتاح Gemini في الإعدادات عشان تستخدم الـ Food AI.'), 1); return; }
   FCH.busy = true; const send = FCH.el.querySelector('#fcGo'); if (send) send.disabled = true; const loading = fcAdd('ai', '…', 1); let bubble = null; const pt = window._askTemp; window._askTemp = .4;
   try {
-    const full = await agentRound({rules:FOOD_RULES + foodGuide(), hist, ctx:foodCtx() + '\n\nUser message: ' + msg, text:msg, allow:FOOD_ALLOW, images:img ? [{t:'Meal or label photo:', d:img}] : null, onChunk:p => { if (!bubble){ loading.remove(); bubble = fcAdd('ai', ''); } fcSet(bubble, stripActs(cleanPlan(p))); }});
+    const full = await agentRound({rules:FOOD_RULES + foodGuide(), hist, ctx:(useImg ? foodCtxLite() + '\n\nA PHOTO IS ATTACHED. Answer only from the photo and the user message below; ignore the diary for deciding what is in the photo.' : foodCtx()) + '\n\nUser message: ' + msg, text:msg, allow:FOOD_ALLOW, images:useImg ? [{t:'Meal or label photo:', d:useImg}] : null, onChunk:p => { if (!bubble){ loading.remove(); bubble = fcAdd('ai', ''); } fcSet(bubble, stripActs(cleanPlan(p))); }});
     if (!bubble){ loading.remove(); bubble = fcAdd('ai', ''); } const clean = stripActs(cleanPlan(full));
     if (!clean && !parseActs(full).length){ bubble.remove(); throw new Error(T('The AI returned an empty answer.', 'الذكاء الاصطناعي رجّع رد فاضي.')); }
-    fcSet(bubble, clean || '👍'); const fu = followUps(full); if (fu.length){ const w = document.createElement('div'); w.className = 'qfu'; w.innerHTML = fu.map(q => `<button type="button" class="sec tiny">${E(q)}</button>`).join(''); bubble.after(w); }
+    fcSet(bubble, clean || '👍'); engTag(bubble); const fu = followUps(full); if (fu.length){ const w = document.createElement('div'); w.className = 'qfu'; w.innerHTML = fu.map(q => `<button type="button" class="sec tiny">${E(q)}</button>`).join(''); bubble.after(w); }
     offerActs(bubble, full, {box:() => FCH.el.querySelector('#fcMsgs'), save:fcSave, allow:FOOD_ALLOW}); fcSave();
   } catch(err){ if (loading.isConnected) loading.remove(); console.error('Food AI', err); const off = navigator.onLine === false; const d = fcAdd('ai', '⚠️ ' + (off ? T('You appear to be offline.', 'شكلك مش متصل بالإنترنت.') : String((err && err.message) || err).slice(0, 220)), 1); const b = document.createElement('button'); b.type = 'button'; b.className = 'sec tiny'; b.textContent = '🔄 ' + T('Retry', 'إعادة'); b.onclick = () => { d.remove(); fcSend(msg); }; d.appendChild(b); }
   finally { window._askTemp = pt === undefined ? null : pt; FCH.busy = false; if (send) send.disabled = false; }
@@ -10366,7 +10380,7 @@ function fcBuild(){
   el.querySelector('#fcGo').onclick = () => fcSend(); el.querySelector('#fcMic').onclick = () => micToggle(() => ta);
   el.querySelector('#fcCam').onclick = () => el.querySelector('#fcFile').click();
   el.querySelector('#fcFile').onchange = async e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return; try { const d = await fileToJpeg(f, 1280, .82); FCH.img = d.split(',')[1]; fcThumb(); } catch(_){ showToast('⚠️ ' + I('Could not read that image.')); } };
-  el.querySelector('#fcClr').onclick = async () => { if (!(await showConfirm(T('Clear the Food AI chat? Your food log is not affected.', 'مسح شات الـ Food AI؟ سجل أكلك مش هيتأثر.'), T('Clear chat', 'مسح الشات')))) return; NU.chat = []; nSave(); FCH.el = null; renderFood(); };
+  el.querySelector('#fcClr').onclick = async () => { if (!(await showConfirm(T('Clear the Food AI chat? Your food log is not affected.', 'مسح شات الـ Food AI؟ سجل أكلك مش هيتأثر.'), T('Clear chat', 'مسح الشات')))) return; NU.chat = []; FCH.last = null; nSave(); FCH.el = null; renderFood(); };
   el.addEventListener('click', e => { const q = e.target.closest('.qfu button'); if (q){ q.closest('.qfu').remove(); fcSend(q.textContent); return; } const c = e.target.closest('.fc-chips button'); if (c){ if (c.dataset.fill){ ta.value = I(c.dataset.p); FCH.drafted = ta.value; ta.focus(); fcSizeIn(); } else fcSend(I(c.dataset.p)); } });
   return el;
 }
