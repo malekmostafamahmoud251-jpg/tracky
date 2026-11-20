@@ -269,6 +269,16 @@ left|متبقي|restant
 Just know the calories? Enter them (macros are optional).|عارف السعرات بس؟ اكتبها (الماكروز اختيارية).|Vous connaissez les calories ? Saisissez-les (macros facultatives).
 Main dishes & soups|أطباق رئيسية وشوربة|Plats et soupes
 Daily report|التقرير اليومي|Rapport du jour
+Budget|الميزانية|Budget
+Over|زيادة|Dépassé
+Targets|الأهداف|Objectifs
+Nutrients|العناصر الغذائية|Nutriments
+Nutrition scores|درجات التغذية|Scores nutritionnels
+Energy summary|ملخص الطاقة|Résumé énergétique
+Vitamin and mineral targets|أهداف الفيتامينات والمعادن|Objectifs vitamines et minéraux
+Vitamins and minerals are estimated from food categories, not lab values. Custom and AI-estimated foods are not counted.|الفيتامينات والمعادن تقديرية من فئات الأكل مش قيم معملية، والأكلات المخصصة وتقدير الـAI مش محسوبة.|Vitamines et minéraux estimés par catégorie d'aliments, pas des valeurs de labo. Les aliments personnalisés ou estimés par l'IA ne sont pas comptés.
+of your calories are covered.|من سعراتك محسوبة.|de vos calories sont couvertes.
+Ask Food AI about my nutrients|اسأل Food AI عن عناصري الغذائية|Demander à Food AI sur mes nutriments
 Macros, vitamins and minerals|الماكروز والفيتامينات والمعادن|Macros, vitamines et minéraux
 on target|على الهدف|dans l'objectif
 over|زيادة|au-dessus
@@ -9571,12 +9581,33 @@ function weekStrip(k){
   if (days.indexOf(k) < 0) return '';
   return `<div class="nf-week">${days.map(d => { const t = sumM(peek(d).meals).cal, g = targetFor(d).kcal, pc = g ? Math.min(1, t / g) : 0, dt = new Date(d + 'T12:00:00'); return `<button type="button" data-tone="none" data-a="gday" data-d="${d}" class="${d === k ? 'on' : ''}"><small>${E(dt.toLocaleDateString(LANG === 'ar' ? 'ar-EG' : undefined, {weekday:'narrow'}))}</small><i style="--p:${Math.round(pc * 100)}%"><b>${dt.getDate()}</b></i></button>`; }).join('')}</div>`;
 }
+function scores(k, tot, tg){
+  const mc = microTotals(k), pc = x => Math.min(1, mc.t[x] / mrda(x));
+  const avg = g => { const L = MK.filter(x => MINFO[x][4] === g); return L.length ? L.reduce((a, x) => a + pc(x), 0) / L.length : 0; };
+  return [{l:'Protein', pc:Math.round(Math.min(1, tg.p ? tot.p / tg.p : 0) * 100)}, {l:'Fiber', pc:Math.round(pc('fib') * 100)}, {l:'Minerals', pc:Math.round(avg('m') * 100)}, {l:'Vitamins', pc:Math.round(avg('v') * 100)}];
+}
+function nutriView(){
+  const k = FS.date, d = peek(k), tot = sumM(d.meals), tg = targetFor(k), mc = microTotals(k);
+  const row = (em, n, v, rda, u, pcx) => { const pc = Math.round(v / rda * 100); return `<div class="nf-nr"><span>${em} ${I(n)}</span><div><i class="${pc < 40 ? 'lo' : pc >= 90 ? 'hi' : ''}" style="width:${Math.min(100, pc)}%"></i></div><b>${v >= 10 ? Math.round(v) : (+v).toFixed(1)}<small> / ${fmt(rda)} ${u} · ${pc}%</small></b></div>`; };
+  let h = `<div class="nf-date"><button type="button" data-tone="none" data-a="prev" aria-label="Previous day">‹</button><div><b>${E(dLabel(k))}</b><small>${I('Nutrients')}</small></div><button type="button" data-tone="none" data-a="next" aria-label="Next day"${k >= todayKey() ? ' disabled' : ''}>›</button></div>`;
+  if (!d.meals.length) return h + `<div class="nf-empty"><i>🧬</i><b>${I('Nothing logged yet')}</b></div>`;
+  h += `<div class="card"><div class="nf-sh0">${I('General')}</div>${row('🔥', 'Energy', tot.cal, tg.kcal, I('kcal'))}${row('🥩', 'Protein', tot.p, tg.p, 'g')}${row('🍞', 'Carbs', tot.c, tg.c, 'g')}${row('🥑', 'Fat', tot.f, tg.f, 'g')}${row('🌾', 'Fiber', mc.t.fib, mrda('fib'), 'g')}</div>`;
+  [['v', 'Vitamins'], ['m', 'Minerals']].forEach(([g, t]) => { h += `<div class="card"><div class="nf-sh0">${I(t)} <em>${I('estimated')}</em></div>${MK.filter(x => x !== 'fib' && MINFO[x][4] === g).map(x => row(MINFO[x][3], MINFO[x][0], mc.t[x], mrda(x), MINFO[x][1])).join('')}</div>`; });
+  h += `<div class="nf-note">ℹ️ ${I('Vitamins and minerals are estimated from food categories, not lab values. Custom and AI-estimated foods are not counted.')} ${mc.cover < 1 ? Math.round(mc.cover * 100) + '% ' + I('of your calories are covered.') : ''}</div>`;
+  const low = MK.map(x => ({x, pc:mc.t[x] / mrda(x)})).sort((a, b) => a.pc - b.pc).slice(0, 2).filter(o => o.pc < .6);
+  if (low.length) h += `<div class="nf-note">💡 ${low.map(o => I(MINFO[o.x][0]) + ': ' + I(MICRO_TIP[o.x])).join('<br>')}</div>`;
+  if (coachReady()) h += `<button type="button" class="sec" data-tone="none" data-a="tab-ai">🤖 ${I('Ask Food AI about my nutrients')}</button>`;
+  return h;
+}
 function dayView(){
   const k = FS.date, d = peek(k), tot = sumM(d.meals), tg = targetFor(k), isT = k === todayKey();
   let h = `<div class="nf-date"><button type="button" data-tone="none" data-a="prev" aria-label="Previous day">‹</button><div><b>${E(dLabel(k))}</b><small>${tg.train ? '🏋️ ' + I('Training day') : ''}</small></div><button type="button" data-tone="none" data-a="next" aria-label="Next day"${isT || k > todayKey() ? ' disabled' : ''}>›</button></div>${weekStrip(k)}`;
   if (!hasGoal()) h += `<div class="nf-setup"><div><b>🎯 ${I('Set your daily goal')}</b><small>${I('Tracky can work out calories and macros from your profile in one tap.')}</small></div><button type="button" data-a="setup">${I('Set up')}</button></div>`;
   const w = d.water || 0, wt = tg.water;
-  h += `<div class="card nf-sum">${ring(tot.cal, tg.kcal)}<div class="nf-sm"><div class="nf-eat"><div><b>${fmt(tot.cal)}</b><small>${I('eaten')}</small></div><div><b>${fmt(tg.kcal)}</b><small>${I('goal')}</small></div></div>${bar('Protein', tot.p, tg.p, 'p')}${bar('Carbs', tot.c, tg.c, 'c')}${bar('Fat', tot.f, tg.f, 'f')}</div></div>`;
+  const base = tg.kcal - tg.tb, left = Math.round(tg.kcal - tot.cal), mc = microTotals(k), sc = scores(k, tot, tg);
+  h += `<div class="card nf-sum">${ring(tot.cal, tg.kcal)}<div class="nf-sm"><div class="nf-sh0">${I('Energy summary')}</div><div class="nf-eq"><div><b>${fmt(base)}</b><small>${I('Budget')}</small></div><em>+</em><div><b>${fmt(tg.tb)}</b><small>${I('Exercise')}</small></div><em>−</em><div><b>${fmt(tot.cal)}</b><small>${I('Food')}</small></div><em>=</em><div class="r${left < 0 ? ' neg' : ''}"><b>${fmt(Math.abs(left))}</b><small>${I(left >= 0 ? 'Remaining' : 'Over')}</small></div></div></div></div>`;
+  h += `<div class="card nf-tg"><div class="nf-sh0">${I('Targets')}</div>${bar('Protein', tot.p, tg.p, 'p')}${bar('Carbs', tot.c, tg.c, 'c')}${bar('Fat', tot.f, tg.f, 'f')}${bar('Fiber', mc.t.fib, mrda('fib'), 'fi')}</div>`;
+  if (d.meals.length) h += `<button type="button" class="card nf-scores" data-tone="none" data-a="view" data-v="nutri"><div class="nf-sh0">${I('Nutrition scores')} <em>${I('estimated')}</em><i>›</i></div><div class="nf-scr">${sc.map(o => `<div class="${o.pc < 40 ? 'lo' : o.pc >= 90 ? 'hi' : ''}"><b>${o.pc}%</b><span style="--p:${Math.min(100, o.pc)}%"></span><small>${I(o.l)}</small></div>`).join('')}</div></button>`;
   h += `<div class="nf-add"><button type="button" class="nf-big" data-tone="none" data-a="q-search"><i>🔍</i><span>${I('Search foods (Arabic or English)')}</span></button><div class="nf-ic">${[['q-mic', '🎤', 'Say it'], ['q-text', '✍️', 'Describe'], ['q-photo', '📸', 'Photo'], ['q-scan', '🏷️', 'Barcode'], ['q-quick', '⚡', 'Quick add']].map(([a, e, l]) => `<button type="button" data-tone="none" data-a="${a}" aria-label="${E(I(l))}"><i>${e}</i><small>${I(l)}</small></button>`).join('')}</div></div>`;
   const rec = NU.recent.map(getFood).filter(Boolean).slice(0, 6);
   if (rec.length) h += `<div class="nf-chips">${rec.map(f => { const s = servs(f)[0]; return `<button type="button" data-tone="none" data-a="rec" data-k="${E(f.k)}">${E(f.e)} ${E(fname(f))}<small>${s ? E(svLabel(s)) : '100 g'}</small></button>`; }).join('')}</div>`;
@@ -9587,7 +9618,7 @@ function dayView(){
   } else MEALS.forEach(([key, em, nm]) => {
     const L = d.meals.filter(m => (m.meal === key) || (!MEALMAP[m.meal] && key === 'snack'));
     const kc = sumM(L).cal;
-    h += `<div class="card nf-meal${L.length ? '' : ' mt'}"><div class="mh"><b>${em} ${I(nm)}</b><span>${kc ? fmt(kc) + ' ' + I('kcal') : ''}</span>${L.length ? `<button type="button" class="sv" data-a="savecombo" data-m="${key}" data-tone="none" aria-label="Save as my meal" title="${E(I('Save as my meal'))}">⭐</button>` : ''}<button type="button" data-a="add" data-m="${key}" data-tone="none" aria-label="Add food">＋</button></div>${L.map(it => itemRow(it, k)).join('')}</div>`;
+    h += `<div class="card nf-meal${L.length ? '' : ' mt'}"><div class="mh"><b>${em} ${I(nm)}${L.length ? `<small>${macroLine(sumM(L))}</small>` : ''}</b><span>${kc ? fmt(kc) + ' ' + I('kcal') : ''}</span>${L.length ? `<button type="button" class="sv" data-a="savecombo" data-m="${key}" data-tone="none" aria-label="Save as my meal" title="${E(I('Save as my meal'))}">⭐</button>` : ''}<button type="button" data-a="add" data-m="${key}" data-tone="none" aria-label="Add food">＋</button></div>${L.map(it => itemRow(it, k)).join('')}</div>`;
   });
   h += `<div class="card nf-water"><div class="wh"><b>💧 ${I('Water')}</b><span>${w} / ${wt}</span></div><div class="wg">${Array.from({length:Math.max(wt, w)}, (_, i) => `<i class="${i < w ? 'on' : ''}" data-a="wset" data-n="${i + 1}"></i>`).join('')}</div><div class="wb"><button type="button" class="sec tiny" data-tone="none" data-a="wm">− 1</button><button type="button" class="tiny" data-a="wp">+ 1</button></div></div>`;
   if (d.meals.length) h += `<button type="button" class="nf-rpb" data-tone="none" data-a="report">📋 <b>${I('Daily report')}</b><small>${I('Macros, vitamins and minerals')}</small><i>›</i></button>`;
@@ -9635,6 +9666,7 @@ function goalsView(){
   <div class="nf-grid">${num('nfKcal', 'Calories', s.kcal, '2000', 10)}${num('nfP', 'Protein (g)', s.p, I('auto'))}${num('nfC', 'Carbs (g)', s.c, I('auto'))}${num('nfF', 'Fat (g)', s.f, I('auto'))}${num('nfW', 'Water (glasses)', s.water, '8')}${num('nfTb', 'Training-day bonus (kcal)', s.tb === undefined ? 150 : s.tb, '150', 10)}</div>
   <label class="nf-chk"><input type="checkbox" id="nfAdj"${s.trainAdj !== false ? ' checked' : ''}> <span>${I('Add the bonus on days I train')}</span></label>
   <small class="insight2">${I('Leave protein, carbs or fat empty and Tracky fills them from your calories and weight.')}</small>
+  <h4 class="nf-sh0">${I('Vitamin and mineral targets')}</h4><div class="nf-grid">${MK.map(x => num('nfM_' + x, MINFO[x][0] + ' (' + MINFO[x][1] + ')', (s.mt || {})[x], MINFO[x][2], 'any')).join('')}</div>
   <button type="button" data-a="saveGoal">${I('Save goal')}</button></div>`;
   const cbs = Object.values(NU.combos).sort((a, b) => b.t - a.t);
   h += `<div class="card"><h3>🍱 ${I('My meals')} <button type="button" class="tiny" data-a="recipe" style="float:inline-end">＋ ${I('New recipe')}</button></h3>${cbs.length ? cbs.map(c => `<div class="nf-cf"><span>${E(c.e || '🍱')} ${E(c.n)}<small>${c.items.length} ${I('items')} · ${fmt(comboKcal(c))} ${I('kcal')}</small></span><button type="button" class="x" data-tone="none" data-a="cbdel" data-id="${E(c.id)}" aria-label="Delete">✕</button></div>`).join('') : `<small class="insight2">${I('Tap the star on a meal in your diary to save it here, then add the whole meal in one tap.')}</small>`}</div>`;
@@ -9651,8 +9683,8 @@ function goalsView(){
 }
 function renderFood(){
   const box = $('foodBox'); if (!box) return; const y = window.scrollY;
-  const tabs = [['day', '🍽️', 'Diary'], ['trends', '📈', 'Insights'], ['ai', '🤖', 'AI'], ['goals', '🎯', 'Goal']];
-  box.innerHTML = `<div class="seg nf-seg">${tabs.map(([k, e, l]) => `<button type="button" data-a="view" data-v="${k}" class="${FS.view === k ? 'on' : ''}">${e} ${I(l)}</button>`).join('')}</div>` + (FS.view === 'day' ? dayView() : FS.view === 'trends' ? trendsView() : FS.view === 'goals' ? goalsView() : '');
+  const tabs = [['day', '🍽️', 'Diary'], ['nutri', '🧬', 'Nutrients'], ['trends', '📈', 'Insights'], ['ai', '🤖', 'AI'], ['goals', '🎯', 'Targets']];
+  box.innerHTML = `<div class="seg nf-seg">${tabs.map(([k, e, l]) => `<button type="button" data-a="view" data-v="${k}" class="${FS.view === k ? 'on' : ''}">${e} ${I(l)}</button>`).join('')}</div>` + (FS.view === 'day' ? dayView() : FS.view === 'trends' ? trendsView() : FS.view === 'goals' ? goalsView() : FS.view === 'nutri' ? nutriView() : '');
   if (FS.view === 'ai') mountFoodAI(box);
   if (FS.cur === 'food') document.body.classList.toggle('nf-ai', FS.view === 'ai'); document.body.classList.toggle('nf-nofab', FS.cur === 'food' && FS.view !== 'day');
   window.scrollTo(0, y);
@@ -9920,6 +9952,7 @@ function saveGoalForm(){
   [['p', 'nfP', 0, 600], ['c', 'nfC', 0, 1200], ['f', 'nfF', 0, 400]].forEach(([k, id, lo, hi]) => { const x = n(id, lo, hi); if (x === null || x === 0) delete s[k]; else s[k] = Math.round(x); });
   const w = n('nfW', 1, 30); if (w === null) delete s.water; else s.water = Math.round(w);
   const tb = n('nfTb', 0, 1000); s.tb = tb === null ? 150 : Math.round(tb); s.trainAdj = !!$('nfAdj').checked;
+  s.mt = s.mt || {}; MK.forEach(x => { const e = $('nfM_' + x), y = e ? +e.value : 0; if (y > 0) s.mt[x] = y; else delete s.mt[x]; });
   nSave(); return true;
 }
 document.addEventListener('click', e => {
@@ -9960,6 +9993,7 @@ document.addEventListener('click', e => {
   else if (a === 'sex'){ ST().sex = el.dataset.v; nSave(); renderFood(); }
   else if (a === 'apply'){ const s = ST(), g = suggest(s.mode); if (g.kcal){ s.kcal = g.kcal; delete s.p; delete s.c; delete s.f; nSave(); renderFood(); showToast('✅ ' + I('Goal saved')); } }
   else if (a === 'profile'){ try { openIntro(true); } catch(_){ openSettings(); } }
+  else if (a === 'tab-ai'){ FS.view = 'ai'; renderFood(); window.scrollTo(0, 0); }
   else if (a === 'saveGoal'){ if (saveGoalForm()){ FS.view = 'day'; renderFood(); showToast('✅ ' + I('Goal saved')); } }
   else if (a === 'cfnew'){ openFood({stage:'search'}); FM.cf = {}; FM.stage = 'create'; FM.fromGoals = true; renderFM(); }
   else if (a === 'cfdel'){ const f = NU.custom[el.dataset.k]; if (f){ delete NU.custom[f.k]; NU.fav = NU.fav.filter(x => x !== f.k); NU.recent = NU.recent.filter(x => x !== f.k); nSave(); renderFood(); showToast('🗑️ ' + I('Deleted'), () => { NU.custom[f.k] = f; idx(f); nSave(); renderFood(); }); } }
@@ -9989,6 +10023,7 @@ const MK = ['fib', 'ca', 'fe', 'k', 'mg', 'zn', 'a', 'c', 'd', 'b12', 'fol'];
 const MINFO = {fib:['Fiber', 'g', 28, '🌾', 'f'], ca:['Calcium', 'mg', 1000, '🦴', 'm'], fe:['Iron', 'mg', 12, '🩸', 'm'], k:['Potassium', 'mg', 3500, '🍌', 'm'], mg:['Magnesium', 'mg', 380, '⚡', 'm'], zn:['Zinc', 'mg', 10, '🛡️', 'm'], a:['Vitamin A', 'µg', 800, '🥕', 'v'], c:['Vitamin C', 'mg', 85, '🍊', 'v'], d:['Vitamin D', 'µg', 15, '☀️', 'v'], b12:['Vitamin B12', 'µg', 2.4, '🧠', 'v'], fol:['Folate', 'µg', 400, '🥬', 'v']};
 const MICRO_CAT = {legumes:[6, 40, 2.5, 350, 45, 1.2, 0, 1, 0, 0, 100], egyptian:[3, 40, 1.5, 250, 30, 1, 40, 4, .1, .3, 40], meals:[1.5, 30, 1.3, 200, 22, 1.3, 40, 3, .2, .5, 25], fruit:[2.2, 15, .4, 220, 12, .15, 30, 25, 0, 0, 18], veg:[2.5, 40, 1, 300, 20, .4, 250, 25, 0, 0, 50], meat:[0, 12, 1.8, 300, 24, 3.5, 10, 0, .5, 1.8, 8], fish:[0, 30, 1, 350, 30, .8, 30, 0, 4, 4, 15], dairy:[0, 150, .1, 160, 14, .6, 40, 1, .3, .6, 8], eggs:[0, 55, 1.8, 130, 12, 1.3, 160, 0, 2, 1.1, 45], nuts:[8, 90, 3, 600, 200, 3, 0, 1, 0, 0, 60], oils:[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], sweets:[1.5, 40, 1.5, 150, 30, .7, 20, 0, .1, .2, 15], sauces:[1, 15, .6, 150, 10, .2, 30, 5, 0, 0, 10], snacks:[2, 40, 1.5, 250, 25, 1.3, 20, 2, .1, .4, 30], drinks:[0, 10, .1, 60, 5, .05, 0, 3, 0, 0, 2], supp:[0, 350, 1, 400, 60, 2, 0, 0, 0, 2, 0]};
 const MICRO_KEY = [[/liver|kebda|كبد/, [0, 8, 6.5, 300, 20, 4, 6000, 25, 1, 70, 250]], [/spinach|sabanekh|سبانخ|molokhia|ملوخية|jute/, [3, 120, 3, 500, 70, 1, 600, 25, 0, 0, 150]], [/orange|برتقال|lemon|ليمون|guava|جوافة|strawberr|فراول|kiwi|pepper_|فلفل/, [2.5, 25, .5, 250, 15, .2, 40, 70, 0, 0, 25]], [/guava|جوافة/, [5, 18, .3, 417, 22, .2, 31, 228, 0, 0, 49]], [/carrot|جزر|sweet_potato|بطاطا|pumpkin|قرع/, [3, 30, .6, 330, 15, .3, 700, 8, 0, 0, 20]], [/broccoli|بروكلي|kale|arugula|جرجير/, [3, 100, 1.5, 350, 25, .6, 400, 70, 0, 0, 100]], [/salmon|سلمون|sardine|سردين|mackerel|ماكريل|tuna|تونة/, [0, 60, 1.5, 400, 30, 1, 40, 0, 10, 8, 10]], [/yogurt|زبادي|milk|لبن|حليب|laban|cheese|جبن|gebna/, [0, 180, .1, 170, 14, .7, 40, 1, .3, .8, 10]], [/egg|بيض/, [0, 55, 1.8, 130, 12, 1.3, 160, 0, 2, 1.1, 45]], [/date|تمر|raisin|زبيب|fig|تين/, [7, 60, 1, 650, 50, .4, 5, 0, 0, 0, 15]], [/tahini|طحينة|sesame|سمسم/, [9, 430, 5, 400, 95, 4, 0, 0, 0, 0, 100]], [/lentil|عدس|chickpea|حمص|foul|فول|bean|fasolia|فاصوليا/, [7, 40, 3, 400, 50, 1.5, 0, 1, 0, 0, 160]], [/oats|شوفان|whole|brown|بلدي|baladi|فريك|freekeh/, [5, 30, 2.5, 250, 80, 2, 0, 0, 0, 0, 40]]];
+const mrda = x => { const m = (ST().mt || {})[x]; return +m > 0 ? +m : MINFO[x][2]; };
 function microPer100(f){
   if (f.cat === 'custom') return null; const s = (f.k + ' ' + (f.ar || '') + ' ' + (f.en || '')).toLowerCase();
   if (f.cat !== 'meals' && f.cat !== 'egyptian' && f.cat !== 'snacks' && f.cat !== 'sweets' && f.cat !== 'oils' && f.cat !== 'drinks' && f.cat !== 'supp'){ for (const [re, v] of MICRO_KEY) if (re.test(s)) return v; }
@@ -10002,7 +10037,7 @@ function microTotals(k){
 function reportData(k){
   const d = peek(k), tot = sumM(d.meals), tg = targetFor(k), mc = microTotals(k);
   const byMeal = MEALS.map(([key, em, nm]) => ({em, nm, kcal:sumM(d.meals.filter(m => m.meal === key || (!MEALMAP[m.meal] && key === 'snack'))).cal}));
-  const low = MK.map(x => ({x, pc:mc.t[x] / MINFO[x][2]})).sort((a, b) => a.pc - b.pc).slice(0, 3).filter(o => o.pc < .6);
+  const low = MK.map(x => ({x, pc:mc.t[x] / mrda(x)})).sort((a, b) => a.pc - b.pc).slice(0, 3).filter(o => o.pc < .6);
   return {d, tot, tg, mc, byMeal, low};
 }
 const MICRO_TIP = {fib:'beans, oats, vegetables or fruit', ca:'milk, yogurt, cheese or tahini', fe:'liver, red meat, lentils or spinach', k:'bananas, potatoes, beans or dates', mg:'nuts, oats, legumes or whole grains', zn:'meat, eggs, legumes or nuts', a:'carrots, sweet potato, liver or molokhia', c:'oranges, guava, peppers or strawberries', d:'fatty fish, eggs or a bit of sunlight', b12:'meat, fish, eggs or dairy', fol:'leafy greens, legumes or liver'};
@@ -10015,7 +10050,7 @@ function reportHtml(k){
   h += `<div class="rp-sh">${I('Macros')}</div><div class="rp-split">${sp.map(s => `<i class="${s[2]}" style="flex:${Math.max(1, s[1] / se * 100).toFixed(0)}"></i>`).join('')}</div><div class="card nf-macros" style="margin:6px 0">${bar('Protein', tot.p, tg.p, 'p')}${bar('Carbs', tot.c, tg.c, 'c')}${bar('Fat', tot.f, tg.f, 'f')}</div><small class="insight2">${sp.map(s => I(s[0]) + ' ' + Math.round(s[1] / se * 100) + '%').join(' · ')}</small>`;
   h += `<div class="rp-sh">${I('Meals')}</div><div class="rp-meals">${byMeal.map(m => `<div><span>${m.em}</span><b>${fmt(m.kcal)}</b><small>${I(m.nm)}</small></div>`).join('')}</div>`;
   [['v', 'Vitamins'], ['m', 'Minerals'], ['f', 'Fiber']].forEach(([g, t]) => {
-    h += `<div class="rp-sh">${I(t)} <em>${I('estimated')}</em></div>` + MK.filter(x => MINFO[x][4] === g).map(x => { const [n, u, rda, em] = MINFO[x], v = mc.t[x], pc = Math.round(v / rda * 100); return `<div class="rp-mi"><span>${em} ${I(n)}</span><div><i class="${pc < 40 ? 'lo' : pc >= 90 ? 'hi' : ''}" style="width:${Math.min(100, pc)}%"></i></div><b>${v >= 10 ? Math.round(v) : v.toFixed(1)}<small> / ${rda} ${u} · ${pc}%</small></b></div>`; }).join('');
+    h += `<div class="rp-sh">${I(t)} <em>${I('estimated')}</em></div>` + MK.filter(x => MINFO[x][4] === g).map(x => { const [n, u, , em] = MINFO[x], rda = mrda(x), v = mc.t[x], pc = Math.round(v / rda * 100); return `<div class="rp-mi"><span>${em} ${I(n)}</span><div><i class="${pc < 40 ? 'lo' : pc >= 90 ? 'hi' : ''}" style="width:${Math.min(100, pc)}%"></i></div><b>${v >= 10 ? Math.round(v) : v.toFixed(1)}<small> / ${rda} ${u} · ${pc}%</small></b></div>`; }).join('');
   });
   if (mc.cover < .8 && tot.cal) h += `<small class="insight2">${I('Foods you created or AI-estimated are not counted in vitamins and minerals.')}</small>`;
   if (low.length) h += `<div class="nf-note">💡 ${I('Lowest today:')} ${low.map(o => I(MINFO[o.x][0])).join(', ')}.<br>${low.slice(0, 2).map(o => I(MINFO[o.x][0]) + ': ' + I(MICRO_TIP[o.x])).join('<br>')}</div>`;
@@ -10067,7 +10102,7 @@ function weekHtml(){
   h += `<div class="rp-top"><div><b>${fmt(S.avg.cal)}</b><small>${I('avg kcal')}</small></div><div><b>${fmt(S.avg.p)}g</b><small>${I('avg protein')}</small></div><div><b>${S.onT}/${S.logged}</b><small>${I('days on target')}</small></div></div>`;
   h += `<div class="rp-sh">${I('Calories per day')}</div><div class="wk-bars">${S.rows.map(r => { const dt = new Date(r.k + 'T12:00:00'); return `<div><i style="height:${Math.round(r.cal / mx * 100)}%" class="${r.cal ? (Math.abs(r.cal - r.tg.kcal) <= r.tg.kcal * .1 ? 'ok' : '') : 'em'}"></i><small>${E(dt.toLocaleDateString(LANG === 'ar' ? 'ar-EG' : undefined, {weekday:'short'}))}</small></div>`; }).join('')}<u style="bottom:${Math.round(tg.kcal / mx * 100)}%"></u></div>`;
   h += `<div class="rp-sh">${I('Protein target hit')}: ${S.pHit}/${S.logged} ${I('days')}</div>`;
-  const avg = x => mic[x] / nd, low = MK.map(x => ({x, pc:avg(x) / MINFO[x][2]})).sort((a, b) => a.pc - b.pc);
+  const avg = x => mic[x] / nd, low = MK.map(x => ({x, pc:avg(x) / mrda(x)})).sort((a, b) => a.pc - b.pc);
   h += `<div class="rp-sh">${I('Vitamins and minerals')} <em>${I('daily average')}</em></div>` + low.slice(0, 11).map(o => { const [n, u, rda, em] = MINFO[o.x], pc = Math.round(o.pc * 100); return `<div class="rp-mi"><span>${em} ${I(n)}</span><div><i class="${pc < 40 ? 'lo' : pc >= 90 ? 'hi' : ''}" style="width:${Math.min(100, pc)}%"></i></div><b>${pc}%</b></div>`; }).join('');
   const lw = low.filter(o => o.pc < .6).slice(0, 2); if (lw.length) h += `<div class="nf-note">💡 ${lw.map(o => I(MINFO[o.x][0]) + ': ' + I(MICRO_TIP[o.x])).join('<br>')}</div>`;
   return h + `<small class="insight2">${I('Vitamin and mineral values are estimates from typical foods, not lab measurements.')}</small><div class="nf-act"><button type="button" data-a="weekask">🤖 ${I('Ask the Food AI about my day')}</button></div>`;
