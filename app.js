@@ -495,6 +495,31 @@ This month|هذا الشهر|Ce mois-ci
 Last month|الشهر الماضي|Le mois dernier
 Complete 20 sets|أكمل 20 مجموعة|Faire 20 séries
 Move 5,000 kg of volume|حرّك 5,000 كجم من الحجم|Soulever 5 000 kg de volume
+Physique|الجسم|Physique
+your body grows where you train|جسمك بيكبر في اللي بتدرّبه|votre corps grandit là où vous vous entraînez
+Smallest area|أضعف منطقة|Zone la plus faible
+Train it to balance your hero.|درّبها عشان توازن البطل.|Entraînez-la pour équilibrer votre héros.
+Log workouts to start growing your hero.|سجّل تمارينك عشان البطل يبدأ يكبر.|Enregistrez des séances pour faire grandir votre héros.
+Rank gear|عدة الرتبة|Équipement de rang
+None yet|لسه مفيش|Aucun
+Wrist wraps|رباط المعصم|Bandes de poignet
+Pauldrons|دروع الكتف|Épaulières
+Chest plate|درع الصدر|Plastron
+Gauntlets|قفازات حديدية|Gantelets
+Shoulder spikes|أشواك الكتف|Pointes d'épaule
+Halo|هالة|Halo
+Wings of light|أجنحة النور|Ailes de lumière
+Rewards road|طريق المكافآت|Route des récompenses
+GP for every level|نقاط GP مع كل مستوى|GP à chaque niveau
+Claim all|استلم الكل|Tout réclamer
+Class from your strongest stat|الكلاس من أقوى صفة عندك|Classe selon votre meilleure stat
+Total|المجموع|Total
+Stats grow from your real sessions, PRs, streak and food logs. Each level needs more than the last.|الصفات بتكبر من تمارينك الحقيقية والأرقام القياسية والاستمرارية وتسجيل الأكل. كل مستوى بيحتاج أكتر من اللي قبله.|Les stats progressent avec vos séances, records, série et repas. Chaque niveau demande plus que le précédent.
+Next reward|المكافأة الجاية|Prochaine récompense
+Alchemist|الكيميائي|Alchimiste
+Novice|مبتدئ|Novice
+Adept|ماهر|Adepte
+Elite|نخبة|Élite
 Strength|القوة|Force
 Endurance|التحمل|Endurance
 Discipline|الانضباط|Discipline
@@ -4872,12 +4897,13 @@ function drawHero(cv, st, pump, rk, t, flash){
   if (cv._yaw != null && performance.now() - cv._yawT > 4000) cv._yaw = null;
   const yaw = (cv._yaw != null ? cv._yaw : .3 + Math.sin(T * .9) * .2) + P.yaw; cv._curYaw = yaw;
   const g = Math.min(1.15, s / 6 + (pump || 0) * .8 + P.pump), cs = Math.cos(yaw), sn = Math.sin(yaw), items = [], OL = 2.6 * dpr;
+  const PHD = (cv._noPh ? null : window.RPGPH) || {}, dv = k => PHD[k] || 0, GI = (rk && !cv._noGear && rk.i) ? rk.i : 0;
   const skin = cfg.skinHex || H3_SKIN[cfg.skin] || H3_SKIN[1], hair = (cfg.face && cfg.hairHex) || cfg.hairHex2 || H3_HAIRC[cfg.hairCol] || H3_HAIRC[0], out = cfg.outHex || H3_OUT[cfg.outfit] || H3_OUT[0], shoe = '#f4f4f4';
   const tr = (x, y, z) => { const X = x * cs + z * sn, Z = -x * sn + z * cs, f = 28 / (28 - Z); return {X:cx + X * U * f, Y:base - (y + P.dy) * U * f, Z, f}; };
   if (rk){ const gr = c.createRadialGradient(cx, H * .5, 8, cx, H * .5, H * .72); gr.addColorStop(0, col + '88'); gr.addColorStop(1, col + '00'); c.fillStyle = gr; c.fillRect(0,0,W,H); }
   c.fillStyle = 'rgba(0,0,0,.3)'; c.beginPath(); c.ellipse(cx, base, 2.3 * U * (1 - P.dy * .12), .45 * U, 0, 0, 6.2832); c.fill();
   const ell = (x, y, z, rx, ry, rz, color, zb) => { const p = tr(x, y, z); items.push({z:p.Z + (zb || 0), f:() => { const sw = Math.hypot(rx * cs, rz * sn) * U * p.f, sh = ry * U * p.f; if (sw < .5 || sh < .5) return; c.save(); c.translate(p.X, p.Y); c.scale(sw, sh);
-    c.beginPath(); c.arc(0,0,1,0,6.2832); c.fillStyle = hx(color,-.3); c.fill(); c.save(); c.clip(); c.fillStyle = color; c.beginPath(); c.arc(-.17,-.2,.93,0,6.2832); c.fill(); c.fillStyle = 'rgba(255,255,255,.3)'; c.beginPath(); c.ellipse(-.43,-.5,.22,.1,-.6,0,6.2832); c.fill(); c.restore();
+    c.beginPath(); c.arc(0,0,1,0,6.2832); c.fillStyle = hx(color,-.3); c.fill(); c.save(); c.clip(); c.fillStyle = color; c.beginPath(); c.arc(-.17,-.2,.93,0,6.2832); c.fill(); c.fillStyle = 'rgba(255,255,255,.3)'; c.beginPath(); c.ellipse(-.43,-.5,.22,.1,-.6,0,6.2832); c.fill(); c.strokeStyle = 'rgba(255,255,255,.26)'; c.lineWidth = .08; c.beginPath(); c.arc(0,0,.9,-2.5,-1.1); c.stroke(); c.restore();
     c.lineWidth = OL / Math.min(sw, sh); c.strokeStyle = hx(color,-.62); c.beginPath(); c.arc(0,0,1,0,6.2832); c.stroke(); c.restore(); }}); return p; };
   const cap = (a, b, ra, rb, color, zb) => { const p = tr(...a), q = tr(...b); items.push({z:(p.Z + q.Z) / 2 + (zb || 0), f:() => { const r1 = ra * U * p.f, r2 = rb * U * q.f, dx = q.X - p.X, dy = q.Y - p.Y, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L, m = Math.max(r1, r2);
     const path = new Path2D(); path.moveTo(p.X + nx * r1, p.Y + ny * r1); path.lineTo(q.X + nx * r2, q.Y + ny * r2); path.lineTo(q.X - nx * r2, q.Y - ny * r2); path.lineTo(p.X - nx * r1, p.Y - ny * r1); path.closePath(); path.moveTo(p.X + r1, p.Y); path.arc(p.X, p.Y, r1, 0, 6.2832); path.moveTo(q.X + r2, q.Y); path.arc(q.X, q.Y, r2, 0, 6.2832);
@@ -4891,28 +4917,35 @@ function drawHero(cv, st, pump, rk, t, flash){
   const line = (pts, zb, alpha) => { const q = pts.map(a => tr(...a)); items.push({z:q[0].Z + zb, f:() => { const al = Math.max(0, cs - .2) * (alpha || 1); if (al <= 0) return; c.strokeStyle = `rgba(40,15,10,${(.5 * al).toFixed(2)})`; c.lineWidth = 2.4 * dpr; c.lineCap = 'round'; c.beginPath(); c.moveTo(q[0].X, q[0].Y); if (q.length === 3) c.quadraticCurveTo(q[1].X, q[1].Y, q[2].X, q[2].Y); else c.lineTo(q[1].X, q[1].Y); c.stroke(); }}); };
   const shirtless = s >= 3, tank = s >= 1.5 && s < 3, tcol = shirtless ? skin : out;
   /* legs: short, chunky */
-  const thR = .55 + .22 * g, caR = .44 + .12 * g;
+  const thR = .55 + .22 * g + .1 * dv('legs'), caR = .44 + .12 * g + .06 * dv('legs');
   [-1, 1].forEach(sg => { const hip = [sg * .8, 3.2, 0], kn = [sg * (.85 + .04 * g), 1.75, .1], an = [sg * .9, .55, 0];
     limb([hip, kn, an], [thR * .93, caR * .95], [skin, skin]); limb([[sg * .85, 3.1, 0], [sg * .9, 2.3, .05]], [thR * 1.1], [out], .2);
     if (s >= 2.5) ell(sg * .88, 1.3, -.2, caR * .9, .5, caR * .8, skin, .1);
     ell(sg * .92, .3, .4, .55, .32, .8, shoe); ell(sg * .92, .5, .78, .42, .2, .3, col, .25); });
-  ell(0, 3.45, 0, 1.45 + .1 * g, .85, 1, out, .1); ell(0, 3.85, 0, 1.4 + .1 * g, .2, 1, '#2b2b36', .3); ell(0, 3.85, 1.0, .26, .2, .08, '#f5c518', .8);
+  ell(0, 3.45, 0, 1.45 + .1 * g, .85, 1, out, .1); ell(0, 3.85, 0, 1.4 + .1 * g, .2, 1, '#2b2b36', .3); ell(0, 3.85, 1.0, .26, .2, .08, '#f5c518', .8); if (GI >= 5) ell(0, 3.85, 1.06, .36, .28, .05, hx(col, .3), .85);
   /* torso: V-shape */
-  ell(0, 4.45, 0, 1.05 + .08 * g, .9, .78, tcol); ell(0, 5.75, 0, 1.5 + .6 * g, 1.2 * (1 + breath), .95 + .15 * g, tcol, .05);
+  ell(0, 4.45, 0, 1.05 + .08 * g, .9, .78, tcol); ell(0, 5.75, 0, 1.5 + .6 * g + .3 * dv('chest'), 1.2 * (1 + breath), .95 + .15 * g + .1 * dv('chest'), tcol, .05);
+  if (dv('back') > .05) [-1, 1].forEach(sg => ell(sg * (1.45 + .35 * g + .45 * dv('back')), 5.2, -.55, .4 + .35 * dv('back'), 1.0 + .3 * dv('back'), .45, tcol, -.3));
   if (shirtless){ const sh = hx(skin, -.16), pc = tr(0, 5.4, 1.1 + .1 * g); items.push({z:pc.Z + .6, f:() => { const al = Math.max(0, cs - .25); if (al <= 0) return; c.fillStyle = 'rgba(70,30,10,' + (.22 * al).toFixed(2) + ')'; const k = U * pc.f;
+      if (dv('core') > .1){ const a0 = tr(0, 5.0, 1.0 + .1 * g), a1 = tr(0, 3.9, .95); c.strokeStyle = 'rgba(70,30,10,' + (.3 * al * Math.min(1, dv('core') * 1.5)).toFixed(2) + ')'; c.lineWidth = 1.6 * dpr; c.lineCap = 'round'; c.beginPath(); c.moveTo(a0.X, a0.Y); c.lineTo(a1.X, a1.Y); c.stroke(); [-1, 1].forEach(sg => { for (let r = 0; r < Math.round(1 + dv('core') * 3); r++){ const q = tr(sg * .3, 4.55 - r * .36, .85); c.beginPath(); c.ellipse(q.X, q.Y, .26 * k * cs, .15 * k, 0, 0, 6.2832); c.fill(); } }); }
     [-1, 1].forEach(sg => { [0, 1, 2].forEach(r => { const q = tr(sg * .34, 4.9 - r * .5, .8); c.beginPath(); c.ellipse(q.X, q.Y, .27 * k * cs, .18 * k, 0, 0, 6.2832); c.fill(); }); const q = tr(sg * .72, 5.35, 1.0 + .1 * g); c.beginPath(); c.ellipse(q.X, q.Y, .62 * k * cs, .16 * k, sg * .15, 0, Math.PI); c.fill(); }); }}); }
   else { ell(0, 5.8, .98 + .15 * g, .3, .3, .06, col, .6); }
+  if (GI >= 3){ ell(0, 5.6, .9 + .15 * g, .85 + .25 * g, .6, .16, hx(col, -.1), .62); ell(0, 5.65, 1.0 + .17 * g, .4, .28, .06, hx(col, .38), .7); }
   if (s >= 2) { [-1, 1].forEach(sg => ell(sg * (1.35 + .6 * g), 5.5, -.35, .5 + .2 * g, .9, .5, tank || shirtless ? skin : out, -.1)); }
   ell(0, 6.95, 0, .62, .5, .6, skin, 0);
   /* arms: chunky */
-  const sw = 1.75 + .6 * g, aR = .42 + .3 * g, fR = .38 + .2 * g, glove = cfg.acc === 'gloves';
+  const sw = 1.75 + .6 * g + .25 * dv('shoulders'), aR = .42 + .3 * g + .1 * dv('arms'), fR = .38 + .2 * g + .06 * dv('arms'), glove = cfg.acc === 'gloves';
   [['R', 1], ['L', -1]].forEach(([k, sg]) => { const A = P[k], S = [sg * sw, 6, 0], d1 = dirv(sg, A[0], A[1]), d2 = dirv(sg, A[2], A[3]);
     const E = [S[0] + d1[0] * 1.35, S[1] + d1[1] * 1.35, S[2] + d1[2] * 1.35], Hd = [E[0] + d2[0] * 1.25, E[1] + d2[1] * 1.25, E[2] + d2[2] * 1.25];
-    ell(S[0], S[1], S[2], .6 + .38 * g, .58 + .34 * g, .58 + .3 * g, tank || shirtless ? skin : out, .2);
+    ell(S[0], S[1], S[2], .6 + .38 * g + .14 * dv('shoulders'), .58 + .34 * g + .1 * dv('shoulders'), .58 + .3 * g, tank || shirtless ? skin : out, .2);
     const ua = (!tank && !shirtless) ? out : skin; limb([S, E, Hd], [aR * .95, fR * .9], [ua, skin], .1);
     if (s >= 2) ell((S[0] + E[0]) / 2, (S[1] + E[1]) / 2, (S[2] + E[2]) / 2 + .18, aR * (1.1 + .25 * g), .62 + .2 * g, aR * (1 + .2 * g), ua, .3);
     ell(E[0] + (Hd[0] - E[0]) * .78, E[1] + (Hd[1] - E[1]) * .78, E[2] + (Hd[2] - E[2]) * .78, fR * .95, fR * .95, fR * .95, col, .35);
-    const hr = .46 + .16 * g; ell(Hd[0], Hd[1], Hd[2], hr, hr, hr, glove ? hx(out, .1) : skin, .4); });
+    const hr = .46 + .16 * g; ell(Hd[0], Hd[1], Hd[2], hr, hr, hr, glove ? hx(out, .1) : skin, .4);
+    if (GI >= 1) ell(E[0] + (Hd[0] - E[0]) * .5, E[1] + (Hd[1] - E[1]) * .5, E[2] + (Hd[2] - E[2]) * .5, fR * 1.12, fR * .62, fR * 1.12, hx(col, .08), .38);
+    if (GI >= 2){ ell(S[0] + sg * .12, S[1] + .38, S[2], .8 + .38 * g + .14 * dv('shoulders'), .5, .74 + .3 * g, hx(col, -.05), .55); ell(S[0] + sg * .12, S[1] + .6, S[2] + .08, .52, .2, .5, hx(col, .3), .62); }
+    if (GI >= 4) ell(Hd[0], Hd[1], Hd[2], hr * 1.3, hr * 1.2, hr * 1.3, hx(col, -.12), .45);
+    if (GI >= 5) cap([S[0] + sg * .3, S[1] + .7, S[2]], [S[0] + sg * .62, S[1] + 1.8, S[2] - .1], .24, .03, hx(col, .25), .7); });
   /* head: big, friendly */
   const hy = 8.2, hp = tr(0, hy, 0); ell(0, hy, 0, 1.62, 1.5, 1.5, skin, .2); [-1, 1].forEach(sg => ell(sg * 1.58, hy - .1, 0, .26, .4, .2, skin, 0));
   const hs = cfg.hair;
@@ -4948,6 +4981,10 @@ function drawHero(cv, st, pump, rk, t, flash){
       if (P.mouth === 1){ c.beginPath(); c.ellipse(mx, my - .05 * k0, mw, .3 * k0, 0, 0, Math.PI); c.fill(); c.stroke(); c.fillStyle = '#ff8b8b'; c.beginPath(); c.ellipse(mx, my + .12 * k0, mw * .5, .12 * k0, 0, 0, Math.PI); c.fill(); }
       else if (P.mouth === 2){ c.fillStyle = '#fff'; c.beginPath(); c.roundRect(mx - mw, my - .12 * k0, mw * 2, .26 * k0, 4 * dpr); c.fill(); c.stroke(); c.lineWidth = 1.4 * dpr; c.beginPath(); c.moveTo(mx, my - .12 * k0); c.lineTo(mx, my + .14 * k0); c.stroke(); }
       else { c.beginPath(); c.moveTo(mx - mw, my - .05 * k0); c.quadraticCurveTo(mx, my + .35 * k0, mx + mw, my - .05 * k0); c.stroke(); } } }});
+  if (GI >= 7) items.push({z:-6, f:() => { const fl = Math.sin(T * 2.4) * .35; [-1, 1].forEach(sg => { const a = tr(sg * .9, 6.4, -.8), t1 = tr(sg * (4.7 + fl), 9.4 + fl, -1.2), t2 = tr(sg * (4.2 + fl), 7.3 + fl * .5, -1.2), t3 = tr(sg * (3.4 + fl), 5.3, -1.2), b = tr(sg * .9, 5.0, -.8), d = sg * 7 * dpr;
+      c.beginPath(); c.moveTo(a.X, a.Y); c.quadraticCurveTo(t1.X - d, t1.Y - 10 * dpr, t1.X, t1.Y); c.quadraticCurveTo(t2.X - d * .2, t2.Y - 3 * dpr, t2.X, t2.Y); c.quadraticCurveTo(t3.X - d * .2, t3.Y - 3 * dpr, t3.X, t3.Y); c.quadraticCurveTo(b.X + d, b.Y + 4 * dpr, b.X, b.Y); c.closePath();
+      const gg = c.createLinearGradient(a.X, a.Y, t1.X, t1.Y); gg.addColorStop(0, col + 'cc'); gg.addColorStop(1, col + '22'); c.fillStyle = gg; c.fill(); c.strokeStyle = 'rgba(255,255,255,.7)'; c.lineWidth = 1.6 * dpr; c.stroke(); }); }});
+  if (GI >= 6) items.push({z:99, f:() => { const hp2 = tr(0, 11.4 + Math.sin(T * 2) * .12, 0); c.save(); c.strokeStyle = col; c.lineWidth = 2.6 * dpr; c.shadowColor = col; c.shadowBlur = 10 * dpr; c.beginPath(); c.ellipse(hp2.X, hp2.Y, 1.45 * U * hp2.f, .34 * U * hp2.f, 0, 0, 6.2832); c.stroke(); c.restore(); }});
   items.sort((a, b) => a.z - b.z).forEach(i => i.f());
   if (t != null){ for (let k = 0; k < 6; k++){ const a = t / 700 + k * 1.047; c.fillStyle = k % 2 ? '#fff' : col; c.beginPath(); c.arc(cx + Math.cos(a) * H * .36, H * .5 + Math.sin(a * 1.3) * H * .4, 2.4 * dpr, 0, 6.2832); c.fill(); }
     if (cfg.aura) for (let k = 0; k < 14; k++){ const ph = ((T * .45 + k * .137) % 1), x = cx + Math.sin(k * 7.3 + T) * H * .22, y = base - ph * H * .85; c.fillStyle = (k % 2 ? '#ffb347' : col) + Math.round((1 - ph) * 200).toString(16).padStart(2, '0'); c.beginPath(); c.arc(x, y, (1 - ph) * 4 * dpr + 1, 0, 6.2832); c.fill(); } }
@@ -4966,7 +5003,7 @@ function heroExtras(el){
   if (lv > settings.emoteLv){ const from = settings.emoteLv, n = [].concat(EMOTES.filter(m => m[3] > from && m[3] <= lv).map(m => m[2] + ' ' + m[1] + ' emote'), H3_ACC.filter(m => m[2] > from && m[2] <= lv).map(m => '🎨 ' + m[1]), H3_HAIRS.filter(m => m[2] > from && m[2] <= lv).map(m => '💇 ' + m[1] + ' hair'), (8 > from && 8 <= lv) ? ['✨ Aura'] : []);
     settings.emoteLv = lv; save(); if (n.length){ showToast('🎭 Unlocked: ' + n.join(', ')); const ok = EMOTES.filter(m => m[3] <= lv).pop(); setTimeout(() => playEmote($('pxHero'), ok[0]), 600); } }
 }
-function drawEvo(){ const rk = rpg().rk; document.querySelectorAll('#evoBar canvas').forEach(cv => { cv._yaw = .3; drawHero(cv, +cv.dataset.st, 0, rk, null); }); }
+function drawEvo(){ const rk = rpg().rk; document.querySelectorAll('#evoBar canvas').forEach(cv => { cv._yaw = .3; cv._noPh = 1; cv._noGear = 1; drawHero(cv, +cv.dataset.st, 0, rk, null); }); }
 function idleHero(cv){ const t0 = performance.now(), r = rpg(), st = Math.min(6, (r.lv - 1) / 8); (function L(now){ if (!cv.isConnected) return; drawHero(cv, st, 0, r.rk, now - t0); requestAnimationFrame(L); })(t0); }
 function flexHero(la, lb){
   let cv = $('lvPx');
@@ -5489,6 +5526,205 @@ function renderPRLog(){
 }
 function floatXP(n){ if (!n || !animOn()) return; const e = document.createElement('div'); e.className = 'xpfloat'; e.textContent = '+' + n + ' XP'; document.body.appendChild(e); setTimeout(() => e.remove(), 1500); }
 { const _rh = renderHero; renderHero = function(){ _rh(); renderHome(); }; const _rc = renderChar; renderChar = function(){ _rc(); renderPRLog(); }; }
+
+
+/* ---------- RPG v2: leveled stats, class evolution, rewards road, richer level-ups ---------- */
+{
+  const SDEF = [
+    {k:'STR', icon:'💪', n:'Strength',   sc:12, c:'#ff5d73'},
+    {k:'END', icon:'🫁', n:'Endurance',  sc:3,  c:'#3ac7a0'},
+    {k:'DISC', icon:'🔥', n:'Discipline', sc:4,  c:'#f5a623'},
+    {k:'TECH', icon:'🎯', n:'Technique',  sc:2,  c:'#63b3ff'},
+    {k:'NUT', icon:'🥗', n:'Nutrition',  sc:3,  c:'#a3d95b'}
+  ];
+  const CLS = {STR:['Berserker','⚔️'], END:['Ranger','🏹'], DISC:['Monk','🧘'], TECH:['Mage','🔮'], NUT:['Alchemist','🧪']};
+  const TIERS = [[15, 'Master'], [10, 'Elite'], [5, 'Adept'], [0, 'Novice']];
+  function nutDays(until){
+    try { const o = JSON.parse(window.NUT.dump()), d = (o && o.days) || {}; let a = 0;
+      Object.keys(d).forEach(k => { if (until && k > until) return; const m = (d[k] && d[k].meals) || []; if (!m.length) return; const cal = m.reduce((x, y) => x + (+y.cal || 0), 0); a += 3 + (m.length >= 3 || cal >= 1200 ? 2 : 0); });
+      return a; } catch(e){ return 0; }
+  }
+  function rawStats(until){
+    const ss = sessions.filter(x => !until || localKey(x.date) <= until).sort((a, b) => a.date.localeCompare(b.date)), best = {}, hi = {}, days = new Set(), wks = new Set();
+    let sets = 0, card = 0, prs = 0;
+    ss.forEach(x => { const k = localKey(x.date); days.add(k); wks.add(weekStart(k)); card += x.cardio ? (+x.cardio.min || 0) : 0;
+      x.exercises.forEach(e => { const key = e.name.trim().toLowerCase(); let top = 0; e.sets.forEach(t => { sets++; const v = e1rm(t.weight, t.reps); if (!(best[key] >= v)) best[key] = v; if (t.weight > top) top = t.weight; });
+        if (hi[key] > 0 && top > hi[key]) prs++; hi[key] = Math.max(hi[key] || 0, top); }); });
+    const top5 = Object.values(best).sort((a, b) => b - a).slice(0, 5).reduce((a, b) => a + b, 0);
+    return {STR:top5, END:sets + card / 2, DISC:days.size * 2 + wks.size * 3, TECH:Object.keys(best).length * 6 + prs * 4, NUT:nutDays(until)};
+  }
+  const lvOf = (raw, sc) => 1 + Math.floor(Math.sqrt(Math.max(0, raw) / sc));
+  function rpgStats(){
+    const now = rawStats(), old = rawStats(shiftDays(todayKey(), -7));
+    const L = SDEF.map(d => { const lv = lvOf(now[d.k], d.sc), lo = (lv - 1) ** 2 * d.sc, hi = lv ** 2 * d.sc;
+      return Object.assign({}, d, {raw:now[d.k], lv, pct:Math.round((now[d.k] - lo) / (hi - lo) * 100), d7:lv - lvOf(old[d.k], d.sc)}); });
+    const top = L.slice().sort((a, b) => b.lv - a.lv || b.raw / b.sc - a.raw / a.sc)[0], total = L.reduce((a, b) => a + b.lv, 0);
+    const tier = TIERS.find(t => top.lv >= t[0])[1], cl = sessions.length ? CLS[top.k] : ['Adventurer', '🗺️'];
+    return {list:L, top, tier, cls:cl, total};
+  }
+  window.rpgStats = rpgStats;
+  function radar(L){
+    const mx = Math.max(10, Math.ceil(Math.max(...L.map(x => x.lv)) * 1.2)), R = 78, C = 100, pt = (i, f) => { const a = -Math.PI / 2 + i * 2 * Math.PI / L.length; return [C + Math.cos(a) * R * f, C + Math.sin(a) * R * f]; };
+    const ring = f => L.map((_, i) => pt(i, f).map(v => v.toFixed(1)).join(',')).join(' '), val = L.map((x, i) => pt(i, Math.max(.08, x.lv / mx)).map(v => v.toFixed(1)).join(',')).join(' ');
+    return `<svg class="rdr" viewBox="0 0 200 200" role="img" aria-label="Stats radar">${[.33, .66, 1].map(f => `<polygon points="${ring(f)}" fill="none" stroke="var(--border)" stroke-width="1"/>`).join('')}${L.map((_, i) => { const q = pt(i, 1); return `<line x1="${C}" y1="${C}" x2="${q[0].toFixed(1)}" y2="${q[1].toFixed(1)}" stroke="var(--border)"/>`; }).join('')}<polygon points="${val}" fill="var(--accent)" fill-opacity=".28" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round"/>${L.map((x, i) => { const q = pt(i, Math.max(.08, x.lv / mx)), t = pt(i, 1.2); return `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="3.4" fill="${x.c}"/><text x="${t[0].toFixed(1)}" y="${(t[1] + 4).toFixed(1)}" text-anchor="middle" font-size="12">${x.icon}</text>`; }).join('')}</svg>`;
+  }
+  /* milestone rewards (GP) */
+  const msGP = L => L % 25 === 0 ? 400 : L % 10 === 0 ? 150 : L % 5 === 0 ? 60 : 15;
+  const claimed = () => (progress.rpgClaimed = progress.rpgClaimed || {});
+  function msGive(L, why){ if (claimed()[L]) return 0; const g = msGP(L), E = ec(); claimed()[L] = Date.now(); E.gp += g; E.led.unshift({id:'lv' + L + '-' + Date.now(), t:Date.now(), amt:g, why:why || ('Level ' + L + ' reward')}); return g; }
+  function road(r){
+    const from = Math.max(2, r.lv - 2), to = from + 10; let h = '';
+    for (let L = from; L <= to; L++){ const st = claimed()[L] ? 'done' : L <= r.lv ? 'ready' : 'lock', big = L % 5 === 0;
+      h += `<button type="button" class="rd ${st}${big ? ' big' : ''}" data-tone="none" ${st === 'ready' ? `data-claim="${L}"` : 'disabled'} aria-label="Level ${L}"><i>${st === 'done' ? '✓' : st === 'ready' ? '🎁' : big ? '⭐' : '🔒'}</i><b>${L}</b><small>+${msGP(L)}</small></button>`; }
+    const pend = []; for (let L = 2; L <= r.lv; L++) if (!claimed()[L]) pend.push(L);
+    return `<div class="card rdcard"><div class="nf-sh0">${tr('Rewards road')}<em>${tr('GP for every level')}</em>${pend.length ? `<button type="button" class="rdall" data-tone="none" data-claim="all">${tr('Claim all')} · +${pend.reduce((a, L) => a + msGP(L), 0)}</button>` : ''}</div><div class="rdrow">${h}</div></div>`;
+  }
+  function paint(){
+    const box = $('charBox'); if (!box || !box.firstElementChild) return;
+    const st = box.querySelector('.stat'); if (!st) return; const old = st.parentElement, S = rpgStats(), r = rpg();
+    const rows = S.list.map(x => `<div class="sv"><span>${x.icon} ${tr(x.n)}</span><div class="xp s"><div style="width:${Math.max(3, x.pct)}%;background:${x.c}"></div></div><b>${x.lv}</b>${x.d7 > 0 ? `<em>▲${x.d7}</em>` : '<em></em>'}</div>`).join('');
+    const html = `<div class="rpgv2"><div class="rcls"><span>${S.cls[1]}</span><div><b>${tr(S.tier)} ${tr(S.cls[0])}</b><small>${tr('Class from your strongest stat')} · ${tr(S.top.n)} ${S.top.lv}</small></div><em>${tr('Total')} ${S.total}</em></div><div class="rgrid">${radar(S.list)}<div class="rrows">${rows}</div></div><small class="insight2">${tr('Stats grow from your real sessions, PRs, streak and food logs. Each level needs more than the last.')}</small></div>${road(r)}`;
+    old.outerHTML = html;
+  }
+  { const _r = renderChar; renderChar = function(){ _r(); try { paint(); } catch(e){ console.warn('rpg v2', e); } }; }
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-claim]'); if (!b) return; const r = rpg(), v = b.dataset.claim; let g = 0;
+    if (v === 'all'){ for (let L = 2; L <= r.lv; L++) g += msGive(L); } else g = msGive(+v);
+    if (g){ save(); showToast('🎁 +' + g + ' GP'); try { buzz(30); } catch(_){} try { ghFx && 0; } catch(_){} renderChar(); try { if (typeof renderStore === 'function') renderStore(); } catch(_){} } });
+  /* richer level-up + post-session XP summary */
+  { const _lc = levelCheck; levelCheck = function(){
+      const before = progress.lastLevel, bx = progress.lastXp, bs = progress.lastStats, key0 = progress.lastRankKey, mod = $('modalLevel'), was = mod.classList.contains('active');
+      _lc();
+      const r = rpg(), S = rpgStats(), cur = {}; S.list.forEach(x => cur[x.k] = x.lv);
+      const lvUp = before && r.lv > before, rankUp = key0 != null && (r.rk.i * 10 + (3 - r.rk.div)) > key0;
+      const gains = bs ? S.list.filter(x => x.lv > (bs[x.k] || 0)).map(x => x.icon + ' ' + tr(x.n) + ' +' + (x.lv - (bs[x.k] || 0))) : [];
+      let g = 0, ex = '';
+      if (lvUp){ for (let L = before + 1; L <= r.lv; L++) g += msGive(L); }
+      if (lvUp || rankUp){
+        if (rankUp && !claimed()['rk' + r.rk.i + '.' + r.rk.div]){ const E = ec(); claimed()['rk' + r.rk.i + '.' + r.rk.div] = Date.now(); E.gp += 100; E.led.unshift({id:'rk' + Date.now(), t:Date.now(), amt:100, why:'Rank up: ' + rankText(r.rk)}); g += 100; }
+        ex = (gains.length ? `<div class="lvg">${gains.map(x => `<span>${x}</span>`).join('')}</div>` : '') + (g ? `<div class="lvr">🎁 +${g} GP</div>` : '') + `<small class="lvn">${tr('Next reward')}: ${tr('Level')} ${r.lv + 1} · +${msGP(r.lv + 1)} GP</small>`;
+        const ee = $('lvExtra'); if (ee) ee.innerHTML = ex; if (g) save();
+      } else if (bx != null && r.xp > bx){
+        showToast('⚡ +' + (r.xp - bx) + ' XP' + (gains.length ? ' · ' + gains.join(' · ') : ''));
+      }
+      progress.lastXp = r.xp; progress.lastStats = cur; save();
+    }; }
+}
+/* ---------- physique: your real training shapes the hero's body ---------- */
+{
+  const PM = ['chest', 'back', 'shoulders', 'arms', 'legs', 'core'], PMI = {chest:'🫁', back:'🦅', shoulders:'🏔️', arms:'💪', legs:'🦵', core:'🧱'}, PMN = {chest:'Chest', back:'Back muscles', shoulders:'Shoulders', arms:'Arms', legs:'Legs', core:'Core'};
+  const GEAR = ['', 'Wrist wraps', 'Pauldrons', 'Chest plate', 'Gauntlets', 'Shoulder spikes', 'Halo', 'Wings of light'];
+  let ck = '', cv = null;
+  function physique(){
+    const key = sessions.length + ':' + ((sessions[sessions.length - 1] || {}).date || '') + ':' + sessions.reduce((a, x) => a + x.exercises.length, 0);
+    if (key === ck && cv) return cv; const n = {}; PM.forEach(k => n[k] = 0);
+    sessions.forEach(x => x.exercises.forEach(e => { const m = muscleOf(e.name); if (!m) return; const k = m === 'glutes' ? 'legs' : m; if (k in n) n[k] += e.sets.length; }));
+    const dev = {}, lv = {}; PM.forEach(k => { dev[k] = Math.min(1, Math.sqrt(n[k] / 150)); lv[k] = 1 + Math.floor(Math.sqrt(n[k] / 2)); });
+    ck = key; return (cv = {n, dev, lv});
+  }
+  Object.defineProperty(window, 'RPGPH', {get(){ try { return physique().dev; } catch(e){ return {}; } }, configurable:true});
+  window.physique = physique;
+  const _paint = window.__rpgPaintHook;
+  { const _r = renderChar; renderChar = function(){ _r(); try {
+      const box = $('charBox'), road = box && box.querySelector('.rdcard'); if (!box || box.querySelector('.physq')) return; const P = physique(), r = rpg(), gi = r.rk.i, tot = Object.values(P.n).reduce((a, b) => a + b, 0);
+      const low = PM.slice().sort((a, b) => P.dev[a] - P.dev[b])[0], nxt = GEAR[gi + 1] ? tr(GEAR[gi + 1]) + ' · ' + tr(RANKS[gi + 1].n) : '';
+      const html = `<div class="card physq"><div class="nf-sh0">${tr('Physique')}<em>${tr('your body grows where you train')}</em></div>${PM.map(k => `<div class="sv"><span>${PMI[k]} ${tr(PMN[k])}</span><div class="xp s"><div style="width:${Math.max(3, Math.round(P.dev[k] * 100))}%"></div></div><b>${P.lv[k]}</b><em>${P.n[k]}</em></div>`).join('')}
+        ${tot ? `<small class="insight2">${tr('Smallest area')}: ${PMI[low]} ${tr(PMN[low])}. ${tr('Train it to balance your hero.')}</small>` : `<small class="insight2">${tr('Log workouts to start growing your hero.')}</small>`}
+        <div class="gearln"><span>🛡️ ${tr('Rank gear')}: <b>${gi ? tr(GEAR[gi]) : tr('None yet')}</b></span>${nxt ? `<small>${tr('Next')}: ${nxt}</small>` : ''}</div></div>`;
+      (road || box.querySelector('.rpgv2') || box).insertAdjacentHTML(road ? 'beforebegin' : 'afterend', html); } catch(e){ console.warn('physique', e); } }; }
+}
+
+/* ---------- RPG round 4: boss chests, quest chains, titles ---------- */
+{
+  const Z = (en, ar) => LANG === 'ar' ? ar : en, fmtN = n => Math.round(n).toLocaleString();
+  const give = (n, why) => { const E = ec(); E.gp += n; E.led.unshift({id:'rq' + Date.now() + Math.random().toString(36).slice(2, 5), t:Date.now(), amt:n, why}); };
+  const PR = () => (progress.rq = progress.rq || {boss:{}, chains:{}, titles:{}, loot:[], kills:0});
+  const BEMO = ['🗿', '🐉', '👻', '🤖'];
+  /* ---- titles ---- */
+  const RKT = ['', ['Silver Challenger', 'متحدي الفضة'], ['Golden Lifter', 'رافع الذهب'], ['Platinum Elite', 'نخبة البلاتين'], ['Diamond Crusher', 'سحّاق الألماس'], ['Master of Iron', 'سيد الحديد'], ['Grandmaster', 'الأستاذ الأعظم'], ['Living Legend', 'أسطورة حية']];
+  const TITLES = [
+    {id:'vet', n:['Veteran', 'محارب قديم'], d:['Reach level 10', 'وصّل مستوى 10'], ok:r => r.lv >= 10},
+    {id:'hard', n:['Hardened', 'صلب'], d:['Reach level 25', 'وصّل مستوى 25'], ok:r => r.lv >= 25},
+    {id:'elder', n:['Elder', 'الحكيم'], d:['Reach level 40', 'وصّل مستوى 40'], ok:r => r.lv >= 40},
+    {id:'k1', n:['Boss Slayer', 'قاتل الزعماء'], d:['Defeat 1 boss', 'اهزم زعيم'], ok:() => PR().kills >= 1},
+    {id:'k5', n:['Titan Hunter', 'صياد العمالقة'], d:['Defeat 5 bosses', 'اهزم 5 زعماء'], ok:() => PR().kills >= 5},
+    {id:'k15', n:['Giant Killer', 'قاتل الجبابرة'], d:['Defeat 15 bosses', 'اهزم 15 زعيم'], ok:() => PR().kills >= 15},
+    {id:'pr10', n:['Record Breaker', 'كاسر الأرقام'], d:['Break 10 PRs', 'اكسر 10 أرقام قياسية'], ok:() => prTotal() >= 10},
+    {id:'pr50', n:['Record Machine', 'ماكينة الأرقام'], d:['Break 50 PRs', 'اكسر 50 رقم قياسي'], ok:() => prTotal() >= 50},
+    {id:'lucky', n:['Lucky Legend', 'محظوظ أسطوري'], d:['Find a Legendary chest drop', 'اجمع جائزة أسطورية'], ok:() => PR().loot.some(x => x.r === 'legendary')}
+  ].concat(RKT.map((t, i) => t && {id:'rk' + i, n:t, d:['Reach this rank', 'وصّل الرتبة دي'], ok:r => r.rk.i >= i}).filter(Boolean));
+  const titleName = t => Z(t.n[0], t.n[1]);
+  const CHAINS = [
+    {id:'iron', icon:'🏋️', n:['Iron Path', 'طريق الحديد'], t:['Iron Walker', 'ماشي الحديد'], gp:300, steps:[{k:'days', n:3}, {k:'sets', n:30}, {k:'prs', n:1}, {k:'vol', n:15000}]},
+    {id:'fuel', icon:'🥗', n:['Fuel Up', 'وقود الجسم'], t:['Fuel Master', 'سيد الوقود'], gp:250, steps:[{k:'food', n:3}, {k:'food', n:5}, {k:'days', n:3}, {k:'food', n:7}]},
+    {id:'endu', icon:'🫁', n:['Endurance Trial', 'تحدي التحمل'], t:['Marathon Mind', 'عقل الماراثون'], gp:250, steps:[{k:'cardio', n:60}, {k:'sets', n:50}, {k:'days', n:5}]}
+  ];
+  CHAINS.forEach(c => TITLES.push({id:'ch_' + c.id, n:c.t, d:['Finish the "' + c.n[0] + '" chain', 'خلّص سلسلة "' + c.n[1] + '"'], ok:() => !!(PR().chains[c.id] || {}).done}));
+  const stepTxt = st => ({days:Z('Train ' + st.n + ' days', 'تمرن ' + st.n + ' أيام'), sets:Z('Complete ' + st.n + ' sets', 'خلّص ' + st.n + ' سيت'), prs:Z('Break ' + st.n + ' PR', 'اكسر ' + st.n + ' رقم قياسي'), vol:Z('Lift ' + fmtN(st.n) + ' kg total', 'ارفع ' + fmtN(st.n) + ' كجم إجمالي'), cardio:Z('Do ' + st.n + ' min cardio', 'اعمل ' + st.n + ' دقيقة كارديو'), food:Z('Log food on ' + st.n + ' days', 'سجّل أكلك ' + st.n + ' أيام')}[st.k]);
+  function countSince(ms){
+    const key = localKey(new Date(ms).toISOString()), ss = sessions.slice().sort((a, b) => a.date.localeCompare(b.date)), best = {}, days = new Set(); let sets = 0, vol = 0, cardio = 0, prs = 0;
+    ss.forEach(x => { const inn = Date.parse(x.date) >= ms;
+      x.exercises.forEach(e => { const k = e.name.trim().toLowerCase(); let top = 0; e.sets.forEach(t => { if (t.weight > top) top = t.weight; if (inn){ sets++; vol += (t.weight || 0) * (t.reps || 0); } }); if (inn && best[k] > 0 && top > best[k]) prs++; best[k] = Math.max(best[k] || 0, top); });
+      if (inn){ days.add(localKey(x.date)); cardio += x.cardio ? (+x.cardio.min || 0) : 0; } });
+    let food = 0; try { const d = (JSON.parse(window.NUT.dump()) || {}).days || {}; Object.keys(d).forEach(k => { if (k >= key && (d[k].meals || []).length) food++; }); } catch(e){}
+    return {days:days.size, sets, vol, cardio, prs, food};
+  }
+  function cst(c){ const st = PR().chains[c.id] = PR().chains[c.id] || {i:0, since:Date.now()}; return st; }
+  function awardTitles(quiet){
+    const r = rpg(), T = PR().titles, fresh = []; TITLES.forEach(t => { if (!T[t.id] && t.ok(r)){ T[t.id] = Date.now(); fresh.push(t); } });
+    if (fresh.length){ save(); if (!quiet) setTimeout(() => showToast('🏷️ ' + Z('New title: ', 'لقب جديد: ') + fresh.map(titleName).join(', ')), 900); } return fresh;
+  }
+  /* ---- loot ---- */
+  function roll(why){
+    const x = Math.random(), r = x < .01 ? 'legendary' : x < .08 ? 'epic' : x < .30 ? 'rare' : 'common', gp = {common:[40, 80], rare:[100, 200], epic:[250, 400], legendary:[600, 900]}[r], g = gp[0] + Math.floor(Math.random() * (gp[1] - gp[0]));
+    give(g, why + ' (' + r + ')'); const d = {t:Date.now(), why, r, gp:g}; PR().loot.unshift(d); PR().loot.length = Math.min(PR().loot.length, 12); save();
+    try { ghFx(['loot', {common:'🎁', rare:'🎁', epic:'💎', legendary:'👑'}[r], why], r === 'common' ? 'common' : r === 'rare' ? 'rare' : 'legendary', g); } catch(e){}
+    return d;
+  }
+  const RC = {common:'#8a97a8', rare:'#3a86ff', epic:'#a855f7', legendary:'#f5a623'};
+  function bossHtml(){
+    const bi = bossInfo(), P = PR(), wk = weekStart(todayKey()); if (!bi.hp) return null;
+    const pct = Math.min(100, bi.dmg / bi.hp * 100), left = 100 - pct, phase = left > 75 ? ['🛡️', Z('Guarded', 'محصّن')] : left > 50 ? ['⚔️', Z('Wounded', 'مجروح')] : left > 25 ? ['🔥', Z('Enraged', 'غاضب')] : left > 0 ? ['💀', Z('Final stand', 'المعركة الأخيرة')] : ['🏆', Z('Defeated', 'انهزم')];
+    const idx = Math.floor(Date.parse(wk) / 6048e5) % 4, got = P.boss[wk], lv = 1 + Math.floor(P.kills / 3);
+    const loot = P.loot.slice(0, 3).map(l => `<span class="lt" style="--c:${RC[l.r]}">${l.r === 'legendary' ? '👑' : l.r === 'epic' ? '💎' : '🎁'} +${l.gp}</span>`).join('');
+    return `<div class="bosscard${bi.dead ? ' dead' : ''}"><div class="bh"><span class="be">${BEMO[idx]}</span><div><b>${tr(bi.name)}</b><small>${Z('Boss level', 'مستوى الزعيم')} ${lv} · ${Z('Defeated', 'اتهزم')} ${P.kills}</small></div><em>${phase[0]} ${phase[1]}</em></div>
+      <div class="bhp"><div style="width:${(100 - pct).toFixed(1)}%"></div><i style="left:25%"></i><i style="left:50%"></i><i style="left:75%"></i></div>
+      <div class="bnum"><span>${fmtN(Math.max(0, bi.hp - bi.dmg))} / ${fmtN(bi.hp)} kg HP</span><span>${Z('Your hits', 'ضرباتك')}: ${fmtN(bi.dmg)} kg</span></div>
+      ${bi.dead ? (got ? `<div class="bgot">✅ ${Z('Chest opened this week', 'فتحت الصندوق الأسبوع ده')}</div>` : `<button type="button" class="bclaim" data-tone="none" data-bossclaim="${wk}">🎁 ${Z('Open boss chest', 'افتح صندوق الزعيم')}</button>`) : `<small class="insight2">${Z('Lift ' + fmtN(bi.hp - bi.dmg) + ' kg more this week to win a chest.', 'ارفع ' + fmtN(bi.hp - bi.dmg) + ' كجم كمان الأسبوع ده عشان تكسب صندوق.')}</small>`}
+      ${loot ? `<div class="lootrow"><small>${Z('Recent loot', 'آخر جوايز')}</small>${loot}</div>` : ''}</div>`;
+  }
+  function chainsHtml(){
+    return `<div class="box chainsbox" id="chainsBox"><h3>⛓️ ${Z('Quest chains', 'سلاسل المهام')}</h3><small class="insight2">${Z('Finish steps in order. Only workouts after you start a step count.', 'خلّص الخطوات بالترتيب. التمارين بعد بداية الخطوة بس هي اللي بتتحسب.')}</small>` + CHAINS.map(c => {
+      const S = cst(c), cnt = countSince(S.since), n = c.steps.length;
+      const dots = c.steps.map((_, i) => `<i class="${i < S.i || S.done ? 'ok' : i === S.i ? 'cur' : ''}"></i>`).join('');
+      if (S.done) return `<div class="goal done chn"><div class="goal-h"><span>✅ ${c.icon} ${Z(c.n[0], c.n[1])}</span><span style="color:var(--ok)">${Z('Complete', 'خلصت')}</span></div><div class="dots2">${dots}</div></div>`;
+      const st = c.steps[S.i], v = Math.min(st.n, cnt[st.k]), ready = cnt[st.k] >= st.n, last = S.i === n - 1;
+      return `<div class="goal chn"><div class="goal-h"><span>${c.icon} ${Z(c.n[0], c.n[1])} <small>${S.i + 1}/${n}</small></span><span style="color:var(--accent)">+${last ? c.gp + ' GP · 🏷️' : '25 GP'}</span></div><div class="dots2">${dots}</div>
+        <div class="goal-v" style="margin:.5rem 0 .3rem"><span>${stepTxt(st)}</span><span>${fmtN(v)} / ${fmtN(st.n)}</span></div><div class="track"><div style="width:${Math.round(v / st.n * 100)}%"></div></div>
+        ${ready ? `<button type="button" class="bclaim" data-tone="none" data-chainclaim="${c.id}">🎁 ${Z('Claim', 'استلم')}</button>` : ''}</div>`; }).join('') + '</div>';
+  }
+  function titlesHtml(){
+    const T = PR().titles, eq = settings.xtitle || '', have = TITLES.filter(t => T[t.id]), lock = TITLES.filter(t => !T[t.id]).slice(0, 4);
+    return `<div class="card titlesq"><div class="nf-sh0">${Z('Titles', 'الألقاب')}<em>${have.length}/${TITLES.length}</em></div><div class="tchips"><button type="button" class="tc${eq ? '' : ' on'}" data-tone="none" data-xt="">—</button>${have.map(t => `<button type="button" class="tc${eq === t.id ? ' on' : ''}" data-tone="none" data-xt="${t.id}">🏷️ ${escapeHTML(titleName(t))}</button>`).join('')}</div>
+      ${lock.length ? `<small class="insight2">${Z('Next titles', 'ألقاب جاية')}: ${lock.map(t => escapeHTML(titleName(t)) + ' (' + escapeHTML(Z(t.d[0], t.d[1])) + ')').join(' · ')}</small>` : ''}</div>`;
+  }
+  { const _r = renderChar; renderChar = function(){ _r(); try {
+      awardTitles(false);
+      const bh = bossHtml(); if ($('boss') && bh) $('boss').innerHTML = bh;
+      const old = $('chainsBox'); if (old) old.remove(); const b = $('boss'); if (b){ const host = b.closest('.box') || b.parentElement; host.insertAdjacentHTML('afterend', chainsHtml()); }
+      const box = $('charBox'); if (box){ const o = box.querySelector('.titlesq'); if (o) o.remove(); const at = box.querySelector('.physq') || box.querySelector('.rdcard'); if (at) at.insertAdjacentHTML('beforebegin', titlesHtml());
+        const t = TITLES.find(x => x.id === settings.xtitle); const rc = box.querySelector('.rcls b'); if (t && rc && !rc.querySelector('.ttl')) rc.insertAdjacentHTML('afterend', `<small class="ttl">🏷️ ${escapeHTML(titleName(t))}</small>`); }
+    } catch(e){ console.warn('rpg r4', e); } }; }
+  document.addEventListener('click', e => {
+    const t = e.target.closest && e.target.closest('[data-xt],[data-bossclaim],[data-chainclaim]'); if (!t) return;
+    if (t.dataset.xt !== undefined){ settings.xtitle = t.dataset.xt; save(); return renderChar(); }
+    if (t.dataset.bossclaim){ const wk = t.dataset.bossclaim, P = PR(); if (P.boss[wk]) return; const bi = bossInfo(); if (!bi.dead) return; P.boss[wk] = Date.now(); P.kills++; const d = roll(tr(bi.name)); save(); showToast('🎁 +' + d.gp + ' GP'); return renderChar(); }
+    if (t.dataset.chainclaim){ const c = CHAINS.find(x => x.id === t.dataset.chainclaim), S = cst(c), st = c.steps[S.i]; if (!st || S.done || countSince(S.since)[st.k] < st.n) return;
+      if (S.i === c.steps.length - 1){ S.done = true; give(c.gp, Z(c.n[0], c.n[1])); showToast('🏁 ' + Z('Chain complete! +', 'السلسلة خلصت! +') + c.gp + ' GP'); try { confetti(120, .5, .3, 1.1); } catch(_){} }
+      else { S.i++; S.since = Date.now(); give(25, Z(c.n[0], c.n[1])); showToast('✅ +25 GP'); }
+      save(); awardTitles(false); return renderChar(); }
+  });
+  { const _lc3 = levelCheck; levelCheck = function(){ _lc3(); try { awardTitles(false); } catch(e){} }; }
+}
 
 /* ---------- export / import ---------- */
 $('exportBtn').onclick = () => {
@@ -8894,9 +9130,35 @@ function dsIcons(){
       em:[['t_roar', 'Titan Roar', '🔥'], ['t_slam', 'Ground Slam', '💥'], ['t_god', 'God Pose', '🏛️'], ['t_clap', 'Thunder Clap', '👏'], ['t_flex', 'Titan Flex', '💪']]}
   };
   window.CHARS = CHARS;
+  /* round 3: more characters, some earned (not bought), some with real bodybuilder builds */
+  {
+    const GEM = () => [['wave', 'Wave', '👋'], ['pump', 'Fist Pump', '✊'], ['dance', 'Dance', '🕺'], ['victory', 'Victory', '🏆'], ['hero', 'Hero Pose', '🦸'], ['flex', 'Flex', '💪']];
+    const mk = (name, price, e, cfg, sk, hr, ot, need, desc) => ({name, price, e, cfg:Object.assign({aura:false, anim:'breathe', sz:0}, cfg), flex:'flex', att:'pump', win:'victory', em:GEM(), sk, hr, ot, ac:cfg.acc || 'none', need, desc});
+    Object.assign(CHARS, {
+      ch_valk:    mk('Valkyrie Fit', 0, '🏋️', {skin:2, hair:'long', hairCol:3, outHex:'#d6336c', acc:'band', sz:1.6}, '#c68642', '#e63946', '#d6336c', {sess:20}, 'Athletic build'),
+      ch_samurai: mk('Samurai Ren', 0, '🗡️', {skin:0, hair:'long', hairCol:1, outHex:'#a4161a', acc:'band', aura:true, anim:'sway', sz:.4}, '#f1c7a0', '#2b2b2b', '#a4161a', {lv:20}, 'Calm and sharp'),
+      ch_pharaoh: mk('Pharaoh Ra', 0, '🏺', {skinHex:'#c79a5b', hair:'bald', outHex:'#1f6f8b', acc:'crown', acc2:'cape', aura:true, sz:1}, '#c79a5b', '#2b2b2b', '#1f6f8b', {rk:2}, 'Royal power'),
+      ch_zombie:  mk('Zombie Gains', 0, '🧟', {skinHex:'#8fbf7a', hair:'mohawk', hairCol:1, outHex:'#3d3d46', acc:'none', anim:'sway', sz:.8}, '#8fbf7a', '#2b2b2b', '#3d3d46', {weeks:8}, 'Never skips'),
+      ch_sergio:  mk('Sergio Pro', 0, '🏆', {skin:1, hair:'short', hairCol:1, outHex:'#f5c518', acc:'gloves', anim:'flex', sz:3.2}, '#e0ac69', '#2b2b2b', '#f5c518', {prs:25}, 'Real bodybuilder'),
+      ch_cosmic:  mk('Cosmic Legend', 0, '🌌', {skinHex:'#7c5cff', hair:'bald', outHex:'#251b5c', acc:'crown', acc2:'cape', aura:true, anim:'flex', sz:1.2}, '#7c5cff', '#251b5c', '#251b5c', {rk:6}, 'Beyond the ranks'),
+      ch_mike:    mk('Iron Mike', 1800, '🦍', {skin:3, hair:'bald', outHex:'#14141a', acc:'none', anim:'flex', sz:3.6}, '#8d5524', '#14141a', '#14141a', null, 'Real bodybuilder'),
+      ch_frost:   mk('Frost Giant', 2200, '🧊', {skinHex:'#a8d8f0', hair:'long', hairCol:5, outHex:'#2b6cb0', acc:'horns', aura:true, sz:1.6}, '#a8d8f0', '#e6e6e6', '#2b6cb0', null, 'Cold and huge')
+    });
+  }
   CHARS.ch_classic.em.forEach(m => m[3] = m[3]); Object.keys(CHARS).forEach(k => { if (k !== 'ch_classic') CHARS[k].em.forEach(m => { m[3] = 1; }); });
   /* store items */
-  Object.entries(CHARS).forEach(([id, c]) => { if (!GH_SHOP.some(x => x.id === id)) GH_SHOP.push({id, slot:'char', cat:'Character', name:c.name, price:c.price, e:c.e, col:c.ot}); });
+  Object.entries(CHARS).forEach(([id, c]) => { if (!GH_SHOP.some(x => x.id === id)) GH_SHOP.push({id, slot:'char', cat:'Character', name:c.name, price:c.price, e:c.e, col:c.ot, need:c.need || undefined}); });
+  /* achievement requirements for earned characters */
+  const A_ = (en, ar) => LANG === 'ar' ? ar : en;
+  { const _gl = ghLock; ghLock = function(it){ const base = _gl(it), n = it && it.need; if (base || !n) return base;
+      try { if (n.lv && rpg().lv < n.lv) return A_('Reach level ' + n.lv + ' (you are ' + rpg().lv + ')', 'وصّل مستوى ' + n.lv + ' (انت في ' + rpg().lv + ')');
+        if (n.rk != null && rpg().rk.i < n.rk) return A_('Reach rank ' + RANKS[n.rk].n, 'وصّل رتبة ' + tr(RANKS[n.rk].n));
+        if (n.sess && sessions.length < n.sess) return A_('Complete ' + n.sess + ' workouts (' + sessions.length + '/' + n.sess + ')', 'خلّص ' + n.sess + ' تمرين (' + sessions.length + '/' + n.sess + ')');
+        if (n.prs && prTotal() < n.prs) return A_('Break ' + n.prs + ' personal records (' + prTotal() + '/' + n.prs + ')', 'اكسر ' + n.prs + ' رقم قياسي (' + prTotal() + '/' + n.prs + ')');
+        if (n.weeks && goodWeeks() < n.weeks) return A_('Hit your weekly goal ' + n.weeks + ' weeks (' + goodWeeks() + '/' + n.weeks + ')', 'حقق هدفك الأسبوعي ' + n.weeks + ' أسابيع (' + goodWeeks() + '/' + n.weeks + ')'); } catch(e){}
+      return ''; }; }
+  { const _lc2 = levelCheck; levelCheck = function(){ _lc2(); try { const seen = progress.charSeen = progress.charSeen || {}, first = !Object.keys(seen).length, fresh = []; Object.keys(CHARS).forEach(id => { const c = CHARS[id]; if (c.need && !ghLock({need:c.need}) && !seen[id]){ seen[id] = 1; fresh.push(c); } });
+      if (fresh.length){ save(); if (!first || fresh.length) setTimeout(() => showToast('🔓 ' + A_('Character unlocked: ', 'اتفتح شخصية: ') + fresh.map(c => c.e + ' ' + c.name).join(', ')), 1200); } } catch(e){} }; }
   /* keep the free one out of the daily deal and always owned */
   { const _gd = ghDeal; ghDeal = function(){ const d = _gd(); return d && d.slot === 'char' && d.price === 0 ? null : d; }; }
   const own0 = () => { const E = ec(); if (!E.own.ch_classic){ E.own.ch_classic = Date.now(); } };
@@ -8915,7 +9177,7 @@ function dsIcons(){
   /* offscreen render of any character at a pose (cached) */
   window.charImg = function(id, h, poseId, stage){
     id = id || charId(); const st = stage != null ? stage : Math.min(6, (rpg().lv - 1) / 8), key = [id, h, poseId || '', Math.round(st * 2)].join('|'); if (CHAR_IMG[key]) return CHAR_IMG[key];
-    const cv = document.createElement('canvas'); cv.dataset.h = h || 110; cv._cfg = charCfgOf(id); cv._yaw = .35; cv._yawT = 1e15; if (poseId) cv._emote = {id:poseId, t0:performance.now() - 1300};
+    const cv = document.createElement('canvas'); cv.dataset.h = h || 110; cv._cfg = charCfgOf(id); cv._noPh = 1; cv._yaw = .35; cv._yawT = 1e15; if (poseId) cv._emote = {id:poseId, t0:performance.now() - 1300};
     const keep = [CHAR_IMG]; try { const sv = charId; drawHero(cv, st, 0, rpg().rk, 1300); } catch(e){ return ''; }
     return CHAR_IMG[key] = cv.toDataURL('image/png');
   };
