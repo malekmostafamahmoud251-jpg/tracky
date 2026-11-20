@@ -269,6 +269,7 @@ left|متبقي|restant
 Just know the calories? Enter them (macros are optional).|عارف السعرات بس؟ اكتبها (الماكروز اختيارية).|Vous connaissez les calories ? Saisissez-les (macros facultatives).
 Main dishes & soups|أطباق رئيسية وشوربة|Plats et soupes
 Daily report|التقرير اليومي|Rapport du jour
+Clear all|مسح الكل|Tout effacer
 Budget|الميزانية|Budget
 Over|زيادة|Dépassé
 Targets|الأهداف|Objectifs
@@ -9609,8 +9610,6 @@ function dayView(){
   h += `<div class="card nf-tg"><div class="nf-sh0">${I('Targets')}</div>${bar('Protein', tot.p, tg.p, 'p')}${bar('Carbs', tot.c, tg.c, 'c')}${bar('Fat', tot.f, tg.f, 'f')}${bar('Fiber', mc.t.fib, mrda('fib'), 'fi')}</div>`;
   if (d.meals.length) h += `<button type="button" class="card nf-scores" data-tone="none" data-a="view" data-v="nutri"><div class="nf-sh0">${I('Nutrition scores')} <em>${I('estimated')}</em><i>›</i></div><div class="nf-scr">${sc.map(o => `<div class="${o.pc < 40 ? 'lo' : o.pc >= 90 ? 'hi' : ''}"><b>${o.pc}%</b><span style="--p:${Math.min(100, o.pc)}%"></span><small>${I(o.l)}</small></div>`).join('')}</div></button>`;
   h += `<div class="nf-add"><button type="button" class="nf-big" data-tone="none" data-a="q-search"><i>🔍</i><span>${I('Search foods (Arabic or English)')}</span></button><div class="nf-ic">${[['q-mic', '🎤', 'Say it'], ['q-text', '✍️', 'Describe'], ['q-photo', '📸', 'Photo'], ['q-scan', '🏷️', 'Barcode'], ['q-quick', '⚡', 'Quick add']].map(([a, e, l]) => `<button type="button" data-tone="none" data-a="${a}" aria-label="${E(I(l))}"><i>${e}</i><small>${I(l)}</small></button>`).join('')}</div></div>`;
-  const rec = NU.recent.map(getFood).filter(Boolean).slice(0, 6);
-  if (rec.length) h += `<div class="nf-chips">${rec.map(f => { const s = servs(f)[0]; return `<button type="button" data-tone="none" data-a="rec" data-k="${E(f.k)}">${E(f.e)} ${E(fname(f))}<small>${s ? E(svLabel(s)) : '100 g'}</small></button>`; }).join('')}</div>`;
   h += nudgeHtml(k);
   if (!d.meals.length){
     const y = peek(shiftDays(k, -1)).meals.length;
@@ -9725,7 +9724,7 @@ function fmList2(){
   } else {
     const sec = (t, L) => L.length ? `<div class="nf-sh">${t}</div>` + L.map(f => foodRow(f)).join('') : '';
     const cb = Object.values(NU.combos).sort((a, b) => b.t - a.t).slice(0, 8);
-    h = (cb.length ? `<div class="nf-sh">🍱 ${I('My meals')}</div>` + cb.map(c => `<button type="button" class="nf-fr" data-tone="none" data-a="combo" data-id="${E(c.id)}"><span class="e">${E(c.e || '🍱')}</span><span class="t"><b>${E(c.n)}</b><small>${c.items.length} ${I('items')} · ${fmt(comboKcal(c))} ${I('kcal')}</small></span><i>＋</i></button>`).join('') : '') + sec('⭐ ' + I('Favorites'), NU.fav.map(getFood).filter(Boolean).slice(0, 6)) + sec('🕘 ' + I('Recent'), NU.recent.map(getFood).filter(Boolean).slice(0, 6)) + sec('🔥 ' + I('Popular'), POP.map(getFood).filter(Boolean));
+    h = (cb.length ? `<div class="nf-sh">🍱 ${I('My meals')}</div>` + cb.map(c => `<button type="button" class="nf-fr" data-tone="none" data-a="combo" data-id="${E(c.id)}"><span class="e">${E(c.e || '🍱')}</span><span class="t"><b>${E(c.n)}</b><small>${c.items.length} ${I('items')} · ${fmt(comboKcal(c))} ${I('kcal')}</small></span><i>＋</i></button>`).join('') : '') + sec('⭐ ' + I('Favorites'), NU.fav.map(getFood).filter(Boolean).slice(0, 6)) + (() => { const L = NU.recent.map(getFood).filter(Boolean).slice(0, 12); return L.length ? `<div class="nf-sh">🕘 ${I('Recent')}<button type="button" class="nf-clr" data-tone="none" data-a="recclr">${I('Clear all')}</button></div>` + L.map(f => `<div class="nf-rw">${foodRow(f)}<button type="button" class="nf-rx" data-tone="none" data-a="recdel" data-k="${E(f.k)}" aria-label="${E(I('Remove'))}">✕</button></div>`).join('') : ''; })() + sec('🔥 ' + I('Popular'), POP.map(getFood).filter(Boolean));
   }
   el.innerHTML = h;
 }
@@ -9815,6 +9814,8 @@ async function fmAnalyze(){
 function fmClick(e){
   const el = e.target.closest('[data-a]'); if (!el || !FM || (el.tagName === 'INPUT' && el.dataset.a !== 'rvon')) return; const a = el.dataset.a, v = el.dataset.v;
   if (a === 'st'){ if (VT === MIC){ voiceStop(false); } FM.stage = v; FM.err = ''; FM.edit = null; renderFM(); if (v === 'search') setTimeout(() => { const q = $('nfQ'); if (q && !('ontouchstart' in window)) q.focus(); }, 40); }
+  else if (a === 'recdel'){ NU.recent = NU.recent.filter(x => x !== el.dataset.k); nSave(); fmList(); }
+  else if (a === 'recclr'){ NU.recent = []; nSave(); fmList(); }
   else if (a === 'm'){ FM.meal = v; $(MODAL).querySelectorAll('.nf-mchips button').forEach(b => b.classList.toggle('on', b.dataset.v === v)); }
   else if (a === 'cat'){ FM.cat = v; $(MODAL).querySelectorAll('.nf-cats button').forEach(b => b.classList.toggle('on', b.dataset.v === v)); fmList(); }
   else if (a === 'pick'){ const f = getFood(el.dataset.k); if (!f) return; FM.f = f; const s = servs(f); FM.sv = s.length ? 0 : -1; FM.qty = 1; FM.g = 100; FM.stage = 'amount'; renderFM(); }
