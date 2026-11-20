@@ -1,5 +1,5 @@
 /* Tracky service worker: instant start from cache, silent update in the background, push notifications */
-const VER = 'tracky-v58', SHELL = ['manifest.json', 'icons/icon-192.png', 'icons/icon-512.png'];
+const VER = 'tracky-v59', SHELL = ['manifest.json', 'icons/icon-192.png', 'icons/icon-512.png'];
 const ABS = u => new URL(u, self.registration.scope).href;
 
 /* store index.html and the app script it points to (script first, so the page never references a missing file) */
@@ -13,6 +13,7 @@ async function storeApp(c, res){
   await c.put(ABS('index.html'), res.clone()); await c.put(ABS('./'), res.clone());
 }
 
+self.addEventListener('message', e => { if (e.data && e.data.askVer && e.source) e.source.postMessage({ver: VER}); });
 self.addEventListener('install', e => {
   e.waitUntil((async () => {
     const c = await caches.open(VER);

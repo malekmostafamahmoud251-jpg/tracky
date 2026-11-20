@@ -4638,7 +4638,7 @@ async function askViaServer(system, hist, userParts, onChunk, maxTokens){
     if (!r.ok) throw new Error('Coach server error ' + r.status + ' ' + await apiErr(r));
     _geminiRoute = 'server';
     window._eng = r.headers.get('X-AI-Engine') === 'backup' ? 'backup' : '';
-    try { if (r.headers.get('X-AI-Engine') === 'backup' && !window._bkShown){ window._bkShown = 1; showToast('ℹ️ ' + (LANG === 'ar' ? 'الكوتش شغال بالذكاء الاحتياطي دلوقتي (مفيش تحليل صور)' : 'Coach is using the backup AI right now (no image analysis)')); } } catch(_){}
+    try { if (r.headers.get('X-AI-Engine') === 'backup' && !window._bkShown){ window._bkShown = 1; showToast('ℹ️ ' + (LANG === 'ar' ? 'الكوتش شغال بالذكاء الاحتياطي دلوقتي (ممكن تكون الردود أقل دقة)' : 'Coach is using the backup AI right now (answers may be less precise)')); } } catch(_){}
     try { const ql = r.headers.get('X-Quota-Left'); if (ql !== null){ window._quotaLeft = +ql; if (+ql === 10 || +ql === 3) showToast('ℹ️ ' + (LANG === 'ar' ? 'باقي لك ' + ql + ' رسائل ذكاء اصطناعي النهاردة' : ql + ' AI messages left today')); } } catch(_){}
     let out = '';
     try { out = await streamGeminiResponse(r, onChunk); } catch(e){ lastErr = e; continue; }
@@ -10145,6 +10145,14 @@ function nudgeHtml(k){
 }
 
 function goTo(g){ const map = {train:'train', food:'food', home:'home', report:'progress'}, b = document.querySelector('.tab[data-tab="' + (map[g] || 'home') + '"]'); if (b) b.click(); if (g === 'report'){ try { showReport(-1); } catch(e){} } }
+
+/* update detection that survives a sleeping page: version ping + controllerchange */
+try { if (navigator.serviceWorker){ const SWc = navigator.serviceWorker, fire = () => { try { SWc.dispatchEvent(new MessageEvent('message', {data:{update:true}})); } catch(_){} }; let had = !!SWc.controller, v0 = null;
+  const ask = () => { try { if (SWc.controller) SWc.controller.postMessage({askVer:1}); } catch(_){} };
+  SWc.addEventListener('controllerchange', () => { if (had) fire(); had = true; });
+  SWc.addEventListener('message', e => { const v = e.data && e.data.ver; if (!v) return; if (v0 === null) v0 = v; else if (v !== v0){ v0 = v; fire(); } });
+  ask(); document.addEventListener('visibilitychange', () => { if (!document.hidden){ SWc.getRegistration().then(r => r && r.update()).catch(() => {}); setTimeout(ask, 2500); } });
+  window.addEventListener('pageshow', () => setTimeout(ask, 2500)); } } catch(e){}
 try { if (navigator.serviceWorker) navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.go) goTo(e.data.go); if (e.data && e.data.update && !$('updBar')){ if (performance.now() < 20000 && !workoutTimerStartedAt && !document.querySelector('.overlay.active') && !(document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName))){ location.reload(); return; } const d = document.createElement('div'); d.id = 'updBar'; d.innerHTML = '<span>🔄 ' + escapeHTML(tr('New version ready')) + '</span><button type="button">' + escapeHTML(tr('Reload')) + '</button><i>✕</i>'; d.querySelector('button').onclick = () => location.reload(); d.querySelector('i').onclick = () => d.remove(); document.body.appendChild(d); } }); const g0 = new URLSearchParams(location.search).get('go'); if (g0) setTimeout(() => goTo(g0), 900); } catch(e){}
 
 
