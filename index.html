@@ -1485,6 +1485,17 @@ svg.lc{touch-action:pan-y;cursor:crosshair}
 .chn{margin:.7rem 0}.chn small{color:var(--sub);font-weight:600}.dots2{display:flex;gap:6px;margin:.4rem 0}.dots2 i{flex:1;height:6px;border-radius:4px;background:var(--border)}.dots2 i.ok{background:var(--ok)}.dots2 i.cur{background:var(--accent)}
 .titlesq{margin-top:.8rem;padding:1rem}.tchips{display:flex;flex-wrap:wrap;gap:6px}.tc{border:1.5px solid var(--border)!important;background:var(--card)!important;color:var(--text)!important;box-shadow:none!important;border-radius:999px;padding:5px 11px!important;min-height:0!important;width:auto!important;font-size:.76rem;font-weight:700}.tc.on{border-color:var(--accent)!important;background:var(--accent)!important;color:#fff!important}.ttl{display:block;color:var(--accent)!important;font-weight:800!important}
 button.bclaim[data-tone]{background:linear-gradient(135deg,#f5a623,#ff7a45)!important;color:#fff!important;font-size:.95rem;opacity:1!important}button.tc[data-tone]{background:var(--card)!important;color:var(--text)!important}button.tc.on[data-tone]{background:var(--accent)!important;color:#fff!important}button.rdall[data-tone]{background:var(--accent)!important;color:#fff!important}
+
+/* v65: games removed (friends duel stays), settings as a menu, hero build page */
+.panel[data-panel="games"]>.box:not(#gDuel){display:none!important}.panel[data-panel="games"]>#gDuel{display:block!important}.panel[data-panel="games"] .subnav:has(button[data-i]){display:none!important}
+#modalSettings .modal[data-stv="menu"] .stsec,#modalSettings .modal[data-stv="menu"] #stBar,#modalSettings .modal[data-stv="menu"] #stBack,.stsec[data-empty]{display:none!important}
+#modalSettings .modal[data-stv="sec"] .stsec:not(.stopen),#modalSettings .modal[data-stv="sec"] #stBar,#modalSettings .modal[data-stv="sec"] #stMenu,#modalSettings .modal[data-stv="sec"] #stFind,#modalSettings .modal[data-stv="search"] #stMenu,#modalSettings .modal[data-stv="search"] #stBar,#modalSettings .modal[data-stv="search"] #stBack{display:none!important}
+#stMenu{display:flex;flex-direction:column;gap:.5rem;margin:.4rem 0 .8rem}
+#stMenu button.stm{display:flex!important;align-items:center;gap:.8rem;width:100%;text-align:start;background:var(--ex)!important;color:var(--text)!important;border:1px solid var(--border)!important;box-shadow:none!important;border-radius:14px;padding:.75rem .9rem;min-height:58px;cursor:pointer}
+#stMenu .stm i{font-style:normal;font-size:1.5rem;width:2rem;text-align:center}#stMenu .stm span{flex:1;display:flex;flex-direction:column;gap:.1rem}#stMenu .stm b{font-size:.98rem}#stMenu .stm small{color:var(--sub);font-size:.78rem;font-weight:600}#stMenu .stm em{font-style:normal;color:var(--sub);font-size:1.4rem}
+#stBack{display:flex!important;width:100%;justify-content:flex-start;background:transparent!important;color:var(--accent)!important;border:0!important;box-shadow:none!important;font-weight:800;padding:.4rem 0;margin:.2rem 0 .3rem;min-height:40px}
+#appVerBox .vrow{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin:.3rem 0}
+#updBar span{max-width:60vw}
 </style>
 </head>
 <body>
@@ -1511,7 +1522,7 @@ button.bclaim[data-tone]{background:linear-gradient(135deg,#f5a623,#ff7a45)!impo
 <div class="sheet" id="moreSheet">
   <button class="tab" data-tab="history">📅 History</button>
   <button class="tab" data-tab="goals">🎯 Goals</button>
-  <button class="tab" data-tab="games">🎮 Games</button>
+  <button class="tab" data-tab="games">🤝 Friends</button>
   <div class="sheetctl">
   <button class="sec tiny" onclick="openSettings()">⚙️ Settings</button>
   <button class="sec tiny" onclick="openIntro(true)">👤 Edit profile</button>
@@ -1788,6 +1799,6 @@ button.bclaim[data-tone]{background:linear-gradient(135deg,#f5a623,#ff7a45)!impo
 <script>try{var __r=JSON.parse(localStorage.getItem('trackyResume')||'null');if(__r&&Date.now()-__r.t<43200000)document.documentElement.classList.add('resume')}catch(e){}</script><div id="splash" aria-label="Tracky is loading"><div class="sp-glow"></div><div class="sp-logo"><i class="sp-ring"></i><i class="sp-ring r2"></i><img src="icons/icon-512.png" alt="Tracky logo"></div><div class="sp-word" aria-hidden="true"><i>T</i><i>R</i><i>A</i><i>C</i><i>K</i><i>Y</i></div><div class="sp-tag">Build · Track · Coach</div><div class="sp-bar"><i></i></div></div>
 <div class="toast" id="toast"></div>
 
-<script src="app.js?v=32f5686f" defer></script>
+<script src="app.js?v=6c67a685" defer></script>
 </body>
 </html>

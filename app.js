@@ -2111,6 +2111,17 @@ Fat|دهون|Lipides
 1 year|سنة|1 an
 App version|النسخة|Version
 Update now|حدّث دلوقتي|Mettre à jour
+About & updates|عن التطبيق والتحديثات|À propos et mises à jour
+Check for updates|دوّر على تحديث|Chercher une mise à jour
+You are on the latest version|إنت على أحدث نسخة|Vous avez la dernière version
+A new version is available|في نسخة جديدة متاحة|Une nouvelle version est disponible
+Update|حدّث|Mettre à jour
+Later|بعدين|Plus tard
+Settings menu|الإعدادات|Réglages
+Build|البنية|Profil
+Rewards|المكافآت|Récompenses
+Records|الأرقام|Records
+Friends|الأصدقاء|Amis
 Clears the saved copy and loads the newest version. Your data stays.|بيمسح النسخة المحفوظة ويحمّل أحدث نسخة. بياناتك زي ما هي.|Efface la copie enregistrée et charge la dernière version. Vos données restent.
 Review before logging|راجع قبل التسجيل|Vérifier avant d'enregistrer
 Time to log your breakfast|وقت تسجّل فطارك|C'est l'heure de noter votre petit-déjeuner
@@ -2713,8 +2724,8 @@ function openInfo(name){
   $('infoBody').innerHTML = `<h4>How to do it</h4><ul><li>${c[0]}</li><li>${c[1]}</li></ul><div class="insight">${c[2]}</div>`;
   $('modalInfo').classList.add('active');
 }
-function stalledFor(name){
-  const arr = sessions.slice().sort((a,b) => a.date.localeCompare(b.date)).map(s => { const e = s.exercises.find(x => sameEx(x.name, name)); return e ? Math.max(...e.sets.map(t => e1rm(t.weight, t.reps))) : null; }).filter(v => v !== null);
+function stalledFor(name, day){
+  const arr = sessions.filter(s => !day || sameDaySess(s, day)).sort((a,b) => a.date.localeCompare(b.date)).map(s => { const e = s.exercises.find(x => sameEx(x.name, name)); return e ? Math.max(...e.sets.map(t => e1rm(t.weight, t.reps))) : null; }).filter(v => v !== null);
   if (arr.length < 4) return 0;
   const since = arr.length - 1 - arr.indexOf(Math.max(...arr)); return since >= 3 ? since : 0;
 }
@@ -4075,7 +4086,7 @@ function dupDay(id){ const day = state.days.find(x => x.id === id); if (!day) re
 
 const topReps = r => { const m = String(r).match(/\d+/g); return m ? Math.max(...m.map(Number)) : 1; };
 function logMeta(day, ex){
-  const rv = sessions.slice().sort((a,b) => String(a.date).localeCompare(String(b.date))).reverse(), hasEx = s => s.exercises && s.exercises.some(e => sameEx(e.name, ex.name)), last = rv.find(hasEx), sameD = !!last && sameDaySess(last, day);
+  const rv = sessions.slice().sort((a,b) => String(a.date).localeCompare(String(b.date))).reverse(), hasEx = s => s.exercises && s.exercises.some(e => sameEx(e.name, ex.name)), last = rv.find(x => hasEx(x) && sameDaySess(x, day)), sameD = !!last;   /* history, weights and notes are kept per training day, even for a shared exercise */
   const le = last && last.exercises.find(e => sameEx(e.name, ex.name));
   let prev = '', hint = '', w = ex.weight, lastNote = '', r0 = null;
   const U = isLb() ? 'lb' : 'kg';
@@ -4083,13 +4094,13 @@ function logMeta(day, ex){
     const work = le.sets.filter(x => !x.warm), ls = work.length ? work : le.sets;
     const t = ls.reduce((a,b) => b.weight > a.weight ? b : a, ls[0]);
     prev = '🕐 Last (' + localKey(last.date) + (sameD ? '' : ', other day') + '): ' + ls.map(x => toDisp(x.weight) + '×' + repTxt(x)).join(' · ') + ' ' + U; w = t.weight; lastNote = le.note ? '(' + localKey(last.date) + ') ' + le.note : '';
-    if (!lastNote){ for (const s of rv){ const e2 = (s.exercises || []).find(e => sameEx(e.name, ex.name)); if (e2 && e2.note){ lastNote = '(' + localKey(s.date) + ') ' + e2.note; break; } } }
+    if (!lastNote){ for (const s of rv){ if (!sameDaySess(s, day)) continue; const e2 = (s.exercises || []).find(e => sameEx(e.name, ex.name)); if (e2 && e2.note){ lastNote = '(' + localKey(s.date) + ') ' + e2.note; break; } } }
     const top = topReps(ex.reps), low = parseFirstRep(ex.reps), allTop = ls.length >= ex.sets && ls.every(x => x.reps >= top), tooHard = le.rpe && le.rpe >= 10;
     if (allTop && !tooHard){ w = t.weight + (t.weight < 20 ? 1 : 2.5); hint = `💡 You hit ${top} reps on every set last time. Try ${toDisp(w)}${U} today.`; }
     else if (allTop && tooHard){ hint = '💡 You hit the top reps but it felt maxed out (RPE 10). Repeat the same weight and aim for an easier set.'; }
     else if (ls.length >= ex.sets && ls.every(x => x.reps >= low)){ r0 = Math.min(top, Math.min(...ls.map(x => x.reps)) + 1); hint = `💡 Same weight today. Aim for ${r0} reps on each set, and add weight once every set reaches ${top}.`; }
   }
-  const st = stalledFor(ex.name);
+  const st = stalledFor(ex.name, day);
   if (st){ w = Math.round(w * 0.9 / 2.5) * 2.5; hint = `📉 No progress for ${st} sessions. Deload today: ${w}kg (-10%), then build back up. Or try a different rep range.`; }
   return {prev, hint, lastNote, w, r0};
 }
@@ -6531,7 +6542,7 @@ window.addEventListener('popstate', e => { const t = e.state && e.state.tab, b =
 /* ---------- v6: navigation + decluttered layout ---------- */
 (function(){
   const nav = document.querySelector('nav.tabs'), sheet = $('moreSheet'), HOSTED = ['builder','progress','history','goals','games'];
-  const lbl = {builder:['🛠️','Plan'], progress:['🧑','Profile'], history:['📅','History'], goals:['🎯','Goals'], games:['🎮','Games']};
+  const lbl = {builder:['🛠️','Plan'], progress:['🧑','Profile'], history:['📅','History'], goals:['🎯','Goals'], games:['🤝','Friends']};
   // move Plan + Profile into the More launcher and give every launcher tile an icon on top
   ['progress','builder'].forEach(n => { const b = nav.querySelector('[data-tab="'+n+'"]'); if (b) sheet.insertBefore(b, sheet.firstChild); });
   const ctl = sheet.querySelector('.sheetctl');
@@ -6783,7 +6794,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-aiq]
    Train = Workout | Plan. Progress = Stats | History | Goals. Hero = Profile | Games. Settings only behind the gear. */
 (function(){
   const nav = document.querySelector('nav.tabs'), sheet = $('moreSheet'), GROUPS = {home:['home'], train:['train','builder'], charts:['charts','history','goals'], aicoach:['aicoach'], progress:['progress','games']};
-  const LBL = {train:['🏋️','Workout'], builder:['🛠️','Plan'], charts:['📊','Stats'], history:['📅','History'], goals:['🎯','Goals'], progress:['🧑','Profile'], games:['🎮','Games']};
+  const LBL = {train:['🏋️','Workout'], builder:['🛠️','Plan'], charts:['📊','Stats'], history:['📅','History'], goals:['🎯','Goals'], progress:['🧑','Profile'], games:['🤝','Friends']};
   const headOf = t => Object.keys(GROUPS).find(h => GROUPS[h].includes(t)) || t;
   // 1. settings controls move into the Settings dialog; the "More" launcher disappears
   const mn = $('navMore'); if (mn) mn.remove(); const sc = $('sheetScrim'); if (sc) sc.remove();
@@ -6849,13 +6860,8 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-aiq]
     ['Hero', '📜', 'Quests', sub('progress', 'Quests'), 'quests missions مهام'],
     ['Hero', '🎁', 'Prizes', sub('progress', 'Prizes'), 'prizes rewards جوائز'],
     ['Hero', '🗂️', 'Collection', sub('progress', 'Collection'), 'collection مجموعة'],
-    ['Hero', '🧭', 'Training path', sub('games', 'Path'), 'path stages map مسار خريطة'],
-    ['Hero', '⚔️', 'Iron raid boss', sub('games', 'Raid'), 'boss raid وحش'],
-    ['Hero', '🗺️', 'Step journey', sub('games', 'Journey'), 'steps journey خطوات رحلة'],
-    ['Hero', '🌟', 'Monthly season', sub('games', 'Season'), 'season monthly event collection موسم حدث شهري saison'],
-    ['Hero', '🤝', 'Friend duel', sub('games', 'Friends'), 'friends duel challenge أصدقاء تحدي'],
-    ['Hero', '🎯', 'Ghost hunt', sub('games', 'Hunt'), 'ghost hunt أشباح'],
-    ['Hero', '🛍️', 'Ghost store', sub('games', 'Store'), 'store shop buy متجر'],
+    ['Hero', '🤝', 'Friend duel', tab('games'), 'friends duel challenge أصدقاء تحدي'],
+    ['Hero', '🛍️', 'Ghost store', tab('store'), 'store shop buy متجر'],
     ['Settings', '📅', 'Monthly check-in', () => openCheckin(), 'check-in photos monthly فحص'],
     ['Settings', '⚙️', 'Settings', () => openSettings(), 'settings إعدادات'],
     ['Settings', '👤', 'Edit profile', () => openIntro(true), 'profile ملف'],
@@ -10844,3 +10850,88 @@ nLoad(); renderFood(); try { renderHome(); } catch(e){}
 window.NUT = {dump:() => JSON.stringify(NU), load:o => { if (!o || typeof o !== 'object' || Array.isArray(o)) return; try { localStorage.setItem(NK, JSON.stringify(o)); } catch(e){} nLoad(); try { refresh(); } catch(e){} }, _t:{bcValid, offLookup, parseMeal, searchFoods, targetFor, adaptive, statsFor, ACT, parseActs, NU:() => NU}, report:openReport, open:st => { openFood({stage:st}); }, active:nutriActive, mealsToday:() => peek(todayKey()).meals.length, remPlan:() => { const r = NU.set && NU.set.rem; if (!r || !r.on) return []; const have = {}; peek(todayKey()).meals.forEach(m => { have[m.meal] = 1; }); return [['b', 'breakfast'], ['l', 'lunch'], ['d', 'dinner']].map(([k, m]) => ({k, t:r[k], done:!!have[m]})); }, protPct:() => { const t = targetFor(todayKey()); return Math.round(sumM(peek(todayKey()).meals).p / t.p * 100); }};
 
 })();
+
+/* ================= v65: friends-only games, settings menu, hero Build page, active update prompt ================= */
+const APP_VER = 'tracky-v65';
+/* 1) games: only the friends duel remains; finishing a workout now pays GP directly (no ghost hunt) */
+ghEvent = function(evId, kind, ratio){
+  if (kind !== 'fin') return null;
+  const E = ec(); if (E.seen[evId]) return null; E.seen[evId] = Date.now();
+  const k = todayKey(), pts = 25 + Math.round(25 * Math.max(0, Math.min(1, +ratio || 0))), used = E.day[k] || 0, got = Math.max(0, Math.min(pts, GH.dailyCap - used));
+  E.day[k] = used + got; E.gp += got; E.led.unshift({id:evId, t:Date.now(), amt:got, why:'Workout completed' + (got < pts ? ' · daily limit' : '')}); ghTrim(E); save();
+  if (got) showToast('🪙 +' + got + ' GP · ' + tr('Workout done'));
+  try { const b = $('storeBdg'); if (b) b.textContent = E.gp > 999 ? Math.floor(E.gp / 1000) + 'k' : E.gp; } catch(e){}
+  return {got};
+};
+renderGameMini = function(){};
+try { localStorage.removeItem('trackySub_games'); } catch(e){}
+(function(){ const gp = document.querySelector('.panel[data-panel="games"]'); if (!gp) return; const kill = () => gp.querySelectorAll('.subnav').forEach(b => { if (b.querySelector('button[data-i]')) b.remove(); }); kill(); setTimeout(kill, 1500);
+})();
+
+/* 2) hero page: new Build page holding class / physique / rewards road */
+(function(){
+  const p = document.querySelector('.panel[data-panel="progress"]'); if (!p || $('buildBox')) return;
+  const bx = document.createElement('div'); bx.className = 'box'; bx.id = 'buildBox'; p.appendChild(bx);
+  const old = p.querySelector('.subnav'); if (old) old.remove(); try { localStorage.removeItem('trackySub_progress'); } catch(e){}
+  const n = [...p.children].filter(e => e.classList.contains('box')).length - 1;
+  subnav('progress', [['🧑 Hero',[0]], ['⚡ Build',[n]], ['📜 Quests',[2,3,4,12]], ['🎁 Rewards',[13,11]], ['📈 Records',[1,6,10,5]], ['📏 Body',[7,8,9]]], []);
+  const mv = () => { const cb = $('charBox'); if (!cb) return; const b = $('buildBox'); b.innerHTML = '';
+    ['.rpgv2', '.physq', '.rdcard'].forEach(sel => { const el = cb.querySelector(sel); if (el) b.appendChild(el); });
+    if (!b.children.length) b.innerHTML = '<div style="color:var(--sub);padding:1rem 0">' + escapeHTML(tr('Log a workout to grow your build.')) + '</div>'; };
+  const sc = () => { const c = $('chainsBox'); if (!c) return; const on = p.querySelector('.subnav button.on'); c.style.display = on && /Quests/.test(on.textContent) ? '' : 'none'; };
+  p.addEventListener('click', e => { if (e.target.closest('.subnav button')) setTimeout(sc, 0); });
+  const _r = renderChar; renderChar = function(){ _r(); try { mv(); sc(); } catch(e){ console.warn('build page', e); } };
+  try { mv(); sc(); } catch(e){}
+})();
+
+/* 3) settings: a menu of pages instead of one long scroll */
+function stMenuInit(){
+  const modal = document.querySelector('#modalSettings .modal'); if (!modal || !$('stFind')) return;
+  const ar = LANG === 'ar', H = {acct:['Sign-in and cloud sync','تسجيل الدخول والمزامنة'], gen:['Theme, language, units','المظهر واللغة والوحدات'], train:['Rest timer and animations','مؤقت الراحة والحركات'], notif:['Reminders and alerts','التذكيرات والتنبيهات'], ai:['Coach and API key','المدرب الذكي والمفتاح'], data:['Backup, export, import','نسخ احتياطي وتصدير واستيراد'], more:['Other options','خيارات أخرى'], about:['Version and updates','النسخة والتحديثات']};
+  const secs = [...modal.querySelectorAll('.stsec')];
+  if (!$('st_about')){ const vb = $('appVerBox'), sec = document.createElement('section'); sec.className = 'stsec'; sec.id = 'st_about'; sec.dataset.n = 'About & updates';
+    const h4 = document.createElement('h4'); h4.innerHTML = '<span>ℹ️</span><span data-k="About & updates"></span>'; const body = document.createElement('div'); body.className = 'stbody'; if (vb) body.appendChild(vb); sec.append(h4, body);
+    const last = secs[secs.length - 1] || $('stFind'); last.after(sec); secs.push(sec);
+    if (vb){ const row = vb.querySelector('#appUpdBtn').parentNode; const c = document.createElement('button'); c.type = 'button'; c.className = 'sec'; c.id = 'appChkBtn'; c.dataset.k = 'Check for updates'; row.prepend(c);
+      c.onclick = async () => { c.disabled = true; const r = await checkUpdate(true); c.disabled = false; if (r === false) showToast('✅ ' + tr('You are on the latest version')); }; } }
+  const vt = $('appVerTxt'); if (vt) vt.textContent = APP_VER.replace('tracky-', '');
+  modal.querySelectorAll('[data-k]').forEach(e => { e.textContent = tr(e.dataset.k); });
+  let menu = $('stMenu'); if (menu) menu.remove(); menu = document.createElement('div'); menu.id = 'stMenu';
+  secs.forEach(sec => { const empty = !sec.querySelector('.stbody > *'); sec.toggleAttribute('data-empty', empty); if (empty) return;
+    const id = sec.id.replace('st_', ''), sp = sec.querySelectorAll('h4 > span'), b = document.createElement('button'); b.type = 'button'; b.className = 'stm'; b.dataset.sec = sec.id;
+    b.innerHTML = '<i>' + sp[0].textContent + '</i><span><b>' + escapeHTML(sp[1].textContent) + '</b><small>' + escapeHTML((H[id] || [''])[ar ? 1 : 0]) + '</small></span><em>' + (ar ? '‹' : '›') + '</em>'; menu.appendChild(b); });
+  $('stFind').after(menu);
+  let back = $('stBack'); if (!back){ back = document.createElement('button'); back.type = 'button'; back.id = 'stBack'; menu.after(back); }
+  back.textContent = (ar ? '› ' : '‹ ') + tr('Settings menu');
+  const view = (v, id) => { modal.dataset.stv = v; secs.forEach(s => s.classList.toggle('stopen', v === 'sec' && s.id === id)); modal.scrollTop = 0; };
+  menu.onclick = e => { const b = e.target.closest('button[data-sec]'); if (b){ buzz(8); view('sec', b.dataset.sec); } };
+  back.onclick = () => { buzz(8); view('menu'); };
+  const f = $('stFind'); if (!f.dataset.stm){ f.dataset.stm = 1; f.addEventListener('input', () => { if (f.value.trim()) modal.dataset.stv = 'search'; else view('menu'); }); }
+  view('menu');
+}
+{ const _os4 = openSettings; openSettings = function(){ _os4.apply(this, arguments); try { stMenuInit(); } catch(e){ console.error(e); } }; }
+
+/* 4) active update check: poll sw.js, show a one-tap prompt */
+let UPD_LAST = 0, UPD_SKIP = '';
+async function checkUpdate(force){
+  if (!('serviceWorker' in navigator) || location.protocol.indexOf('http') !== 0 || !navigator.onLine) return null;
+  if (!force && Date.now() - UPD_LAST < 60000) return null; UPD_LAST = Date.now();
+  try { const r = await fetch('sw.js?c=' + Date.now(), {cache:'no-store'}); if (!r.ok) return null; const m = (await r.text()).match(/VER\s*=\s*'(tracky-v[^']+)'/);
+    if (!m) return null; if (m[1] === APP_VER) return false; if (!force && UPD_SKIP === m[1]) return true; showUpdPrompt(m[1]); return true; } catch(e){ return null; }
+}
+async function applyUpdate(){
+  try { save(); } catch(e){}
+  try { const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r => r.unregister())); const ks = await caches.keys(); await Promise.all(ks.filter(k => k.startsWith('tracky-v')).map(k => caches.delete(k))); } catch(_){}
+  location.replace(location.pathname + '?r=' + Date.now());
+}
+function showUpdPrompt(ver){
+  const old = $('updBar'); if (old) old.remove();
+  const d = document.createElement('div'); d.id = 'updBar'; d.setAttribute('role', 'status'); d.innerHTML = '<span>🔄 ' + escapeHTML(tr('A new version is available')) + '</span><button type="button">' + escapeHTML(tr('Update')) + '</button><i title="' + escapeHTML(tr('Later')) + '">✕</i>';
+  d.querySelector('button').onclick = e => { e.target.disabled = true; e.target.textContent = '…'; applyUpdate(); };
+  d.querySelector('i').onclick = () => { UPD_SKIP = ver; d.remove(); };
+  document.body.appendChild(d);
+}
+setTimeout(() => checkUpdate(true), 3500);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(() => checkUpdate(), 800); });
+window.addEventListener('online', () => setTimeout(() => checkUpdate(), 800));
+setInterval(() => { if (!document.hidden) checkUpdate(); }, 300000);
