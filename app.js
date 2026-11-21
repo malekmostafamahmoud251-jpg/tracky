@@ -2111,6 +2111,17 @@ Fat|دهون|Lipides
 1 year|سنة|1 an
 App version|النسخة|Version
 Update now|حدّث دلوقتي|Mettre à jour
+Using the device microphone instead…|هستخدم مايك الجهاز بدل كده…|Utilisation du micro de l'appareil…
+YOU BEAT THE GHOST!|هزمت الشبح!|VOUS AVEZ BATTU LE FANTÔME !
+THE GHOST WON|الشبح كسب|LE FANTÔME A GAGNÉ
+more than your ghost|أكتر من شبحك|de plus que votre fantôme
+Tied it and took the win|ساويته وأخدت الفوز|Égalité, victoire
+Short by|ناقصك|Il manquait
+Beat it next session|هتغلبه الجلسة الجاية|Battez-le la prochaine fois
+wins in a row|فوز ورا بعض|victoires d'affilée
+wins so far|فوز لحد دلوقتي|victoires
+Tap to continue|اضغط للمتابعة|Appuyez pour continuer
+Ghost|الشبح|Fantôme
 About & updates|عن التطبيق والتحديثات|À propos et mises à jour
 Check for updates|دوّر على تحديث|Chercher une mise à jour
 You are on the latest version|إنت على أحدث نسخة|Vous avez la dernière version
@@ -6186,7 +6197,7 @@ function ghostUpdate(){
 }
 { const _us = updateStats; updateStats = function(){ _us(); try { ghostUpdate(); } catch(e){} }; const _rt = renderTrain; renderTrain = function(){ _rt(); try { ghostUpdate(); } catch(e){} };
   const _ls = logSession; logSession = async function(dayId){ const r = ghostScore(dayId || null), n0 = sessions.length; await _ls.apply(this, arguments);
-    if (sessions.length > n0){ if (r.full > 0 && r.n > 0){ const win = r.fd > 0 && r.you >= r.fd, g = progress.ghost = progress.ghost || {races:0, wins:0, streak:0, best:0}; g.races++; if (win){ g.wins++; g.streak++; g.best = Math.max(g.best, g.streak); } else g.streak = 0; save(); showToast(win ? '👻 You beat your ghost! +15 XP' : '👻 The ghost won this time. Beat it next session.'); }
+    if (sessions.length > n0){ if (r.full > 0 && r.n > 0){ const win = r.fd > 0 && r.you >= r.fd, g = progress.ghost = progress.ghost || {races:0, wins:0, streak:0, best:0}; g.races++; if (win){ g.wins++; g.streak++; g.best = Math.max(g.best, g.streak); } else g.streak = 0; save(); showToast(win ? '👻 You beat your ghost! +15 XP' : '👻 The ghost won this time. Beat it next session.'); try { ghostResult(win, r, g); } catch(e){ console.warn(e); } }
       try { gamesTick(); duelPush(); } catch(e){} } }; }
 /* ---- Iron Raid ---- */
 function raidBase(){ const wk = {}; sessions.forEach(s => { const w = weekStart(localKey(s.date)); wk[w] = (wk[w] || 0) + (s.volume || 0); }); const cw = weekStart(todayKey()), v = [1, 2, 3, 4].map(i => wk[shiftDays(cw, -7 * i)] || 0).filter(x => x > 0); return Math.max(4000, v.length ? v.reduce((a, b) => a + b, 0) / v.length : 8000); }
@@ -8040,10 +8051,11 @@ function openVoice(){
   if ($('vMic')) $('vMic').onclick = () => { if (VCLOUD) voiceCloudStop(true); else if (VON || VREC) voiceStop(false); else if (!VBUSY) voiceStart(); };
   $('modalVoice').classList.add('active');
 }
+function voiceDevice(){ const k = settings.voiceEngine; settings.voiceEngine = 'device'; try { voiceStart(); } finally { settings.voiceEngine = k; } }
 function voiceStart(){
   if (VBUSY) return; voiceStop(false); VERR = 0;
   const eng = settings.voiceEngine || 'auto';
-  if (eng === 'cloud' || (!SRC && eng !== 'device')) return voiceCloudStart();
+  if (eng === 'cloud' || (eng === 'auto' && vCanCloud()) || (!SRC && eng !== 'device')) return voiceCloudStart();
   if (!SRC) return vSay('⚠️ ' + tr('Voice recognition is not available in this browser. Type the phrase below, or use the microphone key on your phone keyboard.'), 'bad');
   let rec; try { rec = new SRC(); rec.lang = voiceLang(); rec.interimResults = true; rec.maxAlternatives = 5; rec.continuous = false; } catch(e){ return eng === 'auto' ? voiceCloudStart() : vSay('⚠️ ' + String((e && e.message) || e), 'bad'); }
   VREC = rec;
@@ -8069,7 +8081,7 @@ function voiceStop(){
 async function voiceCloudStart(){
   if (!vCanCloud()) return vSay('⚠️ ' + tr('Voice recognition is not available in this browser. Type the phrase below, or use the microphone key on your phone keyboard.'), 'bad');
   VBUSY = true; vSay('🎙️ ' + tr('Allow the microphone…'));
-  let stream; try { stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true, noiseSuppression:true, channelCount:1}}); }
+  let stream; try { stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false, noiseSuppression:false, autoGainControl:true, channelCount:1}}); }
   catch(e){ VBUSY = false; return vSay('⚠️ ' + tr('Microphone permission is blocked'), 'bad'); }
   if (!vOpen()){ stream.getTracks().forEach(t => t.stop()); VBUSY = false; return; }
   let ctx; try { const AC = window.AudioContext || window.webkitAudioContext; ctx = new AC(); if (ctx.state === 'suspended') await ctx.resume(); }
@@ -8098,21 +8110,23 @@ async function voiceCloudStop(send){
     if (!text) return vSay(tr('Did not hear anything. Tap the mic and try again.'));
     vSay(text); voiceHandle([text]);
     if (settings.voiceKeep && !VT) setTimeout(() => { if (vOpen() && !VON && !VREC && !VCLOUD && !VBUSY) voiceStart(); }, 900);
-  } catch(e){ VBUSY = false; vSay('⚠️ ' + String((e && e.message) || e).replace(/\s+/g, ' ').slice(0, 150), 'bad'); }
+  } catch(e){ VBUSY = false; const m = String((e && e.message) || e).replace(/\s+/g, ' ').slice(0, 150); if ((settings.voiceEngine || 'auto') === 'auto' && SRC && !VCLOUD && vOpen() && !/limit|OK to send|Sign in/i.test(m)){ vSay('📱 ' + tr('Using the device microphone instead…')); setTimeout(() => { try { voiceDevice(); } catch(_){} }, 400); } else vSay('⚠️ ' + m, 'bad'); }
 }
 function voiceWav(chunks, rate){
   let n = 0; chunks.forEach(c => n += c.length); const all = new Float32Array(n); let o = 0; chunks.forEach(c => { all.set(c, o); o += c.length; });
   const R = 16000, ratio = rate / R, m = Math.max(1, Math.floor(n / ratio)), buf = new ArrayBuffer(44 + m * 2), dv = new DataView(buf), w = (p, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(p + i, s.charCodeAt(i)); };
+  let pk = 0; for (let i = 0; i < n; i++){ const a = Math.abs(all[i]); if (a > pk) pk = a; } const gain = pk > .005 ? Math.min(8, .85 / pk) : 1;
   w(0, 'RIFF'); dv.setUint32(4, 36 + m * 2, true); w(8, 'WAVE'); w(12, 'fmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true); dv.setUint32(24, R, true); dv.setUint32(28, R * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true); w(36, 'data'); dv.setUint32(40, m * 2, true);
-  for (let i = 0; i < m; i++){ const a = Math.floor(i * ratio), b = Math.max(a + 1, Math.min(n, Math.floor((i + 1) * ratio))); let s = 0, c = 0; for (let j = a; j < b && j < n; j++){ s += all[j]; c++; } const v = Math.max(-1, Math.min(1, c ? s / c : 0)); dv.setInt16(44 + i * 2, v < 0 ? v * 0x8000 : v * 0x7fff, true); }
+  for (let i = 0; i < m; i++){ const a = Math.floor(i * ratio), b = Math.max(a + 1, Math.min(n, Math.floor((i + 1) * ratio))); let s = 0, c = 0; for (let j = a; j < b && j < n; j++){ s += all[j]; c++; } const v = Math.max(-1, Math.min(1, (c ? s / c : 0) * gain)); dv.setInt16(44 + i * 2, v < 0 ? v * 0x8000 : v * 0x7fff, true); }
   const u8 = new Uint8Array(buf); let bin = ''; for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(bin);
 }
 async function voiceTranscribe(b64){
-  const names = [...new Set(state.days.flatMap(d => (d.exercises || []).map(e => e.name)))].slice(0, 40).join(', ');
+  const names = [...new Set(state.days.flatMap(d => (d.exercises || []).map(e => e.name)))].slice(0, 60).join(', ');
   const sys = 'You are a speech-to-text engine for a gym and nutrition app. Output only the exact words spoken, nothing else.';
-  const prompt = VT ? 'Transcribe this short voice note. The speaker may use Egyptian Arabic, English or French and is describing food they ate, a question, or a command for a fitness app. Write numbers as digits. Reply with the transcript only, with no quotes and no explanation. If there is no speech, reply with an empty line.' : 'Transcribe this short voice note. The speaker may use Egyptian Arabic, English or French and says an exercise name, a weight and reps (sometimes sets). Write numbers as digits and keep units (kg, reps, sets) as spoken. Possible exercises: ' + names + '. Reply with the transcript only, with no quotes and no explanation. If there is no speech, reply with an empty line.';
+  const hint = settings.voiceLang || ({ar:'ar-EG', fr:'fr-FR', en:'en-US'}[LANG] || 'en-US'), common = 'Transcribe exactly what was said, word for word. The speaker is Egyptian and often mixes Egyptian Arabic with English words (food names, gym terms, exercise and brand names). Keep Arabic words in Arabic script and English words in English letters. Never translate, paraphrase, correct or invent words. Write numbers as digits. Main language: ' + hint + '. Reply with the transcript only, no quotes, no explanation. If there is no clear speech, reply with an empty line.';
+  const prompt = VT ? common + ' The speech is about food the user ate, a question, or a command for a fitness app.' : common + ' The speech is an exercise name, a weight and reps (sometimes sets). Keep units (kg, reps, sets) as spoken. If the speaker says one of these exercises, even with an Arabic accent or in Arabic letters, write it exactly as listed: ' + names + '.';
   const parts = [{text:prompt}, {inlineData:{mimeType:'audio/wav', data:b64}}]; let out = '';
-  if (!(settings && settings.geminiKey) && APP_CONFIG.coachUrl) await askViaServer(sys, [], parts, t => { out = t; }, 1024);
+  if (!(settings && settings.geminiKey) && APP_CONFIG.coachUrl){ const t0 = window._askTemp, g0 = window._askGen; window._askTemp = 0; window._askGen = {topP:.1}; try { await askViaServer(sys, [], parts, t => { out = t; }, 1024); } finally { window._askTemp = t0; window._askGen = g0; } }
   else {
     if (!geminiReady()) throw new Error('No Gemini API key set. Add yours in Settings.');
     const r = await fetch(GEMINI_BASE + '/models/gemini-flash-latest:generateContent', {method:'POST', headers:{'Content-Type':'application/json', 'x-goog-api-key':geminiKey()}, body:JSON.stringify({systemInstruction:{parts:[{text:sys}]}, contents:[{role:'user', parts}], generationConfig:{temperature:0, maxOutputTokens:1024}})});
@@ -9194,7 +9208,7 @@ function dsIcons(){
   };
   /* profile: hide the old designer button, show the character name + swap link */
   { const _rc2 = renderChar; renderChar = function(){ _rc2(); try { const b = $('pxEditBtn'); if (b){ const c = charDef(); b.outerHTML = `<div class="charcap"><b>${escapeHTML(c.name)}</b><button type="button" class="sec tiny" data-go-char="1">🛍️ <span>More characters</span></button></div>`; } } catch(e){} }; }
-  document.addEventListener('click', e => { if (!e.target.closest('[data-go-char]')) return; GH_CAT = 'Character'; document.querySelector('.tab[data-tab="games"]').click(); setTimeout(() => { const bar = document.querySelector('.panel[data-panel="games"] .subnav'); const b = bar && [...bar.querySelectorAll('button[data-i]')].find(x => /Store/.test(x.textContent)); if (b) b.click(); try { renderStore(); } catch(_){} }, 120); });
+  document.addEventListener('click', e => { if (!e.target.closest('[data-go-char]')) return; GH_CAT = 'Character'; document.querySelector('.tab[data-tab="store"]').click(); setTimeout(() => { try { renderStore(); } catch(_){} }, 80); });
 
   /* ---------- mascots: the character lives in every game ---------- */
   const MASC = new Set(); let masRaf = 0, masLast = 0;
@@ -9386,7 +9400,7 @@ function dsIcons(){
   duelPush = async function(force){
     const d = duelCfg(); if (!d.code || (!force && Date.now() - _lp < 15000)) return; _lp = Date.now();
     const sh = SH(), body = {code:d.code, uid:d.uid, name:d.name, tz:-new Date().getTimezoneOffset(), days:myDays(), tot:myTot(), week:weekStart(todayKey()), vol:duelMine().vol, steps:duelMine().steps, sessions:duelMine().sessions};
-    if (sh.stats) body.stats = myStats();
+    if (sh.stats){ body.stats = myStats(); body.lifts = myLifts(); try { body.char = charId(); } catch(e){} } else body.lifts = null;
     if (sh.plan && state.days.length){ const c = await myPlan(); if (c && c.length < 11000){ body.plan = c; body.planDays = state.days.length; body.planNames = state.days.slice(0, 7).map(x => x.name); } }
     try { await duelApi('push', body); } catch(e){}
   };
@@ -9435,14 +9449,14 @@ function dsIcons(){
     return `<div class="fx-chips">${PER.map(([k, l]) => `<button type="button" class="${per === k ? 'on' : ''}" ${V2() || k === 'week' ? '' : 'disabled'} data-fx="per:${k}"><span>${l}</span></button>`).join('')}</div>
       <div class="fx-chips">${MET.map(([k, l]) => `<button type="button" class="${FX.met === k ? 'on' : ''}" data-fx="met:${k}"><span>${l}</span></button>`).join('')}</div>
       ${mi >= 0 && ps.length > 1 ? `<div class="insight" style="font-weight:700">${mi === 0 ? '👑 <span>You are #1</span>' : '<span>Your rank</span> #' + (mi + 1)}</div>` : ''}
-      ${ps.map((p, i) => `<div class="qrow fx-m${p.me ? ' me' : ''}" data-fx="prof:${esc(p.uid)}"><i>${medal[i] || (i + 1)}</i><div class="qtx"><b>${esc(p.name)}${p.me ? ' ·' : ''}${p.me ? ' <span>(you)</span>' : ''}</b>${p.stats && p.stats.rank ? '<small>' + esc(p.stats.rank) + ' · Lv ' + (p.stats.lv || 1) + ' · 🔥' + (p.stats.streak || 0) + '</small>' : ''}<div class="qbar"><i style="width:${Math.round(p._v / mx * 100)}%"></i></div></div><span class="qxp">${fmt(p._v, FX.met)}<small>${mcap[FX.met]}</small></span></div>`).join('')}
+      ${ps.map((p, i) => `<div class="qrow fx-m${p.me ? ' me' : ''}" data-fx="prof:${esc(p.uid)}"><i>${medal[i] || (i + 1)}</i><div class="qtx"><b>${esc(p.name)}${p.me ? ' ·' : ''}${p.me ? ' <span>(you)</span>' : ''} ${dot(p)}</b>${p.stats && p.stats.rank ? '<small>' + esc(p.stats.rank) + ' · Lv ' + (p.stats.lv || 1) + ' · 🔥' + (p.stats.streak || 0) + '</small>' : ''}<div class="qbar"><i style="width:${Math.round(p._v / mx * 100)}%"></i></div></div><span class="qxp">${fmt(p._v, FX.met)}<small>${mcap[FX.met]}</small></span></div>`).join('')}
       ${V2() ? '' : '<small class="stepnote"><span>Month and all-time boards need the updated server.</span></small>'}`;
   }
 
   /* ---- plans ---- */
   function panePlans(){
     const sh = SH(), me = (DUEL.players || []).find(p => p.me), others = (DUEL.players || []).filter(p => !p.me);
-    return `<div class="fx-share"><label><input type="checkbox" data-fx="shs" ${sh.stats ? 'checked' : ''}> <span>Share my stats with the group</span></label><label><input type="checkbox" data-fx="shp" ${sh.plan ? 'checked' : ''}> <span>Share my exercise plan with the group</span></label><small class="stepnote"><span>Friends see level, streak and totals. You can turn this off at any time.</span></small></div>
+    return `<div class="fx-share"><label><input type="checkbox" data-fx="shs" ${sh.stats ? 'checked' : ''}> <span>Share my stats with the group</span></label><label><input type="checkbox" data-fx="shp" ${sh.plan ? 'checked' : ''}> <span>Share my exercise plan with the group</span></label><label><input type="checkbox" data-fx="shf" ${sh.feed !== false ? 'checked' : ''}> <span>Post my workouts and PRs to the feed</span></label><small class="stepnote"><span>Friends see level, streak and totals. You can turn this off at any time.</span></small></div>
       ${!V2() ? '<small class="insight2"><span>Plan sharing needs the updated server.</span></small>' : ''}
       ${others.length ? others.map(p => `<div class="qrow"><i>🥊</i><div class="qtx"><b>${esc(p.name)}</b><small>${p.plan ? esc((p.plan.names || []).join(' · ') || (p.plan.n + ' days')) : '<span>No plan shared yet</span>'}</small></div>${p.plan ? `<button type="button" class="sec tiny" data-fx="plan:${esc(p.uid)}">📥 <span>View</span></button>` : ''}</div>`).join('') : '<small class="insight2"><span>Invite friends to see each other\'s plans.</span></small>'}
       ${me && me.plan ? '<small class="stepnote">✅ <span>Your plan is visible to the group.</span></small>' : ''}`;
@@ -9452,10 +9466,12 @@ function dsIcons(){
   function profile(uid){
     const p = (DUEL.players || []).find(x => x.uid === uid), me = (DUEL.players || []).find(x => x.me); if (!p) return;
     const box = mkModal('modalFx'), S = p.stats || {}, row = (lab, k) => { const a = val(p, k, 'vol'), b = me ? val(me, k, 'vol') : 0; return `<div class="vrow"><span>${me ? Math.round(b).toLocaleString() : ''}</span><div class="vbar"><i style="width:${Math.round((a + b ? b / (a + b) : .5) * 100)}%"></i></div><span>${Math.round(a).toLocaleString()}</span><small><span>${lab}</span></small></div>`; };
-    box.innerHTML = `<h2>${p.me ? '🧑' : '🥊'} ${esc(p.name)}</h2>
+    let pimg = ''; try { const cid = p.me ? charId() : p.char; if (cid && CHARS[cid]) pimg = `<img class="fx-pimg" alt="" src="${charImg(cid, 84, CHARS[cid].flex)}">`; } catch(e){}
+    box.innerHTML = `<div class="fx-ph">${pimg}<div><h2 style="margin:0">${pimg ? '' : (p.me ? '🧑' : '🥊')} ${esc(p.name)} ${dot(p)}</h2><small>${tierOf(p.uid)}${p.train ? ' · 🏋️ <span>Training now</span>' : p.on ? ' · <span>Online</span>' : (p.seen ? ' · <span>Seen</span> ' + ago(p.seen) : '')}</small></div></div>
       <div class="fx-badges">${S.rank ? '<span>🏅 ' + esc(S.rank) + '</span>' : ''}${S.lv ? '<span>⭐ Lv ' + S.lv + '</span>' : ''}${S.streak != null && p.stats ? '<span>🔥 ' + S.streak + '</span>' : ''}${S.prs ? '<span>🏆 ' + S.prs + ' PR</span>' : ''}${S.split ? '<span>🗓️ ' + esc(S.split) + '</span>' : ''}${S.goal ? '<span>🎯 ' + esc(S.goal) + '</span>' : ''}</div>
       ${p.stats ? '' : '<small class="insight2"><span>This friend keeps their stats private.</span></small>'}
       <div class="fx-grid"><div><b>${fmt(val(p, 'cur', 'score'), 'score')}</b><small><span>Week points</span></small></div><div><b>${fmt(val(p, 'month', 'vol'), 'vol')}</b><small><span>Month kg</span></small></div><div><b>${fmt(val(p, 'all', 'sessions'), 'sessions')}</b><small><span>Sessions</span></small></div><div><b>${fmt(val(p, 'all', 'vol'), 'vol')}</b><small><span>All-time kg</span></small></div></div>
+      ${!p.me && me ? liftsCmp(p) : ''}
       ${!p.me && me ? `<div class="gen-l"><span>You vs</span> ${esc(p.name)}</div>${row('Week kg', 'cur')}${row('Month kg', 'month')}${row('All-time kg', 'all')}` : ''}
       ${!p.me ? `<div class="stepacts" style="margin-top:.6rem">${['👊', '🔥', '👏', '💪'].map(e => `<button type="button" class="sec tiny" data-fx="nudge:${esc(p.uid)}:${e}">${e}</button>`).join('')}<button type="button" data-fx="chalto:${esc(p.uid)}">⚔️ <span>Challenge</span></button>${p.plan ? `<button type="button" class="sec" data-fx="plan:${esc(p.uid)}">📥 <span>Plan</span></button>` : ''}</div>` : ''}
       <div class="stepacts" style="margin-top:.6rem"><button type="button" class="sec" data-fx="close"><span>Close</span></button></div>`;
@@ -9463,7 +9479,7 @@ function dsIcons(){
   }
 
   /* ---- render: wrap the board, add groups + tabs ---- */
-  const PANES = {ranks:paneRanks, chal:paneChal, plans:panePlans};
+  const PANES = {ranks:paneRanks, chal:paneChal, plans:panePlans, feed:paneFeed, chat:paneChat, league:paneLeague};
   function decorate(){
     const box = $('gDuel'), d = duelCfg(); if (!box) return;
     box.querySelectorAll('.fx-wrap').forEach(e => e.remove());
@@ -9473,14 +9489,88 @@ function dsIcons(){
     const gs = groups(), tab = FX.tab, top = document.createElement('div'); top.className = 'fx-wrap';
     top.innerHTML = `<div class="fx-groups">${gs.map(g => `<button type="button" class="${g.code === d.code ? 'on' : ''}" data-fx="grp:${esc(g.code)}">${esc(g.name || g.code)}</button>`).join('')}<button type="button" class="fx-add" data-fx="gadd" aria-label="Add group">＋</button></div>
       ${FX.adding === 'grp' ? `<div class="fx-form"><input id="fxGName" class="in" maxlength="24" placeholder="Group name" style="width:100%"><div class="stepacts" style="margin:.4rem 0"><button type="button" data-fx="gnew">➕ <span>Create group</span></button></div><div class="stepacts"><input id="fxGCode" class="in" maxlength="6" placeholder="CODE" style="flex:1;text-transform:uppercase"><button type="button" class="sec" data-fx="gjoin"><span>Join</span></button></div><small id="fxMsg" class="stepnote"></small></div>` : ''}
-      <div class="fx-tabs">${[['board', '📋', 'Board'], ['ranks', '🏆', 'Ranks'], ['chal', '⚔️', 'Challenges'], ['plans', '🗓️', 'Plans']].map(([k, ic, l]) => `<button type="button" class="${tab === k ? 'on' : ''}" data-fx="tab:${k}"><i>${ic}</i><span>${l}</span></button>`).join('')}</div>`;
+      <div class="fx-tabs">${[['board', '📋', 'Board'], ['feed', '📰', 'Feed'], ['chat', '💬', 'Chat'], ['league', '🏅', 'League'], ['ranks', '🏆', 'Ranks'], ['chal', '⚔️', 'Challenges'], ['plans', '🗓️', 'Plans']].map(([k, ic, l]) => `<button type="button" class="${tab === k ? 'on' : ''}" data-fx="tab:${k}"><i>${ic}</i><span>${l}</span></button>`).join('')}</div>`;
     h3.after(top); board.style.display = tab === 'board' ? '' : 'none';
     if (tab !== 'board'){ const pane = document.createElement('div'); pane.className = 'fx-pane'; if (!DUEL || !DUEL.players) pane.innerHTML = '<small class="insight2"><span>Loading…</span></small>'; else if (tab !== 'ranks' && !V2()) pane.innerHTML = '<small class="insight2"><span>This needs the updated Tracky server (tracky-duel.js).</span></small>' + (tab === 'plans' ? PANES.plans() : ''); else pane.innerHTML = PANES[tab](); box.appendChild(pane); }
     if (DUEL && DUEL.players){ const ch = (DUEL.chal || []).filter(c => !c.done && c.to === d.uid && c.mine !== 'in' && c.mine !== 'out').length, b = top.querySelector('[data-fx="tab:chal"]'); if (ch && b) b.insertAdjacentHTML('beforeend', '<em class="fx-dot">' + ch + '</em>'); }
-    board.querySelectorAll('.qrow').forEach(r => { const nm = r.querySelector('.qtx b'); if (!nm || !DUEL || !DUEL.players) return; const p = DUEL.players.find(x => x.name && nm.textContent.indexOf(x.name) === 0); if (p){ r.dataset.fx = 'prof:' + p.uid; r.classList.add('fx-m'); } });
+    board.querySelectorAll('.qrow').forEach(r => { const nm = r.querySelector('.qtx b'); if (!nm || !DUEL || !DUEL.players) return; const p = DUEL.players.find(x => x.name && nm.textContent.indexOf(x.name) === 0); if (p){ r.dataset.fx = 'prof:' + p.uid; r.classList.add('fx-m'); nm.insertAdjacentHTML('beforeend', ' ' + dot(p)); } });
+    if (tab === 'board') board.insertAdjacentHTML('afterbegin', liveStrip());
     try { settleRewards(); } catch(e){}
   }
   { const _r = renderDuel; renderDuel = function(){ _r.apply(this, arguments); try { decorate(); } catch(e){ console.error(e); } }; }
+
+
+  /* ---- v66: live presence, feed, chat, league, compare ---- */
+  const REACT = ['🔥', '💪', '👏', '😮'], LIVE = {feed:[], chat:[], pres:{}, ok:0, fresh:0};
+  const ago = t => { const m = Math.max(0, Math.round((Date.now() - t) / 60000)); return m < 1 ? (LANG === 'ar' ? 'دلوقتي' : 'now') : m < 60 ? m + (LANG === 'ar' ? 'د' : 'm') : m < 1440 ? Math.floor(m / 60) + (LANG === 'ar' ? 'س' : 'h') : Math.floor(m / 1440) + (LANG === 'ar' ? 'ي' : 'd'); };
+  const pres = p => (LIVE.pres && LIVE.pres[p.uid]) || {on:p.on, train:p.train, seen:p.seen};
+  const dot = p => { const r = pres(p); return r.train ? '<span class="fx-dot2 tr" title="Training">🏋️</span>' : r.on || p.me ? '<span class="fx-dot2 on"></span>' : '<span class="fx-dot2"></span>'; };
+  const TN = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Master'], TI = ['🥉', '🥈', '🥇', '💠', '💎', '👑'];
+  const tierOf = uid => { const r = ((DUEL && DUEL.lg && DUEL.lg.rows) || []).find(x => x.uid === uid); return r ? TI[r.tier] + ' ' + tr(TN[r.tier]) + ' · ' + r.lp + ' LP' : ''; };
+  function myLifts(){ const best = {}; sessions.forEach(s => (s.exercises || []).forEach(e => (e.sets || []).forEach(t => { const w = +t.weight, r = +t.reps; if (!(w > 0) || !(r > 0) || r > 30) return; const v = e1rm(w, r), k = String(e.name).trim().toLowerCase(); if (!best[k] || v > best[k][1]) best[k] = [e.name, Math.round(v * 10) / 10, w, r]; })));
+    return Object.values(best).sort((a, b) => b[1] - a[1]).slice(0, 8); }
+  function liftsCmp(p){ const L = p.lifts; if (!L || !L.length) return ''; const mine = {}; myLifts().concat([]).forEach(a => mine[String(a[0]).trim().toLowerCase()] = a);
+    sessions.forEach(s => (s.exercises || []).forEach(e => (e.sets || []).forEach(t => { const w = +t.weight, r = +t.reps; if (!(w > 0) || !(r > 0) || r > 30) return; const k = String(e.name).trim().toLowerCase(), v = e1rm(w, r); if (!mine[k] || v > mine[k][1]) mine[k] = [e.name, Math.round(v * 10) / 10, w, r]; })));
+    const rows = L.slice(0, 5).map(a => { const m = mine[String(a[0]).trim().toLowerCase()], mv = m ? m[1] : 0, tv = a[1], tot = Math.max(1, mv + tv); return `<div class="vrow"><span>${m ? Math.round(mv) : '–'}</span><div class="vbar"><i style="width:${Math.round(mv / tot * 100)}%"></i></div><span>${Math.round(tv)}</span><small>${esc(a[0])} <span>(est. 1RM kg)</span></small></div>`; }).join('');
+    return `<div class="gen-l"><span>Lift by lift</span></div>${rows}`; }
+  function liveStrip(){ const ps = (DUEL && DUEL.players) || [], tr1 = ps.filter(p => !p.me && pres(p).train), on = ps.filter(p => !p.me && pres(p).on && !pres(p).train);
+    if (!tr1.length && !on.length) return ''; return `<div class="fx-live">${tr1.map(p => `<span class="tr">🏋️ <b>${esc(p.name)}</b> <span>is training now</span></span>`).join('')}${on.map(p => `<span>🟢 ${esc(p.name)}</span>`).join('')}</div>`; }
+  async function liveFetch(){
+    const d = duelCfg(); if (!d.code || !V2()) return; try { const j = await duelApi('live', null, '?code=' + encodeURIComponent(d.code) + '&uid=' + encodeURIComponent(d.uid));
+      const prevChat = LIVE.chat.length ? LIVE.chat[LIVE.chat.length - 1].t : 0; LIVE.feed = j.feed || []; LIVE.chat = j.chat || []; LIVE.pres = j.pres || {}; LIVE.ok = 1; LIVE.fresh = Date.now();
+      const seen = (d.seenChat = d.seenChat || {})[d.code] || 0, fresh = LIVE.chat.filter(m => m.u !== d.uid && m.t > seen);
+      if (FX.tab === 'chat' && document.querySelector('.panel.active[data-panel="games"]')){ if (LIVE.chat.length){ seenAll(); } }
+      else if (fresh.length && prevChat && fresh[fresh.length - 1].t > prevChat && !document.hidden){ const m = fresh[fresh.length - 1]; showToast('💬 ' + m.name + ': ' + String(m.txt).slice(0, 40)); }
+      if (j.nudge && j.nudge.t && j.nudge.t > (d.lastNudge || 0)){ d.lastNudge = j.nudge.t; showToast(j.nudge.emoji + ' ' + j.nudge.from); }
+    } catch(e){}
+    paintLive();
+  }
+  function seenAll(){ const d = duelCfg(); d.seenChat = d.seenChat || {}; const t = LIVE.chat.length ? LIVE.chat[LIVE.chat.length - 1].t : 0; if (t > (d.seenChat[d.code] || 0)){ d.seenChat[d.code] = t; save(); } }
+  const feedSeen = () => { const d = duelCfg(); d.seenFeed = d.seenFeed || {}; return d.seenFeed; };
+  function paintLive(){
+    const d = duelCfg(); if (!d.code) return;
+    const f = $('fxFeed'); if (f) f.innerHTML = feedHtml(); const m = $('fxMsgs'); if (m){ const atEnd = m.scrollHeight - m.scrollTop - m.clientHeight < 60; m.innerHTML = msgsHtml(); if (atEnd) m.scrollTop = m.scrollHeight; }
+    const lsec = document.querySelector('.fx-live'); if (lsec){ const h = liveStrip(); if (h) lsec.outerHTML = h; else lsec.remove(); }
+    const seenC = (d.seenChat || {})[d.code] || 0, un = LIVE.chat.filter(x => x.u !== d.uid && x.t > seenC).length, fa = feedSeen()[d.code] || 0, nf = LIVE.feed.filter(x => x.u !== d.uid && x.t > fa).length;
+    [['chat', un], ['feed', nf]].forEach(([k, n]) => { const b = document.querySelector('.fx-tabs [data-fx="tab:' + k + '"]'); if (!b) return; let e = b.querySelector('em.fx-dot'); if (n && FX.tab !== k){ if (!e){ b.insertAdjacentHTML('beforeend', '<em class="fx-dot"></em>'); e = b.querySelector('em.fx-dot'); } e.textContent = n > 9 ? '9+' : n; } else if (e) e.remove(); });
+  }
+  const evIcon = {pr:'🏆', workout:'🏋️', level:'⭐', streak:'🔥'};
+  function feedHtml(){ const d = duelCfg(), ps = (DUEL && DUEL.players) || [], nm = u => { const p = ps.find(x => x.uid === u); return p ? p.name : '?'; };
+    if (!LIVE.feed.length) return '<small class="insight2"><span>No activity yet. Finish a workout and it shows up here for your friends.</span></small>';
+    return LIVE.feed.map(e => { const mine = e.u === d.uid; return `<div class="fx-ev${mine ? ' me' : ''}"><i>${evIcon[e.type] || '✨'}</i><div class="fx-evb"><div><b>${esc(nm(e.u))}${mine ? ' <span>(you)</span>' : ''}</b> <small>${ago(e.t)}</small></div><div class="fx-evt">${esc(e.txt)}</div><div class="fx-re">${REACT.map(em => { const a = (e.re || {})[em] || [], on = a.includes(d.uid); return `<button type="button" class="${on ? 'on' : ''}" data-fx="react:${esc(e.id)}:${em}">${em}${a.length ? ' <span>' + a.length + '</span>' : ''}</button>`; }).join('')}</div></div></div>`; }).join(''); }
+  function paneFeed(){ const d = duelCfg(); feedSeen()[d.code] = LIVE.feed.length ? LIVE.feed[0].t : Date.now(); save(); if (Date.now() - LIVE.fresh > 1500) setTimeout(liveFetch, 50); return `<div id="fxFeed" class="fx-feed">${feedHtml()}</div>`; }
+  const chatMsgs = () => { const d = duelCfg(), to = FX.chatTo || 'all'; return LIVE.chat.filter(m => to === 'all' ? !m.to : (m.to && ((m.u === d.uid && m.to === to) || (m.u === to && m.to === d.uid)))); };
+  function msgsHtml(){ const d = duelCfg(), L = chatMsgs(); if (!L.length) return '<small class="insight2"><span>No messages yet. Say hi 👋</span></small>';
+    return L.map(m => `<div class="fx-msg${m.u === d.uid ? ' me' : ''}">${m.u === d.uid ? '' : '<small>' + esc(m.name) + '</small>'}<div>${esc(m.txt)}</div><em>${ago(m.t)}</em></div>`).join(''); }
+  function paneChat(){ const ps = ((DUEL && DUEL.players) || []).filter(p => !p.me), to = FX.chatTo || 'all'; if (Date.now() - LIVE.fresh > 1500) setTimeout(liveFetch, 50); setTimeout(() => { seenAll(); const m = $('fxMsgs'); if (m) m.scrollTop = m.scrollHeight; paintLive(); }, 60);
+    return `<div class="fx-chips"><button type="button" class="${to === 'all' ? 'on' : ''}" data-fx="chto:all">👥 <span>Group</span></button>${ps.map(p => `<button type="button" class="${to === p.uid ? 'on' : ''}" data-fx="chto:${esc(p.uid)}">${esc(p.name)}</button>`).join('')}</div>
+      <div id="fxMsgs" class="fx-msgs">${msgsHtml()}</div><div class="fx-send"><input id="fxIn" class="in" maxlength="300" autocomplete="off" placeholder="Message…"><button type="button" data-fx="say" aria-label="Send">➤</button></div>`; }
+  async function sendChat(){ const i = $('fxIn'); if (!i) return; const txt = i.value.trim(); if (!txt) return; const d = duelCfg(); i.value = ''; try { await duelApi('say', {code:d.code, uid:d.uid, txt, to:(FX.chatTo && FX.chatTo !== 'all') ? FX.chatTo : ''}); await liveFetch(); const m = $('fxMsgs'); if (m) m.scrollTop = m.scrollHeight; } catch(x){ i.value = txt; showToast('⚠️ ' + (x.message || x)); } }
+  document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target && e.target.id === 'fxIn'){ e.preventDefault(); sendChat(); } });
+  function paneLeague(){ const lg = DUEL && DUEL.lg; if (!lg) return '<small class="insight2"><span>This needs the updated server.</span></small>'; const d = duelCfg(), me = lg.rows.find(r => r.uid === d.uid), T = lg.tiers, mx = Math.max(1, ...lg.rows.map(r => r.lp));
+    let hero = ''; if (me){ const nx = T[me.tier + 1], cur = T[me.tier][1]; hero = `<div class="fx-lg"><i>${TI[me.tier]}</i><div><b>${tr(TN[me.tier])}</b><small>${me.lp} LP${nx ? ' · ' + (nx[1] - me.lp) + ' <span>to</span> ' + tr(TN[me.tier + 1]) : ''}</small><div class="qbar"><i style="width:${nx ? Math.round((me.lp - cur) / (nx[1] - cur) * 100) : 100}%"></i></div></div></div>`; }
+    return `${hero}<small class="stepnote"><span>Every finished week pays league points: 1st +30, 2nd +20, 3rd +10, anyone who trained +5. A monthly champion gets a crown. Moving up a league pays GP.</span></small>
+      ${lg.rows.map((r, i) => `<div class="qrow fx-m${r.uid === d.uid ? ' me' : ''}" data-fx="prof:${esc(r.uid)}"><i>${i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</i><div class="qtx"><b>${TI[r.tier]} ${esc(r.name)}${r.uid === d.uid ? ' <span>(you)</span>' : ''}</b><small>${tr(TN[r.tier])}${r.w ? ' · 🏆' + r.w : ''}${r.m ? ' · 👑' + r.m : ''}</small><div class="qbar"><i style="width:${Math.round(r.lp / mx * 100)}%"></i></div></div><span class="qxp">${r.lp}<small>LP</small></span></div>`).join('')}
+      ${lg.mwin.filter(m => m.u).length ? '<div class="gen-l"><span>Monthly champions</span></div>' + lg.mwin.filter(m => m.u).map(m => `<div class="qrow"><i>👑</i><div class="qtx"><b>${esc(m.name)}</b><small>${m.ym}</small></div></div>`).join('') : ''}`; }
+  function gpAdd(n, why){ const E = ec(); E.gp += n; E.led.unshift({id:'fx:' + Date.now() + ':' + Math.random().toString(36).slice(2, 5), t:Date.now(), amt:n, why}); try { ghTrim(E); } catch(e){} save(); }
+  function leagueRewards(){ const lg = DUEL && DUEL.lg, d = duelCfg(); if (!lg) return; const me = lg.rows.find(r => r.uid === d.uid); if (!me) return; progress.fxLg = progress.fxLg || {}; const key = d.code + ':' + d.uid, prev = progress.fxLg[key];
+    if (prev == null){ progress.fxLg[key] = me.tier; save(); } else if (me.tier > prev){ progress.fxLg[key] = me.tier; const g = 30 * me.tier; gpAdd(g, 'League: ' + TN[me.tier]); showToast(TI[me.tier] + ' ' + tr(TN[me.tier]) + ' league! +' + g + ' GP'); } else if (me.tier < prev){ progress.fxLg[key] = me.tier; save(); }
+    progress.fxMw = progress.fxMw || {}; lg.mwin.forEach(m => { const k = d.code + ':' + m.ym; if (m.u === d.uid && !progress.fxMw[k]){ progress.fxMw[k] = 1; gpAdd(100, 'Monthly champion ' + m.ym); showToast('👑 Monthly champion! +100 GP'); } }); }
+  /* presence ping + background polling */
+  async function ping(){ const d = duelCfg(); if (!d.code || document.hidden || !V2()) return; const tr0 = workoutTimerStartedAt ? {day:'', since:workoutTimerStartedAt} : null; try { await duelApi('ping', {code:d.code, uid:d.uid, train:tr0}); } catch(e){} }
+  setInterval(ping, 45000); setTimeout(ping, 6000);
+  setInterval(() => { const d = duelCfg(); if (!d.code || document.hidden) return; const act = !!document.querySelector('.panel.active[data-panel="games"]'); if (act || Date.now() - LIVE.fresh > 55000) liveFetch(); }, 8000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden){ setTimeout(ping, 500); setTimeout(liveFetch, 800); } });
+  /* post to the feed after a workout */
+  async function post(type, txt, key, n){ const d = duelCfg(); if (!d.code || SH().feed === false) return; try { await duelApi('post', {code:d.code, uid:d.uid, type, txt, key, n:n || 0}); } catch(e){} }
+  { const _ls = logSession; logSession = async function(){ const n0 = sessions.length, lv0 = (() => { try { return rpg().lv; } catch(e){ return 0; } })(); const r = await _ls.apply(this, arguments);
+    try { if (sessions.length > n0){ const rec = sessions[sessions.length - 1], prev = sessions.slice(0, -1); let sets = 0, prn = 0;
+      for (const e of rec.exercises){ sets += e.sets.length; const old = Math.max(0, ...prev.flatMap(s => (s.exercises || []).filter(x => sameEx(x.name, e.name)).flatMap(x => x.sets.map(t => +t.weight || 0)))), top = Math.max(...e.sets.map(t => +t.weight || 0)); if (old > 0 && top > old && prn < 2){ prn++; await post('pr', '🏆 ' + e.name + ' ' + top + ' kg', 'p' + rec.id + prn, top); } }
+      await post('workout', (rec.dayName || 'Workout') + ' · ' + sets + ' sets · ' + Math.round(rec.volume || 0).toLocaleString() + ' kg', 'w' + rec.id, rec.volume);
+      const lv1 = rpg().lv; if (lv0 && lv1 > lv0) await post('level', '⭐ Level ' + lv1, 'l' + lv1, lv1);
+      const st = progress.streakDays || 0; progress.fxStreak = progress.fxStreak || 0; if ([3, 5, 10, 20, 30, 50, 100].includes(st) && st > progress.fxStreak){ progress.fxStreak = st; save(); await post('streak', '🔥 ' + st + '-streak', 's' + st, st); }
+      _lp = 0; setTimeout(liveFetch, 400); } } catch(e){ console.warn('feed post', e); } return r; }; }
+  { const _sr = settleRewards; settleRewards = function(){ _sr.apply(this, arguments); try { leagueRewards(); } catch(e){} }; }
 
   /* ---- events ---- */
   window.addEventListener('click', async e => {
@@ -9497,14 +9587,18 @@ function dsIcons(){
     else if (a === 'chalto'){ $('modalFx').classList.remove('active'); FX.tab = 'chal'; FX.adding = 'chal'; FX.to = v; renderDuel(); }
     else if (a === 'chalgo'){ const d = duelCfg(); try { await duelApi('challenge', {code:d.code, uid:d.uid, kind:FX.mk, days:FX.md, to:FX.to, tz:-new Date().getTimezoneOffset()}); FX.adding = false; showToast('⚔️ Challenge sent'); _lp = 0; await duelRefresh(); } catch(x){ showToast('⚠️ ' + (x.message || x)); } }
     else if (a === 'resp'){ const [id, ok] = v.split(':'), d = duelCfg(); try { await duelApi('respond', {code:d.code, uid:d.uid, id, accept:ok === '1'}); await duelRefresh(); } catch(x){ showToast('⚠️ ' + (x.message || x)); } }
+    else if (a === 'react'){ const [id, em] = v.split(':'), d = duelCfg(); try { await duelApi('react', {code:d.code, uid:d.uid, id, emoji:em}); await liveFetch(); } catch(x){ showToast('⚠️ ' + (x.message || x)); } }
+    else if (a === 'say') sendChat();
+    else if (a === 'chto'){ FX.chatTo = v; renderDuel(); setTimeout(() => { const m = $('fxMsgs'); if (m) m.scrollTop = m.scrollHeight; }, 30); }
     else if (a === 'prof') profile(v);
     else if (a === 'close') $('modalFx').classList.remove('active');
     else if (a === 'nudge'){ const [to, em] = v.split(':'), d = duelCfg(); try { await duelApi('nudge', {code:d.code, uid:d.uid, to, emoji:em}); showToast(em + ' sent'); } catch(x){ showToast('⚠️ ' + (x.message || x)); } }
     else if (a === 'plan'){ const d = duelCfg(); try { const j = await duelApi('plan', null, '?code=' + encodeURIComponent(d.code) + '&uid=' + encodeURIComponent(d.uid) + '&of=' + encodeURIComponent(v)); $('modalFx').classList.remove('active'); previewImport('#plan=' + j.code); } catch(x){ showToast('⚠️ ' + (x.message || x)); } }
-    else if (a === 'shs' || a === 'shp'){ SH()[a === 'shs' ? 'stats' : 'plan'] = t.checked; save(); _lp = 0; duelPush(true); }
+    else if (a === 'shs' || a === 'shp' || a === 'shf'){ SH()[a === 'shs' ? 'stats' : a === 'shf' ? 'feed' : 'plan'] = t.checked; save(); _lp = 0; duelPush(true); }
   }, true);
-  document.addEventListener('change', e => { const t = e.target.closest && e.target.closest('input[data-fx="shs"],input[data-fx="shp"]'); if (!t) return; SH()[t.dataset.fx === 'shs' ? 'stats' : 'plan'] = t.checked; save(); _lp = 0; duelPush(true); });
+  document.addEventListener('change', e => { const t = e.target.closest && e.target.closest('input[data-fx="shs"],input[data-fx="shp"],input[data-fx="shf"]'); if (!t) return; SH()[t.dataset.fx === 'shs' ? 'stats' : t.dataset.fx === 'shf' ? 'feed' : 'plan'] = t.checked; save(); _lp = 0; duelPush(true); });
   /* a plan or workout changed: refresh what friends see */
+  { const _r2 = renderDuel; renderDuel = function(){ const i = $('fxIn'), v = i ? i.value : '', f = i && document.activeElement === i; _r2.apply(this, arguments); const j = $('fxIn'); if (j){ j.value = v; if (f) j.focus(); } try { paintLive(); } catch(e){} }; }
   try { renderDuel(); } catch(e){}
 })();
 /* ---------- v25: nutrition tab + AI coach actions ---------- */
@@ -10852,7 +10946,7 @@ window.NUT = {dump:() => JSON.stringify(NU), load:o => { if (!o || typeof o !== 
 })();
 
 /* ================= v65: friends-only games, settings menu, hero Build page, active update prompt ================= */
-const APP_VER = 'tracky-v65';
+const APP_VER = 'tracky-v68';
 /* 1) games: only the friends duel remains; finishing a workout now pays GP directly (no ghost hunt) */
 ghEvent = function(evId, kind, ratio){
   if (kind !== 'fin') return null;
@@ -10935,3 +11029,44 @@ setTimeout(() => checkUpdate(true), 3500);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(() => checkUpdate(), 800); });
 window.addEventListener('online', () => setTimeout(() => checkUpdate(), 800));
 setInterval(() => { if (!document.hidden) checkUpdate(); }, 300000);
+
+/* ================= v67: ghost race result animation + sounds ================= */
+let GRAC = null;
+function ghRaceSound(win){
+  if (settings.ghostSound === false) return;
+  try { GRAC = GRAC || new (window.AudioContext || window.webkitAudioContext)(); const c = GRAC; if (c.state === 'suspended') c.resume(); const T = c.currentTime + .05;
+    const note = (f, t, d, type, vol, bend) => { const o = c.createOscillator(), g = c.createGain(), fl = c.createBiquadFilter(); o.type = type; o.frequency.setValueAtTime(f, T + t); if (bend) o.frequency.exponentialRampToValueAtTime(bend, T + t + d); fl.type = 'lowpass'; fl.frequency.value = type === 'sawtooth' ? 1600 : 6000; o.connect(fl); fl.connect(g); g.connect(c.destination); g.gain.setValueAtTime(.0001, T + t); g.gain.exponentialRampToValueAtTime(vol, T + t + .02); g.gain.exponentialRampToValueAtTime(.0001, T + t + d); o.start(T + t); o.stop(T + t + d + .05); };
+    if (win){
+      [[523.25, 0], [659.25, .11], [783.99, .22], [1046.5, .33]].forEach(([f, t]) => { note(f, t, .32, 'triangle', .22); note(f * 2, t, .25, 'sine', .07); });
+      [[1046.5, .6], [1318.5, .6], [1568, .6]].forEach(([f, t]) => { note(f, t, 1.1, 'triangle', .16); note(f / 2, t, 1.1, 'sine', .12); });
+      for (let i = 0; i < 7; i++) note(2093 + i * 220, 1.0 + i * .07, .22, 'sine', .05);
+      note(130.8, .6, 1.2, 'sine', .25);
+    } else {
+      [[392, 0, .38], [370, .42, .38], [349.2, .84, .38]].forEach(([f, t, d]) => note(f, t, d, 'sawtooth', .17, f * .94));
+      note(311, 1.28, 1.2, 'sawtooth', .2, 196); const vib = c.createOscillator(), vg = c.createGain(); vib.frequency.value = 6; vg.gain.value = 9; vib.connect(vg);
+      note(98, 1.3, 1.1, 'sine', .3, 55); note(220, .0, .2, 'square', .04, 110);
+    }
+  } catch(e){}
+}
+function ghostResult(win, r, g){
+  const old = $('ghRes'); if (old) old.remove(); const N = v => Math.round(toDisp(v)).toLocaleString(), u = isLb() ? 'lb' : 'kg';
+  const you = r.you || 0, gh = r.fd || r.gst || 0, diff = Math.abs(you - gh), pct = gh ? Math.round(diff / gh * 100) : 0;
+  const ghost = `<svg class="gr-ghost" viewBox="0 0 120 130" aria-hidden="true"><defs><linearGradient id="ggr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${win ? '#eaf6ff' : '#ffd0e6'}"/><stop offset="1" stop-color="${win ? '#8fb8ff' : '#ff5fa2'}"/></linearGradient></defs><path d="M12 118V54C12 26 33 8 60 8s48 18 48 46v64l-14-12-13 12-13-12-13 12-13-12-13 12z" fill="url(#ggr)" opacity=".95"/>${win ? '<path d="M38 52l14 8M38 60l14-8M70 52l14 8M70 60l14-8" stroke="#1a2b66" stroke-width="4" stroke-linecap="round"/><path d="M48 84q12-9 24 0" stroke="#1a2b66" stroke-width="4.5" fill="none" stroke-linecap="round"/>' : '<ellipse cx="46" cy="54" rx="7" ry="9" fill="#2a0a1c"/><ellipse cx="74" cy="54" rx="7" ry="9" fill="#2a0a1c"/><path d="M42 80q18 20 36 0z" fill="#2a0a1c"/><path d="M44 80h32" stroke="#fff" stroke-width="3"/>'}</svg>`;
+  const d = document.createElement('div'); d.id = 'ghRes'; d.className = win ? 'win' : 'lose'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-live', 'polite');
+  d.innerHTML = (win ? '<div class="gr-rays"></div><canvas></canvas>' : '<div class="gr-rain"></div>') + `<div class="gr-stage">${ghost}${win ? '<div class="gr-trophy">🏆</div>' : ''}</div>
+    <div class="gr-t">${win ? tr('YOU BEAT THE GHOST!') : tr('THE GHOST WON')}</div>
+    <div class="gr-s">${win ? (pct ? '+' + pct + '% ' + tr('more than your ghost') : tr('Tied it and took the win')) : tr('Short by') + ' ' + N(diff) + ' ' + u + (pct ? ' (' + pct + '%)' : '') + ' · ' + tr('Beat it next session')}</div>
+    <div class="gr-cmp"><div><b>${N(you)}</b><small>${tr('You')} (${u})</small></div><div><b>${N(gh)}</b><small>${tr('Ghost')} (${u})</small></div></div>
+    ${win ? `<div class="gr-xp">+15 XP${g && g.streak > 1 ? ' · 🔥 ' + g.streak + ' ' + tr('wins in a row') : ''}</div>` : (g && g.wins ? `<small class="gr-s" style="animation-delay:1.7s">🏆 ${g.wins} ${tr('wins so far')}</small>` : '')}
+    <div class="gr-tap">${tr('Tap to continue')}</div>`;
+  document.body.appendChild(d);
+  const close = () => { d.style.transition = 'opacity .3s'; d.style.opacity = '0'; cancelAnimationFrame(raf); setTimeout(() => d.remove(), 320); };
+  let raf = 0; d.addEventListener('click', close); setTimeout(() => { if (d.isConnected) close(); }, win ? 7000 : 6000);
+  ghRaceSound(win); buzz(win ? [60, 40, 60, 40, 140] : [220, 90, 90]);
+  if (win){ const cv = d.querySelector('canvas'), cx = cv.getContext('2d'), W = cv.width = innerWidth, H = cv.height = innerHeight, cols = ['#ffd45a', '#5aa9ff', '#ff6fa8', '#7affb2', '#fff'], P = []; let t0 = performance.now();
+    const burst = (n, x, y) => { for (let i = 0; i < n; i++){ const a = Math.random() * 6.283, v = 4 + Math.random() * 9; P.push({x, y, vx:Math.cos(a) * v, vy:Math.sin(a) * v - 5, r:3 + Math.random() * 5, c:cols[i % cols.length], rot:Math.random() * 6, vr:(Math.random() - .5) * .4, life:1}); } };
+    setTimeout(() => burst(70, W / 2, H * .4), 1400); setTimeout(() => burst(50, W * .25, H * .5), 1700); setTimeout(() => burst(50, W * .75, H * .5), 1900);
+    const step = () => { cx.clearRect(0, 0, W, H); P.forEach(p => { p.vy += .28; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.life -= .006; cx.save(); cx.globalAlpha = Math.max(0, p.life); cx.translate(p.x, p.y); cx.rotate(p.rot); cx.fillStyle = p.c; cx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r); cx.restore(); }); for (let i = P.length - 1; i >= 0; i--) if (P[i].life <= 0 || P[i].y > H + 40) P.splice(i, 1); raf = requestAnimationFrame(step); };
+    step(); }
+}
+window.ghostResult = ghostResult;

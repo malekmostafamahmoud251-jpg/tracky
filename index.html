@@ -1496,6 +1496,51 @@ button.bclaim[data-tone]{background:linear-gradient(135deg,#f5a623,#ff7a45)!impo
 #stBack{display:flex!important;width:100%;justify-content:flex-start;background:transparent!important;color:var(--accent)!important;border:0!important;box-shadow:none!important;font-weight:800;padding:.4rem 0;margin:.2rem 0 .3rem;min-height:40px}
 #appVerBox .vrow{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin:.3rem 0}
 #updBar span{max-width:60vw}
+
+/* v66 friends live */
+.fx-tabs{display:flex!important;overflow-x:auto;scrollbar-width:none}.fx-tabs::-webkit-scrollbar{display:none}.fx-tabs button{flex:1 0 auto!important;min-width:62px}
+.fx-dot2{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--border);vertical-align:middle;margin-inline-start:.2rem}.fx-dot2.on{background:#22c55e;box-shadow:0 0 6px #22c55e}.fx-dot2.tr{background:none;width:auto;height:auto;border-radius:0;box-shadow:none;font-size:.85rem}
+.fx-live{display:flex;flex-wrap:wrap;gap:.4rem;margin:.2rem 0 .6rem}.fx-live span{background:var(--ex);border:1px solid var(--border);border-radius:2rem;padding:.25rem .65rem;font-size:.78rem;font-weight:700}.fx-live span.tr{border-color:var(--accent);color:var(--accent)}
+.fx-ev{display:flex;gap:.7rem;padding:.7rem .2rem;border-bottom:1px solid var(--border)}.fx-ev>i{font-style:normal;font-size:1.5rem}.fx-evb{flex:1;min-width:0}.fx-evb small{color:var(--sub);margin-inline-start:.3rem}.fx-evt{font-weight:700;margin:.15rem 0 .35rem;overflow-wrap:anywhere}.fx-ev.me .fx-evt{color:var(--accent)}
+.fx-re{display:flex;gap:.35rem;flex-wrap:wrap}.fx-re button{background:var(--ex)!important;color:var(--text)!important;border:1px solid var(--border)!important;box-shadow:none!important;border-radius:2rem;padding:.2rem .6rem;min-height:30px;font-size:.85rem}.fx-re button.on{border-color:var(--accent)!important;background:color-mix(in srgb,var(--accent) 18%,transparent)!important}
+.fx-msgs{display:flex;flex-direction:column;gap:.4rem;max-height:46vh;min-height:140px;overflow-y:auto;padding:.4rem .1rem;margin:.4rem 0}.fx-msg{align-self:flex-start;max-width:82%;background:var(--ex);border-radius:14px 14px 14px 4px;padding:.4rem .7rem;overflow-wrap:anywhere}.fx-msg.me{align-self:flex-end;background:var(--accent);color:#fff;border-radius:14px 14px 4px 14px}.fx-msg small{display:block;font-weight:800;color:var(--accent);font-size:.7rem}.fx-msg.me small{display:none}.fx-msg em{display:block;font-style:normal;font-size:.62rem;opacity:.65;text-align:end}
+.fx-send{display:flex;gap:.4rem}.fx-send input{flex:1;min-width:0}.fx-send button{background:var(--accent)!important;color:#fff!important;border:0!important;border-radius:12px;min-width:48px;min-height:44px;font-size:1.1rem}
+.fx-lg{display:flex;gap:.9rem;align-items:center;background:var(--ex);border-radius:16px;padding:.8rem 1rem;margin:.2rem 0 .6rem}.fx-lg>i{font-style:normal;font-size:2.4rem}.fx-lg>div{flex:1}.fx-lg b{font-size:1.1rem;display:block}.fx-lg small{color:var(--sub);font-weight:700}
+.fx-ph{display:flex;gap:.8rem;align-items:center;margin-bottom:.3rem}.fx-pimg{width:72px;height:72px;object-fit:contain;border-radius:16px;background:var(--ex)}
+
+/* v67 ghost race result */
+#ghRes{position:fixed;inset:0;z-index:3000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.6rem;text-align:center;color:#fff;padding:1.5rem;overflow:hidden;animation:ghrIn .35s ease both;cursor:pointer}
+#ghRes.win{background:radial-gradient(circle at 50% 40%,#1d4ed8 0,#0b1b4d 55%,#050a1f 100%)}
+#ghRes.lose{background:radial-gradient(circle at 50% 40%,#4a1230 0,#1a0a22 55%,#07040d 100%)}
+@keyframes ghrIn{from{opacity:0}to{opacity:1}}
+#ghRes canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#ghRes .gr-rays{position:absolute;left:50%;top:40%;width:150vmax;height:150vmax;margin:-75vmax 0 0 -75vmax;background:repeating-conic-gradient(from 0deg,rgba(255,215,90,.16) 0 7deg,transparent 7deg 20deg);animation:grSpin 16s linear infinite;-webkit-mask-image:radial-gradient(circle,#000 0,transparent 55%);mask-image:radial-gradient(circle,#000 0,transparent 55%)}
+@keyframes grSpin{to{transform:rotate(360deg)}}
+#ghRes .gr-stage{position:relative;width:190px;height:190px;display:flex;align-items:center;justify-content:center}
+#ghRes .gr-ghost{width:150px;height:150px;filter:drop-shadow(0 0 22px rgba(120,200,255,.8))}
+#ghRes.win .gr-ghost{animation:grDie 1.4s .5s cubic-bezier(.5,0,.8,.4) forwards,grShake .5s .15s 2}
+#ghRes.lose .gr-ghost{filter:drop-shadow(0 0 26px rgba(255,70,140,.85));animation:grLaugh 2.2s ease-in-out infinite}
+@keyframes grShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-9px) rotate(-4deg)}75%{transform:translateX(9px) rotate(4deg)}}
+@keyframes grDie{0%{transform:scale(1) rotate(0);opacity:1}40%{transform:scale(1.15) rotate(-8deg);opacity:1}100%{transform:scale(.1) rotate(220deg) translateY(-60px);opacity:0}}
+@keyframes grLaugh{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-14px) scale(1.07)}}
+#ghRes .gr-trophy{position:absolute;font-size:5.6rem;opacity:0;transform:scale(.1);animation:grPop .7s 1.5s cubic-bezier(.2,1.6,.4,1) forwards;filter:drop-shadow(0 0 24px rgba(255,200,60,.9))}
+@keyframes grPop{to{opacity:1;transform:scale(1)}}
+#ghRes .gr-t{font-size:clamp(1.7rem,8vw,2.6rem);font-weight:900;letter-spacing:.04em;line-height:1.05;opacity:0;animation:grUp .6s .9s ease forwards;text-shadow:0 4px 28px rgba(0,0,0,.5)}
+#ghRes.win .gr-t{background:linear-gradient(180deg,#fff,#ffd45a);-webkit-background-clip:text;background-clip:text;color:transparent;animation-delay:1.3s}
+#ghRes.lose .gr-t{color:#ff9bc4;animation-delay:.6s}
+#ghRes .gr-s{opacity:0;animation:grUp .6s 1.6s ease forwards;color:#cfd8ff;font-weight:700}
+#ghRes.lose .gr-s{animation-delay:1.1s}
+#ghRes .gr-cmp{display:flex;gap:.8rem;align-items:stretch;justify-content:center;opacity:0;animation:grUp .6s 1.9s ease forwards;margin-top:.3rem}
+#ghRes.lose .gr-cmp{animation-delay:1.4s}
+#ghRes .gr-cmp div{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:.6rem 1rem;min-width:104px;backdrop-filter:blur(4px)}
+#ghRes .gr-cmp b{display:block;font-size:1.35rem}#ghRes .gr-cmp small{opacity:.75;font-weight:700}
+#ghRes .gr-xp{display:inline-block;background:linear-gradient(90deg,#ffb300,#ff7a00);color:#2a1500;font-weight:900;border-radius:2rem;padding:.35rem 1rem;opacity:0;animation:grUp .5s 2.2s ease forwards}
+#ghRes .gr-tap{position:absolute;bottom:calc(1.4rem + env(safe-area-inset-bottom));font-size:.78rem;opacity:0;color:#fff;animation:grTap 1s 2.8s forwards}
+@keyframes grUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes grTap{to{opacity:.6}}
+#ghRes.lose::after{content:'';position:absolute;inset:0;background:radial-gradient(circle,transparent 45%,rgba(0,0,0,.7));pointer-events:none}
+#ghRes.lose .gr-rain{position:absolute;inset:0;background:repeating-linear-gradient(100deg,transparent 0 14px,rgba(255,120,180,.07) 14px 15px);animation:grRain 1.2s linear infinite}
+@keyframes grRain{to{background-position:-40px 120px}}
 </style>
 </head>
 <body>
@@ -1799,6 +1844,6 @@ button.bclaim[data-tone]{background:linear-gradient(135deg,#f5a623,#ff7a45)!impo
 <script>try{var __r=JSON.parse(localStorage.getItem('trackyResume')||'null');if(__r&&Date.now()-__r.t<43200000)document.documentElement.classList.add('resume')}catch(e){}</script><div id="splash" aria-label="Tracky is loading"><div class="sp-glow"></div><div class="sp-logo"><i class="sp-ring"></i><i class="sp-ring r2"></i><img src="icons/icon-512.png" alt="Tracky logo"></div><div class="sp-word" aria-hidden="true"><i>T</i><i>R</i><i>A</i><i>C</i><i>K</i><i>Y</i></div><div class="sp-tag">Build · Track · Coach</div><div class="sp-bar"><i></i></div></div>
 <div class="toast" id="toast"></div>
 
-<script src="app.js?v=6c67a685" defer></script>
+<script src="app.js?v=68da4ba6" defer></script>
 </body>
 </html>
