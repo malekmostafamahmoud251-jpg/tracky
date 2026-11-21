@@ -1541,6 +1541,7 @@ button.bclaim[data-tone]{background:linear-gradient(135deg,#f5a623,#ff7a45)!impo
 #ghRes.lose::after{content:'';position:absolute;inset:0;background:radial-gradient(circle,transparent 45%,rgba(0,0,0,.7));pointer-events:none}
 #ghRes.lose .gr-rain{position:absolute;inset:0;background:repeating-linear-gradient(100deg,transparent 0 14px,rgba(255,120,180,.07) 14px 15px);animation:grRain 1.2s linear infinite}
 @keyframes grRain{to{background-position:-40px 120px}}
+.xalt{display:flex;flex-wrap:wrap;gap:.35rem;margin:.35rem 0 .1rem}.xalt:empty{display:none}.xalt .xchip{font-size:.72rem}.xalt b{font-size:.7rem;opacity:.7;align-self:center}
 </style>
 </head>
 <body>
@@ -1691,6 +1692,7 @@ button.bclaim[data-tone]{background:linear-gradient(135deg,#f5a623,#ff7a45)!impo
   <h3>🏋️ <span id="exTitle">Add Exercise</span></h3>
   <div class="exsearch"><span class="exs-ic">🔍</span><input type="text" id="exNameInput" autocomplete="off" placeholder="Search or type a new exercise"><button type="button" id="exClear" aria-label="Clear">✕</button></div>
   <small class="insight2" id="exInfo"></small>
+  <div id="exAlt" class="xalt"></div>
   <div id="exPicker">
     <div class="exchips" id="exMuscleChips"></div>
     <div class="exchips" id="exEquipChips"></div>
@@ -1844,6 +1846,6 @@ button.bclaim[data-tone]{background:linear-gradient(135deg,#f5a623,#ff7a45)!impo
 <script>try{var __r=JSON.parse(localStorage.getItem('trackyResume')||'null');if(__r&&Date.now()-__r.t<43200000)document.documentElement.classList.add('resume')}catch(e){}</script><div id="splash" aria-label="Tracky is loading"><div class="sp-glow"></div><div class="sp-logo"><i class="sp-ring"></i><i class="sp-ring r2"></i><img src="icons/icon-512.png" alt="Tracky logo"></div><div class="sp-word" aria-hidden="true"><i>T</i><i>R</i><i>A</i><i>C</i><i>K</i><i>Y</i></div><div class="sp-tag">Build · Track · Coach</div><div class="sp-bar"><i></i></div></div>
 <div class="toast" id="toast"></div>
 
-<script src="app.js?v=79d1ef7c" defer></script>
+<script src="app.js?v=cea05352" defer></script>
 </body>
 </html>
