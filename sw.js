@@ -1,5 +1,5 @@
 /* Tracky service worker: instant start from cache, silent update in the background, push notifications */
-const VER = 'tracky-v68', SHELL = ['manifest.json', 'icons/icon-192.png', 'icons/icon-512.png'];
+const VER = 'tracky-v69', SHELL = ['manifest.json', 'icons/icon-192.png', 'icons/icon-512.png'];
 const ABS = u => new URL(u, self.registration.scope).href;
 
 /* store index.html and the app script it points to (script first, so the page never references a missing file) */

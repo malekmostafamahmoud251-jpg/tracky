@@ -8088,11 +8088,14 @@ async function voiceCloudStart(){
   catch(e){ stream.getTracks().forEach(t => t.stop()); VBUSY = false; return vSay('⚠️ ' + String((e && e.message) || e), 'bad'); }
   const src = ctx.createMediaStreamSource(stream), proc = ctx.createScriptProcessor(4096, 1, 1), mute = ctx.createGain(); mute.gain.value = 0;
   const C = VCLOUD = {stream, ctx, src, proc, mute, chunks:[], speech:false, quiet:0, t0:performance.now(), done:false, rate:ctx.sampleRate};
-  proc.onaudioprocess = e => { if (C.done) return; const d = e.inputBuffer.getChannelData(0); C.chunks.push(new Float32Array(d)); let s = 0; for (let i = 0; i < d.length; i++) s += d[i] * d[i];
-    const rms = Math.sqrt(s / d.length), dt = d.length / C.rate, el = performance.now() - C.t0;
-    if (el < 500){ C.floor = Math.max(C.floor || 0, rms); } const th = Math.max(.015, (C.floor || 0) * 2.6);
-    if (rms > th){ C.speech = true; C.quiet = 0; } else if (C.speech) C.quiet += dt;
-    if ((C.speech && C.quiet > 1.5) || el > 14000 || (!C.speech && el > 7000)) setTimeout(() => voiceCloudStop(true), 0); };
+  C.peak = 0; C.min = 1; C.ema = 0;
+  proc.onaudioprocess = e => { if (C.done) return; const d = e.inputBuffer.getChannelData(0); C.chunks.push(new Float32Array(d)); let s2 = 0, pk = 0; for (let i = 0; i < d.length; i++){ s2 += d[i] * d[i]; const a = d[i] < 0 ? -d[i] : d[i]; if (a > pk) pk = a; }
+    const rms = Math.sqrt(s2 / d.length), dt = d.length / C.rate, el = performance.now() - C.t0; C.peak = Math.max(C.peak, pk); C.ema = C.ema ? C.ema * .6 + rms * .4 : rms;
+    if (el > 300) C.min = Math.min(C.min, C.ema);                       /* the quietest moment so far = the room noise (never the first half second, the user may already be talking) */
+    const th = Math.max(.012, C.min * 3.2);
+    if (C.ema > th){ C.speech = true; C.quiet = 0; C.talk = (C.talk || 0) + dt; } else if (C.speech) C.quiet += dt;
+    if (C.speech && C.talk > .25 && C.quiet > 1.4) setTimeout(() => voiceCloudStop(true), 0);
+    else if (el > 14000 || (!C.speech && el > 9000)) setTimeout(() => voiceCloudStop(true), 0); };
   src.connect(proc); proc.connect(mute); mute.connect(ctx.destination);
   VBUSY = false; vMicOn(true); vSay('🎙️ ' + tr('Listening… tap the mic when you finish'));
 }
@@ -8102,7 +8105,7 @@ async function voiceCloudStop(send){
   try { C.stream.getTracks().forEach(t => t.stop()); } catch(e){}
   try { C.ctx.close(); } catch(e){}
   vMicOn(false); if (!send) return;
-  if (!C.speech) return vSay(tr('Did not hear anything. Tap the mic and try again.'));
+  if (performance.now() - C.t0 < 600 || (!C.speech && C.peak < .02)) return vSay(tr('Did not hear anything. Tap the mic and try again.'));
   vSay('⏳ ' + tr('Understanding…')); VBUSY = true;
   try {
     const text = await voiceTranscribe(voiceWav(C.chunks, C.rate)); VBUSY = false;
@@ -8125,6 +8128,12 @@ async function voiceTranscribe(b64){
   const sys = 'You are a speech-to-text engine for a gym and nutrition app. Output only the exact words spoken, nothing else.';
   const hint = settings.voiceLang || ({ar:'ar-EG', fr:'fr-FR', en:'en-US'}[LANG] || 'en-US'), common = 'Transcribe exactly what was said, word for word. The speaker is Egyptian and often mixes Egyptian Arabic with English words (food names, gym terms, exercise and brand names). Keep Arabic words in Arabic script and English words in English letters. Never translate, paraphrase, correct or invent words. Write numbers as digits. Main language: ' + hint + '. Reply with the transcript only, no quotes, no explanation. If there is no clear speech, reply with an empty line.';
   const prompt = VT ? common + ' The speech is about food the user ate, a question, or a command for a fitness app.' : common + ' The speech is an exercise name, a weight and reps (sometimes sets). Keep units (kg, reps, sets) as spoken. If the speaker says one of these exercises, even with an Arabic accent or in Arabic letters, write it exactly as listed: ' + names + '.';
+  if (APP_CONFIG.coachUrl){ const l2 = String(hint).slice(0, 2).toLowerCase(), food = VT ? 'بيض مسلوق، صدور فراخ، رز أبيض، لبن، زبادي يوناني، whey protein, oats، تونة، ' : '';
+    try { const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 25000);
+      const r = await fetch(pushUrl('/stt'), {method:'POST', headers:Object.assign({'Content-Type':'application/json'}, authHdr()), body:JSON.stringify({audio:b64, lang:/^(ar|en|fr)$/.test(l2) ? l2 : '', prompt:food + (names || 'Bench press, Lat pulldown, Squat, Deadlift, Shoulder press') + '، 60 كيلو، 8 تكرارات'}), signal:ctl.signal}); clearTimeout(tm);
+      if (r.ok){ const j = await r.json(); return String(j.text || '').replace(/["“”]/g, '').trim(); }
+      if (r.status === 429) throw new Error(LANG === 'ar' ? 'خلصت حد الصوت النهاردة.' : 'Daily voice limit reached.');
+    } catch(e){ if (/limit|حد/i.test(String(e.message))) throw e; } }
   const parts = [{text:prompt}, {inlineData:{mimeType:'audio/wav', data:b64}}]; let out = '';
   if (!(settings && settings.geminiKey) && APP_CONFIG.coachUrl){ const t0 = window._askTemp, g0 = window._askGen; window._askTemp = 0; window._askGen = {topP:.1}; try { await askViaServer(sys, [], parts, t => { out = t; }, 1024); } finally { window._askTemp = t0; window._askGen = g0; } }
   else {
@@ -10946,7 +10955,7 @@ window.NUT = {dump:() => JSON.stringify(NU), load:o => { if (!o || typeof o !== 
 })();
 
 /* ================= v65: friends-only games, settings menu, hero Build page, active update prompt ================= */
-const APP_VER = 'tracky-v68';
+const APP_VER = 'tracky-v69';
 /* 1) games: only the friends duel remains; finishing a workout now pays GP directly (no ghost hunt) */
 ghEvent = function(evId, kind, ratio){
   if (kind !== 'fin') return null;
