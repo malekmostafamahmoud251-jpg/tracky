@@ -1542,6 +1542,35 @@ button.bclaim[data-tone]{background:linear-gradient(135deg,#f5a623,#ff7a45)!impo
 #ghRes.lose .gr-rain{position:absolute;inset:0;background:repeating-linear-gradient(100deg,transparent 0 14px,rgba(255,120,180,.07) 14px 15px);animation:grRain 1.2s linear infinite}
 @keyframes grRain{to{background-position:-40px 120px}}
 .xalt{display:flex;flex-wrap:wrap;gap:.35rem;margin:.35rem 0 .1rem}.xalt:empty{display:none}.xalt .xchip{font-size:.72rem}.xalt b{font-size:.7rem;opacity:.7;align-self:center}
+
+/* v74 weekly trading cards */
+.wcgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:.75rem}
+.wc{--c1:#8a94a6;--c2:#4a5365;--gl:rgba(255,255,255,.25);position:relative;aspect-ratio:5/7;border-radius:1.1em!important;padding:.28em!important;background:linear-gradient(150deg,var(--c1),var(--c2))!important;font-size:.62rem;color:#fff!important;cursor:pointer;box-shadow:0 .4em 1.2em rgba(0,0,0,.28)!important;overflow:hidden;transition:transform .2s;border:0!important;text-align:left;font-family:inherit;width:100%;height:auto;min-height:0;display:block;font-weight:400}
+.wc:hover{transform:translateY(-3px) rotate(-.6deg)}
+.wc.r-rare{--c1:#4aa3ff;--c2:#1d4ed8}.wc.r-epic{--c1:#c084fc;--c2:#6d28d9}.wc.r-legendary{--c1:#ffd75e;--c2:#d97706}
+.wc-in{position:relative;height:100%;border-radius:.85em;background:radial-gradient(120% 80% at 50% 0%,rgba(255,255,255,.14),transparent 55%),linear-gradient(180deg,#101a3a,#0a1128);padding:.55em .6em;display:flex;flex-direction:column;align-items:center;overflow:hidden}
+.wc-k{position:absolute;display:flex;flex-direction:column;align-items:center;line-height:1;font-weight:900;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+.wc-k b{font-size:1.9em}.wc-k span{font-size:1.25em;color:var(--c1)}
+.wc-k.tl{left:.55em;top:.45em}.wc-k.br{right:.55em;bottom:.45em;transform:rotate(180deg)}
+.wc-art{margin-top:.9em;width:5.6em;height:5.6em;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 30%,var(--c1),var(--c2));box-shadow:0 0 1.4em var(--gl),inset 0 0 .8em rgba(0,0,0,.35);font-size:1em}
+.wc-art i{font-style:normal;font-size:2.9em;filter:drop-shadow(0 .1em .15em rgba(0,0,0,.4))}
+.wc-t{margin-top:.55em;font-weight:900;font-size:1.15em;letter-spacing:.02em;text-align:center}
+.wc-s{opacity:.7;font-size:.9em;text-align:center}
+.wc-r{margin:.4em 0 .25em;padding:.12em .7em;border-radius:99em;background:linear-gradient(90deg,var(--c1),var(--c2));font-weight:900;font-size:.82em;letter-spacing:.12em;text-transform:uppercase}
+.wc-st{list-style:none;margin:.2em 0 0;padding:0;width:100%;display:grid;gap:.18em;font-weight:700;font-size:.98em}
+.wc-st li{display:flex;justify-content:space-between;gap:.4em;background:rgba(255,255,255,.07);border-radius:.5em;padding:.15em .5em}
+.wc-st li b{font-weight:900}
+.wc-tag{position:absolute;top:.5em;right:.5em;background:#ef4444;color:#fff;border-radius:99em;padding:.05em .55em;font-weight:900;font-size:.85em;z-index:2}
+.wc-tag.live{background:#22a06b}
+.wc.live{outline:2px dashed rgba(255,255,255,.55);outline-offset:-4px}
+.wc.empty{filter:grayscale(1);opacity:.55}
+.wc.r-epic::after,.wc.r-legendary::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.35) 48%,transparent 66%);background-size:250% 100%;animation:wcfoil 3.6s linear infinite;pointer-events:none;mix-blend-mode:overlay}
+@keyframes wcfoil{from{background-position:130% 0}to{background-position:-130% 0}}
+@media (prefers-reduced-motion:reduce){.wc::after{animation:none!important}}
+.wcbigwrap{display:flex;justify-content:center;margin-bottom:.8rem}.wcbigwrap .wc{width:min(260px,70vw);font-size:1rem;cursor:default}.wc-in{text-transform:none}.wcbigwrap .wc:hover{transform:none}
+.wcd{display:grid;gap:.35rem;font-size:.9rem}.wcd .r{display:flex;justify-content:space-between;gap:.6rem;border-bottom:1px solid rgba(128,128,128,.18);padding:.25rem 0}
+.wcd .mb{height:.5rem;border-radius:99px;background:rgba(128,128,128,.2);overflow:hidden;flex:1;margin:.35rem 0 0 .5rem}.wcd .mb i{display:block;height:100%;background:var(--accent)}
+.xalt .tip{flex-basis:100%}
 </style>
 </head>
 <body>
@@ -1657,6 +1686,7 @@ button.bclaim[data-tone]{background:linear-gradient(135deg,#f5a623,#ff7a45)!impo
   <div class="box" id="charBox"></div>
   <div class="box"><h3>🏅 Personal Records <span id="prCount" style="font-size:.9rem;color:var(--sub)"></span></h3><div id="prLog"></div></div>
   <div class="box"><h3>👹 Weekly Boss</h3><div id="boss"></div></div>
+  <div class="box" id="wcBox"><h3>🃏 Weekly Cards <span id="wcCount" style="font-size:.9rem;color:var(--sub)"></span></h3><div id="wcGrid" class="wcgrid"></div><div id="wcMore" style="text-align:center;margin-top:.6rem"></div></div>
   <div class="box"><h3>📜 Weekly Quests</h3><div id="quests"></div></div>
   <div class="box"><h3>🗓️ Monthly Challenges</h3><div id="mchal"></div></div>
   <div class="box"><h3>📅 Monthly Report</h3><div style="display:flex;gap:.5rem;flex-wrap:wrap"><button class="sec tiny" onclick="showReport(0)">This month</button><button class="sec tiny" onclick="showReport(-1)">Last month</button></div></div>
@@ -1837,6 +1867,7 @@ button.bclaim[data-tone]{background:linear-gradient(135deg,#f5a623,#ff7a45)!impo
   <div class="acts"><button class="cancel" onclick="closeModal('modalCardio')">Cancel</button><button onclick="saveCardio()">Save</button></div></div></div>
 <div class="overlay" id="modalEdit"><div class="modal"><h3>✏️ Edit session</h3><div id="editBody"></div>
   <div class="acts"><button class="cancel" onclick="closeModal('modalEdit')">Cancel</button><button onclick="saveEdit()">Save</button></div></div></div>
+<div class="overlay" id="modalWC"><div class="modal"><div id="wcBig" class="wcbigwrap"></div><div id="wcDetail"></div><div class="acts"><button onclick="closeModal('modalWC')">Close</button></div></div></div>
 <div class="overlay" id="modalInfo"><div class="modal"><h3 id="infoTitle"></h3><p id="infoMuscle" style="color:var(--sub);font-weight:700"></p><div id="infoBody"></div>
   <div class="acts"><button onclick="closeModal('modalInfo')">Close</button></div></div></div>
 <div class="overlay conf" id="modalPhoto"><div class="modal"><img id="photoImg" alt="" style="width:100%;border-radius:1rem"><p id="photoDate" style="margin-top:.6rem;font-weight:700"></p>
@@ -1846,6 +1877,6 @@ button.bclaim[data-tone]{background:linear-gradient(135deg,#f5a623,#ff7a45)!impo
 <script>try{var __r=JSON.parse(localStorage.getItem('trackyResume')||'null');if(__r&&Date.now()-__r.t<43200000)document.documentElement.classList.add('resume')}catch(e){}</script><div id="splash" aria-label="Tracky is loading"><div class="sp-glow"></div><div class="sp-logo"><i class="sp-ring"></i><i class="sp-ring r2"></i><img src="icons/icon-512.png" alt="Tracky logo"></div><div class="sp-word" aria-hidden="true"><i>T</i><i>R</i><i>A</i><i>C</i><i>K</i><i>Y</i></div><div class="sp-tag">Build · Track · Coach</div><div class="sp-bar"><i></i></div></div>
 <div class="toast" id="toast"></div>
 
-<script src="app.js?v=204fb091" defer></script>
+<script src="app.js?v=2b31d94d" defer></script>
 </body>
 </html>
