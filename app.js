@@ -2111,6 +2111,7 @@ Fat|دهون|Lipides
 1 year|سنة|1 an
 App version|النسخة|Version
 Update now|حدّث دلوقتي|Mettre à jour
+kcal burned (estimated from your sets, reps and weights)|سعرات محروقة (تقدير من مجموعاتك وتكراراتك وأوزانك)|kcal brûlées (estimées d'après tes séries, répétitions et charges)
 Share usage statistics|مشاركة إحصائيات الاستخدام|Partager les statistiques d'utilisation
 Sends your display name, app version, language and simple counts (screens opened, workouts logged, coach messages, minutes used) so the developer can improve Tracky and support you. Never your workouts, food, photos, notes or chat text.|بيبعت اسمك المعروض ونسخة التطبيق واللغة وأعداد بسيطة (الشاشات المفتوحة، التمارين المسجّلة، رسائل الكوتش، دقايق الاستخدام) عشان المطوّر يحسّن Tracky ويساعدك. مش بيبعت تمارينك ولا أكلك ولا صورك ولا ملاحظاتك ولا نص الشات.|Envoie ton nom affiché, la version, la langue et des compteurs simples (écrans ouverts, séances, messages du coach, minutes) pour que le développeur améliore Tracky et t'aide. Jamais tes séances, repas, photos, notes ou chats.
 Your access to Tracky online features (coach, sync, friends) has been suspended. Your data on this phone is untouched.|تم إيقاف وصولك لمزايا Tracky أونلاين (الكوتش والمزامنة والأصدقاء). بياناتك على الموبايل زي ما هي.|Ton accès aux fonctions en ligne de Tracky (coach, synchro, amis) a été suspendu. Tes données sur ce téléphone sont intactes.
@@ -4448,7 +4449,7 @@ function showAnalysis(d){
   const rec = d.rec, mus = {}, A = animOn(); let sets = 0, reps = 0, vol = 0, heavy = 0, e1 = 0, rpeS = 0, rpeN = 0, topEx = null;
   rec.exercises.forEach(e => { const m = muscleOf(e.name), k = m || 'other', ev = e.sets.reduce((a,t) => a + t.weight * t.reps, 0); mus[k] = mus[k] || {sets:0, vol:0}; mus[k].sets += e.sets.length; mus[k].vol += ev;
     e.sets.forEach(t => { sets++; reps += t.reps; vol += t.weight * t.reps; heavy = Math.max(heavy, t.weight); e1 = Math.max(e1, e1rm(t.weight, t.reps)); }); if (e.rpe){ rpeS += e.rpe; rpeN++; } if (!topEx || ev > topEx.v) topEx = {n:e.name, v:ev}; });
-  const rpe = rpeN ? rpeS / rpeN : 7, mins = Math.max(5, Math.round(sets * 2.3 + (rec.exercises.length * 1.5))), met = Math.max(3.5, Math.min(6, 4.5 + (rpe - 7) * .25)), kcal = Math.round(met * userKg() * mins / 60);
+  const kb = kcalBreakdown(rec), mins = kb.mins, kcal = kb.kcal;
   const tot = Object.values(mus).reduce((a,m) => a + m.sets, 0) || 1, rows = Object.entries(mus).sort((a,b) => b[1].sets - a[1].sets);
   const prevS = sessions.slice(0, -1).reverse().find(x => x.dayName && x.dayName === rec.dayName), pv = prevS ? prevS.volume : 0, dv = pv > 0 ? Math.round((vol - pv) / pv * 100) : null;
   const notes = [];
@@ -4458,7 +4459,7 @@ function showAnalysis(d){
   const dly = i => `animation-delay:${A ? (.3 + i * .12).toFixed(2) : 0}s`, st = (v, l, i, c) => `<div class="st" style="${dly(i)}"><b data-count="${c == null ? v : c}">${v}</b><small>${l}</small></div>`;
   const el = document.createElement('div'); el.id = 'anl';
   el.innerHTML = `<div class="wrap"><div class="pulse"><i></i><i></i><i></i><b>💪</b></div><h2>Session analysis</h2><div class="sub">${escapeHTML(rec.dayName || 'Workout')} · about ${mins} min</div>
-    <div class="kcal"><b data-count="${kcal}">0</b><small>kcal burned (estimate)</small></div>
+    <div class="kcal"><b data-count="${kcal}">0</b><small>kcal burned (estimated from your sets, reps and weights)</small></div>
     <div class="grid">${st(sets, 'sets', 0)}${st(reps, 'reps', 1)}${st(Math.round(toDisp(vol)), unitName() + ' moved', 2)}${st(toDisp(heavy), 'heaviest set', 3)}${st(Math.round(toDisp(e1)), 'best est. 1RM', 4)}${st(d.xp ? '+' + d.xp : '0', 'XP earned', 5, d.xp || 0)}</div>
     <h3>Training load by muscle group</h3>${rows.map(([k,m], i) => `<div class="mrow"><div><span>${escapeHTML(MUSCLES[k] || 'Other')}</span><span>${m.sets} sets${m.vol ? ' · ' + Math.round(toDisp(m.vol)) + ' ' + unitName() : ''}</span></div><div class="mt"><span data-w="${Math.round(m.sets / rows[0][1].sets * 100)}"></span></div></div>`).join('')}
     ${notes.map((n, i) => `<div class="note" style="${dly(6 + i)}">${n}</div>`).join('')}
@@ -8365,15 +8366,39 @@ function cardioMET(c){
   if (/cycle|bike/.test(t)) return sp ? Math.max(3.5, Math.min(14, 3.5 + .35 * Math.max(0, sp - 10))) : 6.8;
   if (/swim/.test(t)) return 6; if (/row/.test(t)) return 7; if (/hiit/.test(t)) return 8; return 6;
 }
+/* v76: gym calories from the sets you really did (weight x reps x range of motion), time under tension, rest time and afterburn */
+const KC_BW1 = /pull-?up|chin-?up|\bdips?\b|muscle-?up|leg raise|knee raise|toes-to-bar|hanging/i, KC_BW2 = /push-?up|plank|burpee|mountain|crunch|sit-?up|jump|lunge|step-?up|pistol|bridge|bodyweight/i;
+const KC_ROM = {chest:.42, back:.5, shoulders:.45, arms:.35, legs:.55, glutes:.4, core:.3};
+const KC_COMP = /squat|deadlift|press|row\b|rows\b|pull|chin|dip|lunge|thrust|clean|snatch|swing|step-?up|push-?up|good morning|thruster|burpee/i, KC_ISO = /extension|curl|raise|fly|kickback|pushdown|shrug|crunch|plank/i;
+let _kcBest = {k:'', m:{}};
+function kcBest(){
+  const k = sessions.length + ':' + ((sessions[sessions.length - 1] || {}).id || ''); if (_kcBest.k === k) return _kcBest.m;
+  const m = {}; sessions.forEach(x => (x.exercises || []).forEach(e => e.sets.forEach(t => { const v = e1rm(+t.weight || 0, +t.reps || 0), n = String(e.name).trim().toLowerCase(); if (v > (m[n] || 0)) m[n] = v; })));
+  _kcBest = {k, m}; return m;
+}
+function kcalBreakdown(s){
+  const kg = userKg() || 70, best = Object.assign({}, kcBest()), exs = s.exercises || [];
+  exs.forEach(e => e.sets.forEach(t => { const v = e1rm(+t.weight || 0, +t.reps || 0), n = String(e.name).trim().toLowerCase(); if (v > (best[n] || 0)) best[n] = v; }));
+  let mech = 0, tutNet = 0, tutSec = 0, restEst = 0, intSum = 0, intN = 0, nSets = 0;
+  exs.forEach(e => {
+    const g = muscleOf(e.name) || '', rom = KC_ROM[g] || .45, comp = KC_COMP.test(e.name) && !KC_ISO.test(e.name), bw1 = KC_BW1.test(e.name), bw2 = !bw1 && KC_BW2.test(e.name), b = best[String(e.name).trim().toLowerCase()] || 0;
+    e.sets.forEach(t => {
+      const w = +t.weight || 0, r = Math.max(0, +t.reps || 0); if (!r) return;
+      const f = t.warm ? .5 : 1, L = bw1 ? kg + Math.max(0, w) : bw2 ? kg * .65 + Math.max(0, w) : (w > 0 ? w : kg * .5);
+      const inten = w > 0 && b > 0 ? Math.min(1, w / b) : (bw1 || bw2 ? .6 : .5), sec = r * 3;
+      mech += f * (L * 9.81 * rom * r * 1.4 * (comp ? 1.2 : 1) / .18) / 4184;
+      tutNet += f * (2.5 + 3.5 * inten) * kg * sec / 3600; tutSec += sec;
+      restEst += inten >= .85 ? 150 : inten >= .7 ? 105 : 70; if (!t.warm){ intSum += inten; intN++; } nSets++;
+    });
+  });
+  const estMin = (tutSec + restEst * .8 + exs.length * 40) / 60, timed = s.durationSec >= 300 ? s.durationSec / 60 : 0, mins = timed ? Math.min(timed, Math.max(estMin * 2.2, 40), 150) : Math.max(5, estMin);
+  const rest = 1.2 * kg * Math.max(0, mins * 60 - tutSec) / 3600, net = mech + tutNet + rest, avgInt = intN ? intSum / intN : .6, epoc = net * (.04 + .08 * avgInt), base = kg * mins / 60;
+  return {kcal:Math.round(net + epoc + base), mins:Math.round(mins), sets:nSets, net:Math.round(net + epoc)};
+}
 function sessionKcal(s){
   const kg = userKg() || 70;
   if (s.cardio) return cardioMET(s.cardio) * kg * ((+s.cardio.min || 0) / 60);
-  const exs = s.exercises || [], work = exs.flatMap(e => e.sets.filter(x => !x.warm)), sets = exs.reduce((n, e) => n + e.sets.length, 0);
-  const est = Math.max(5, sets * 2.3 + exs.length * 1.5), timed = s.durationSec >= 300 ? s.durationSec / 60 : 0, mins = timed ? Math.min(timed, Math.max(est * 3, 40), 150) : est;
-  const rp = exs.map(e => +e.rpe).filter(x => x > 0), rpe = rp.length ? rp.reduce((a, b) => a + b, 0) / rp.length : 7.5;
-  const big = work.length ? exs.reduce((n, e) => n + (/legs|back|glutes/.test(muscleOf(e.name) || '') ? e.sets.length : 0), 0) / Math.max(1, sets) : 0;
-  const met = Math.max(2.8, Math.min(6, 2.8 + (rpe - 5) * .5 + big * .6));
-  return met * kg * (mins / 60) * 1.06;
+  return kcalBreakdown(s).kcal;
 }
 
 /* ===== ghosts: compare only inside the same training day ===== */
@@ -10993,7 +11018,7 @@ window.NUT = {dump:() => JSON.stringify(NU), load:o => { if (!o || typeof o !== 
 })();
 
 /* ================= v65: friends-only games, settings menu, hero Build page, active update prompt ================= */
-const APP_VER = 'tracky-v75';
+const APP_VER = 'tracky-v76';
 /* 1) games: only the friends duel remains; finishing a workout now pays GP directly (no ghost hunt) */
 ghEvent = function(evId, kind, ratio){
   if (kind !== 'fin') return null;
