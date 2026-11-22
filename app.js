@@ -9439,7 +9439,7 @@ function dsIcons(){
   async function switchTo(code){ const d = duelCfg(); d.code = code; DUEL = null; save(); FX.tab = 'board'; renderDuel(); await duelRefresh(); }
   async function addGroup(kind){
     const d = duelCfg(), msg = $('fxMsg'); d.uid = d.uid || Array.from(crypto.getRandomValues(new Uint8Array(8))).map(x => x.toString(16).padStart(2, '0')).join(''); d.name = d.name || settings.heroName || 'Player';
-    try { const j = kind === 'new' ? await duelApi('create', {name:d.name, uid:d.uid, gname:($('fxGName') || {}).value || ''}) : await duelApi('join', {name:d.name, uid:d.uid, code:(($('fxGCode') || {}).value || '').trim().toUpperCase()});
+    try { const j = kind === 'new' ? await duelApi('create', {name:d.name, uid:d.uid, gname:($('fxGName') || {}).value || ''}) : await duelApi('join', {pid:settings.pushId || '', name:d.name, uid:d.uid, code:(($('fxGCode') || {}).value || '').trim().toUpperCase()});
       groups(); if (!d.groups.some(g => g.code === j.code)) d.groups.push({code:j.code, name:j.name || ''}); d.code = j.code; save(); FX.adding = false; DUEL = null; _lp = 0; FX.tab = 'board'; renderDuel(); await duelRefresh(); showToast(kind === 'new' ? '✅ Group created' : '✅ Joined'); }
     catch(e){ if (msg) msg.textContent = '⚠️ ' + (e.message || e); }
   }
@@ -9586,9 +9586,9 @@ function dsIcons(){
     if (prev == null){ progress.fxLg[key] = me.tier; save(); } else if (me.tier > prev){ progress.fxLg[key] = me.tier; const g = 30 * me.tier; gpAdd(g, 'League: ' + TN[me.tier]); showToast(TI[me.tier] + ' ' + tr(TN[me.tier]) + ' league! +' + g + ' GP'); } else if (me.tier < prev){ progress.fxLg[key] = me.tier; save(); }
     progress.fxMw = progress.fxMw || {}; lg.mwin.forEach(m => { const k = d.code + ':' + m.ym; if (m.u === d.uid && !progress.fxMw[k]){ progress.fxMw[k] = 1; gpAdd(100, 'Monthly champion ' + m.ym); showToast('👑 Monthly champion! +100 GP'); } }); }
   /* presence ping + background polling */
-  async function ping(){ const d = duelCfg(); if (!d.code || document.hidden || !V2()) return; const tr0 = workoutTimerStartedAt ? {day:'', since:workoutTimerStartedAt} : null; try { await duelApi('ping', {code:d.code, uid:d.uid, train:tr0}); } catch(e){} }
+  async function ping(){ const d = duelCfg(); if (!d.code || document.hidden || !V2()) return; const tr0 = workoutTimerStartedAt ? {day:'', since:workoutTimerStartedAt} : null; try { await duelApi('ping', {code:d.code, uid:d.uid, train:tr0, pid:settings.pushId || ''}); } catch(e){} }
   setInterval(ping, 45000); setTimeout(ping, 6000);
-  setInterval(() => { const d = duelCfg(); if (!d.code || document.hidden) return; const act = !!document.querySelector('.panel.active[data-panel="games"]'); if (act || Date.now() - LIVE.fresh > 55000) liveFetch(); }, 8000);
+  setInterval(() => { const d = duelCfg(); if (!d.code || document.hidden) return; const act = !!document.querySelector('.panel.active[data-panel="games"]'); if (act || Date.now() - LIVE.fresh > 15000) liveFetch(); }, 8000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden){ setTimeout(ping, 500); setTimeout(liveFetch, 800); } });
   /* post to the feed after a workout */
   async function post(type, txt, key, n){ const d = duelCfg(); if (!d.code || SH().feed === false) return; try { await duelApi('post', {code:d.code, uid:d.uid, type, txt, key, n:n || 0}); } catch(e){} }
@@ -10975,7 +10975,7 @@ window.NUT = {dump:() => JSON.stringify(NU), load:o => { if (!o || typeof o !== 
 })();
 
 /* ================= v65: friends-only games, settings menu, hero Build page, active update prompt ================= */
-const APP_VER = 'tracky-v72';
+const APP_VER = 'tracky-v73';
 /* 1) games: only the friends duel remains; finishing a workout now pays GP directly (no ghost hunt) */
 ghEvent = function(evId, kind, ratio){
   if (kind !== 'fin') return null;
