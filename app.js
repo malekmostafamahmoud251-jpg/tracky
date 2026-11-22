@@ -2111,6 +2111,9 @@ Fat|دهون|Lipides
 1 year|سنة|1 an
 App version|النسخة|Version
 Update now|حدّث دلوقتي|Mettre à jour
+Share usage statistics|مشاركة إحصائيات الاستخدام|Partager les statistiques d'utilisation
+Sends your display name, app version, language and simple counts (screens opened, workouts logged, coach messages, minutes used) so the developer can improve Tracky and support you. Never your workouts, food, photos, notes or chat text.|بيبعت اسمك المعروض ونسخة التطبيق واللغة وأعداد بسيطة (الشاشات المفتوحة، التمارين المسجّلة، رسائل الكوتش، دقايق الاستخدام) عشان المطوّر يحسّن Tracky ويساعدك. مش بيبعت تمارينك ولا أكلك ولا صورك ولا ملاحظاتك ولا نص الشات.|Envoie ton nom affiché, la version, la langue et des compteurs simples (écrans ouverts, séances, messages du coach, minutes) pour que le développeur améliore Tracky et t'aide. Jamais tes séances, repas, photos, notes ou chats.
+Your access to Tracky online features (coach, sync, friends) has been suspended. Your data on this phone is untouched.|تم إيقاف وصولك لمزايا Tracky أونلاين (الكوتش والمزامنة والأصدقاء). بياناتك على الموبايل زي ما هي.|Ton accès aux fonctions en ligne de Tracky (coach, synchro, amis) a été suspendu. Tes données sur ce téléphone sont intactes.
 Weekly Cards|كروت الأسبوع|Cartes de la semaine
 workouts|تمارين|séances
 In progress|جارٍ|En cours
@@ -3309,7 +3312,7 @@ function acctToggleAuto(on){ settings.cloudAuto = !!on; save(); }
 function acctInfo(){ const el = $('acInfo'); if (!el) return; const t = lastCloudT(); el.textContent = t ? tr('Last sync') + ': ' + new Date(t).toLocaleString(LOCALE()) : ''; }
 function privacyText(){ return LANG === 'ar'
   ? 'بياناتك (التمارين، الأكل، الملاحظات، وزنك) بتتخزن على جهازك. لو سجّلت دخول، نسخة منها بتتخزن في حسابك على خادم Cloudflare عشان المزامنة، والإيميل بس هو اللي بيحدد حسابك. لما تستخدم المدرب الذكي أو تحليل الأكل بالصورة، النص أو الصورة وملخص بياناتك بيتبعتوا لـ Google Gemini عشان يرد عليك، ومش بنبيعها ولا بنشاركها مع حد غير كده. الصور الشخصية بتفضل على جهازك ومابتترفعش للسحابة. تقدر تمسح حسابك ونسختك السحابية في أي وقت من هنا. التطبيق مش بديل عن الطبيب أو المختص.'
-  : 'Your data (workouts, food, notes, weight) is stored on your device. If you sign in, a copy is stored in your account on a Cloudflare server for syncing, and your e-mail is the only thing that identifies your account. When you use the AI coach or photo food analysis, your text or image and a summary of your data are sent to Google Gemini to answer you. We do not sell your data or share it with anyone else. Progress photos stay on your device and are not uploaded. You can delete your account and cloud copy at any time from here. The app is not a substitute for a doctor or qualified professional.'; }
+  : 'Your data (workouts, food, notes, weight) is stored on your device. If you sign in, a copy is stored in your account on a Cloudflare server for syncing, and your e-mail is the only thing that identifies your account. When you use the AI coach or photo food analysis, your text or image and a summary of your data are sent to Google Gemini to answer you. We also record, unless you turn it off in Account, a random device ID, your display name, app version, language and simple usage counts (screens opened, workouts logged, coach messages, minutes used) so the developer can support you; the developer can also suspend access to the online features for abuse. We do not sell your data or share it with anyone else. Progress photos stay on your device and are not uploaded. You can delete your account and cloud copy at any time from here. The app is not a substitute for a doctor or qualified professional.'; }
 function renderAcct(){
   const box = $('acctBody'); if (!box) return; const E2 = escapeHTML, a = getAuth();
   if (!APP_CONFIG.coachUrl){ box.innerHTML = '<small class="insight2">' + E2(tr('Accounts need the Tracky server (coachUrl).')) + '</small>'; return; }
@@ -3330,8 +3333,10 @@ function renderAcct(){
     if (!acctCfg) h += `<small class="insight2">${E2(tr('Could not reach the server.'))}</small>`;
   }
   if (acctMsg) h += `<small class="insight2" style="color:var(--bad,#ff6b6b)">⚠️ ${E2(acctMsg)}</small>`;
+  h += `<label style="display:flex;gap:.5rem;align-items:flex-start;margin-top:.7rem"><input type="checkbox" id="statsOn" ${settings.stats !== false ? 'checked' : ''}><span><b>${E2(tr('Share usage statistics'))}</b><br><small class="insight2">${E2(tr('Sends your display name, app version, language and simple counts (screens opened, workouts logged, coach messages, minutes used) so the developer can improve Tracky and support you. Never your workouts, food, photos, notes or chat text.'))}</small></span></label>`;
   h += `<details style="margin-top:.6rem"><summary>🔒 ${E2(tr('Privacy'))}</summary><small class="insight2" style="display:block;margin-top:.4rem">${E2(privacyText())}</small></details>`;
   box.innerHTML = h; acctInfo();
+  { const so = $('statsOn'); if (so) so.onchange = () => { settings.stats = so.checked; save(); if (so.checked) TEL.send(true); }; }
   if (!a && acctCfg && acctCfg.google && $('gBtn')) loadGsi(() => { try { google.accounts.id.initialize({client_id:acctCfg.google, callback:r => acctGoogle(r.credential)}); google.accounts.id.renderButton($('gBtn'), {theme:'filled_black', size:'large', text:'continue_with', width:260}); } catch(e){} });
 }
 function loadGsi(cb){ if (window.google && google.accounts && google.accounts.id) return cb(); if (window._gsiLoading){ window._gsiLoading.push(cb); return; } window._gsiLoading = [cb]; const s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.async = true; s.onload = () => { (window._gsiLoading || []).forEach(f => f()); window._gsiLoading = null; }; s.onerror = () => { window._gsiLoading = null; }; document.head.appendChild(s); }
@@ -10988,7 +10993,7 @@ window.NUT = {dump:() => JSON.stringify(NU), load:o => { if (!o || typeof o !== 
 })();
 
 /* ================= v65: friends-only games, settings menu, hero Build page, active update prompt ================= */
-const APP_VER = 'tracky-v74';
+const APP_VER = 'tracky-v75';
 /* 1) games: only the friends duel remains; finishing a workout now pays GP directly (no ghost hunt) */
 ghEvent = function(evId, kind, ratio){
   if (kind !== 'fin') return null;
@@ -11220,3 +11225,40 @@ function wcOpen(wk){
 document.addEventListener('click', e => { const c = e.target.closest('#wcGrid [data-wc]'); if (c){ wcOpen(c.dataset.wc); return; } if (e.target.closest('#wcAll')){ WC.all = true; renderWC(); } });
 { const _rp = renderProgress; renderProgress = function(){ _rp(); try { renderWC(); } catch(e){ console.warn('cards', e); } }; }
 setTimeout(() => { try { const W = wcAll(), cur = weekStart(todayKey()), k = Object.keys(W).filter(x => x !== cur && W[x].n).sort().pop(); if (k && !(settings.wcOpened || {})[k] && settings.wcToast !== k){ settings.wcToast = k; save(); showToast('🃏 ' + tr('New weekly card unlocked')); } } catch(e){} }, 4000);
+
+/* ===== v75: usage stats (opt-out), device id, blocked-state handling ===== */
+const TEL = {
+  c: {}, last: 0,
+  on(){ return settings.stats !== false; },
+  iid(){ if (!/^[0-9a-f]{24}$/.test(settings.iid || '')){ settings.iid = Array.from(crypto.getRandomValues(new Uint8Array(12))).map(x => x.toString(16).padStart(2, '0')).join(''); save(); } return settings.iid; },
+  add(k, n){ if (TEL.on()) TEL.c[k] = (TEL.c[k] || 0) + (n || 1); },
+  async send(force){
+    if (!TEL.on() || !APP_CONFIG.coachUrl || !navigator.onLine) return;
+    if (!force && Date.now() - TEL.last < 25 * 60e3) return; if (Date.now() - TEL.last < 60e3) return;
+    TEL.last = Date.now(); const sent = Object.assign({}, TEL.c);
+    try {
+      const r = await fetch(APP_CONFIG.coachUrl + '/t', { method:'POST', keepalive:true, headers:Object.assign({'Content-Type':'application/json'}, authHdr()),
+        body:JSON.stringify({iid:TEL.iid(), name:settings.heroName || '', ver:(typeof APP_VER !== 'undefined' ? APP_VER : ''), lang:LANG, plat:/Android/i.test(navigator.userAgent) ? 'android' : /iPhone|iPad/i.test(navigator.userAgent) ? 'ios' : 'web', pwa:(matchMedia('(display-mode: standalone)').matches || navigator.standalone) ? 1 : 0, n:sent})});
+      if (!r.ok) return; const j = await r.json();
+      if (!j.skip) Object.keys(sent).forEach(k => { TEL.c[k] = (TEL.c[k] || 0) - sent[k]; if (TEL.c[k] <= 0) delete TEL.c[k]; });
+      setBlocked(!!j.blocked);
+    } catch(e){}
+  }
+};
+function setBlocked(b){
+  try { b ? localStorage.setItem('tkBlocked', '1') : localStorage.removeItem('tkBlocked'); } catch(e){}
+  let bar = $('blockBar');
+  if (b && !bar){ bar = document.createElement('div'); bar.id = 'blockBar'; bar.setAttribute('style', 'position:fixed;left:0;right:0;top:0;z-index:99999;background:#b91c1c;color:#fff;padding:.55rem .9rem;font-size:.85rem;text-align:center'); bar.textContent = tr('Your access to Tracky online features (coach, sync, friends) has been suspended. Your data on this phone is untouched.'); document.body.appendChild(bar); }
+  if (!b && bar) bar.remove();
+}
+{ const _f = window.fetch.bind(window); window.fetch = function(u, o){ try { const url = typeof u === 'string' ? u : (u && u.url) || '';
+    if (APP_CONFIG.coachUrl && url.indexOf(APP_CONFIG.coachUrl) === 0){ o = Object.assign({}, o); const h = new Headers(o.headers || (typeof u !== 'string' && u.headers) || undefined); if (!h.has('X-Iid')) h.set('X-Iid', TEL.iid()); o.headers = h; } } catch(e){}
+  return _f(u, o).then(r => { try { if (r.status === 403 && APP_CONFIG.coachUrl && (typeof u === 'string' ? u : (u && u.url) || '').indexOf(APP_CONFIG.coachUrl) === 0) r.clone().json().then(j => { if (j && j.blocked) setBlocked(true); }).catch(() => {}); } catch(e){} return r; }); }; }
+document.addEventListener('click', e => { const t = e.target.closest && e.target.closest('.tab[data-tab]'); if (t) TEL.add('tab_' + String(t.dataset.tab).replace(/[^a-z0-9_]/gi, '').slice(0, 14).toLowerCase()); }, true);
+{ const _ls = logSession; logSession = async function(){ const n0 = sessions.length, r = await _ls.apply(this, arguments); try { if (sessions.length > n0) TEL.add('workout'); } catch(e){} return r; }; }
+{ const _ac = askCoach; askCoach = function(){ TEL.add('coach_msg'); return _ac.apply(this, arguments); }; }
+TEL.add('app_open');
+setInterval(() => { if (!document.hidden) TEL.add('active_sec', 30); }, 30000);
+document.addEventListener('visibilitychange', () => { if (document.hidden) TEL.send(true); });
+setTimeout(() => TEL.send(true), 6000); setInterval(() => TEL.send(false), 30 * 60e3);
+try { if (localStorage.getItem('tkBlocked')) setBlocked(true); } catch(e){}
