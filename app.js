@@ -6024,7 +6024,7 @@ function renderSteps(){
   b.innerHTML = `<div class="box"><h3>👣 Steps today</h3><div class="stepnum"><b id="stepN">${n.toLocaleString()}</b><small>/ ${goal.toLocaleString()}</small></div><div class="qbar"><i id="stepBar" style="width:${Math.min(100, n / goal * 100)}%"></i></div>
     <div class="stepmeta"><span>🚶 <b id="stepK">${stepKcal(n)}</b> kcal</span><span>🏋️ <b id="stepG">${gymKcalDay(k)}</b> kcal</span><span>🔥 <b id="stepT">${stepKcal(n) + gymKcalDay(k)}</b> total</span><span>📏 <b id="stepKm">${stepKm(n).toFixed(2)}</b> km</span></div>
     <div class="stepbars">${d7.map(x => `<div><i style="height:${Math.round(x[1] / mx * 100)}%"></i><small>${x[0]}</small></div>`).join('')}</div>
-    <div class="stepacts">${NATIVE.ok ? (NATIVE.st && NATIVE.st.granted ? '' : '<button type="button" class="sec tiny" data-st="native">' + (LANG === 'ar' ? '🔓 فعّل العدّ في الخلفية' : '🔓 Enable background steps') + '</button>') : `<button type="button" class="sec tiny" data-st="toggle">${STEP.on ? '⏸ Stop counting' : '▶ Start counting'}</button>`}<button type="button" class="sec tiny" data-st="add">＋ Add steps</button><button type="button" class="sec tiny" data-st="goal">🎯 Goal</button>${NATIVE.ok ? '' : `<button type="button" class="sec tiny" data-st="notif">${progress.stepNotif ? '📌 Notification bar: On' : '📌 Notification bar: Off'}</button>`}</div>
+    <div class="stepacts">${NATIVE.ok ? (NATIVE.st && NATIVE.st.granted ? '' : '<button type="button" class="sec tiny" data-st="native">' + (LANG === 'ar' ? '🔓 فعّل العدّ في الخلفية' : '🔓 Enable background steps') + '</button>') : `<button type="button" class="sec tiny" data-st="toggle">${STEP.on ? '⏸ Stop counting' : '▶ Start counting'}</button>`}<button type="button" class="sec tiny" data-st="add">＋ Add steps</button><button type="button" class="sec tiny" data-st="goal">🎯 Goal</button>${NATIVE.ok ? (NATIVE.st && NATIVE.st.granted ? `<button type="button" class="sec tiny" data-st="notif">${progress.stepNotif === false ? '📌 ' + (LANG === 'ar' ? 'شريط الإشعارات: مقفول' : 'Notification bar: Off') : '📌 ' + (LANG === 'ar' ? 'شريط الإشعارات: شغال' : 'Notification bar: On')}</button>` : '') : `<button type="button" class="sec tiny" data-st="notif">${progress.stepNotif ? '📌 Notification bar: On' : '📌 Notification bar: Off'}</button>`}</div>
     <small class="stepnote">${NATIVE.ok ? (NATIVE.st && NATIVE.st.granted ? (LANG === 'ar' ? '✅ الخطوات بتتحسب في الخلفية حتى لو التطبيق أو الموبايل مقفول. الرقم بيتحدّث لما تفتح التطبيق.' : '✅ Steps are counted in the background, even with the app closed or the phone locked. The number updates when you open Tracky.') : (LANG === 'ar' ? 'محتاج إذن النشاط البدني عشان العدّ يشتغل في الخلفية.' : 'Needs the activity permission to count in the background.')) : STEP.on ? 'Counting… keep Tracky open with the screen on. Counting pauses when the screen is off.' : 'Counts steps from your phone motion sensor while Tracky is open. Calories are an estimate from your weight and height.'}</small></div>`;
 }
 document.addEventListener('click', e => { const t = e.target.closest('[data-st]'); if (!t) return; const a = t.dataset.st;
@@ -6051,7 +6051,15 @@ async function stepNativeSync(){
     await P.schedule(); const r = await P.getDays(), D = (r && r.days) || {}; progress.steps = progress.steps || {}; progress.stepsNat = progress.stepsNat || {}; let ch = false;
     Object.keys(D).forEach(k => { const nat = +D[k] || 0, prev = +progress.stepsNat[k] || 0; if (nat > prev){ progress.steps[k] = (progress.steps[k] || 0) + (nat - prev); progress.stepsNat[k] = nat; ch = true; } });
     if (ch){ save(); stepLive(); } if (!was) renderSteps();
+    const tk = todayKey(); NATIVE.off = (progress.steps[tk] || 0) - (+D[tk] || 0); NATIVE.offDay = tk; trackerSync();
   } catch(e){}
+}
+/* v80: permanent "steps today" notification in the shade (Android foreground service), like a health app */
+async function trackerSync(force){
+  const P = NATIVE.ok && NATIVE.ped(); if (!P || !(NATIVE.st && NATIVE.st.granted)) return;
+  const on = progress.stepNotif !== false, sig = [on, stepGoal(), LANG, Math.round(userKg()), strideM().toFixed(2), NATIVE.off || 0, NATIVE.offDay].join('|');
+  if (!force && NATIVE.trk === sig) return; NATIVE.trk = sig;
+  try { if (on) await P.startTracker({goal:stepGoal(), lang:LANG, kg:userKg(), stride:strideM(), off:NATIVE.off || 0, offDay:NATIVE.offDay || ''}); else await P.stopTracker(); } catch(e){}
 }
 async function nativeEnable(){
   const P = NATIVE.ped(), LN = NATIVE.ln();
@@ -6072,6 +6080,7 @@ async function nativeReminders(){
       if (r.on && Array.isArray(r.days) && r.days.includes(wd) && !(i === 0 && W.todayDone)){ const t = at(r.time || '18:00'); if (t) out.push({id:1000 + i, title:'Tracky 💪', body:dayMsg(wd) || tr('Time to train! Keep your streak alive.'), schedule:{at:t, allowWhileIdle:true}}); }
       fr.forEach((f, j) => { if (i === 0 && f.done) return; const t = at(f.t); if (t) out.push({id:2000 + i * 10 + j, title:'Tracky 🍽️', body:tr(MSG[f.k]), schedule:{at:t, allowWhileIdle:true}}); });
     }
+    out.forEach(n => { n.smallIcon = 'ic_stat_tracky'; n.largeIcon = 'ic_large_tracky'; n.iconColor = '#7C5CFF'; });
     if (out.length) await LN.schedule({notifications:out});
   } catch(e){}
 }
@@ -6089,7 +6098,7 @@ if (NATIVE.ok){
   pushTest = async function(){
     const LN = NATIVE.ln(); if (!LN) return;
     try { let p = await LN.checkPermissions(); if (p.display !== 'granted') p = await LN.requestPermissions(); if (p.display !== 'granted') return showToast('⚠️ ' + tr('Reminders need notifications to be allowed.'));
-      await LN.schedule({notifications:[{id:9001, title:'Tracky 🔔', body:tr('Notifications are working.'), schedule:{at:new Date(Date.now() + 3000), allowWhileIdle:true}}]}); showToast('🔔 ' + tr('Sent. It should arrive in a few seconds.')); }
+      await LN.schedule({notifications:[{id:9001, smallIcon:'ic_stat_tracky', largeIcon:'ic_large_tracky', iconColor:'#7C5CFF', title:'Tracky 🔔', body:tr('Notifications are working.'), schedule:{at:new Date(Date.now() + 3000), allowWhileIdle:true}}]}); showToast('🔔 ' + tr('Sent. It should arrive in a few seconds.')); }
     catch(e){ showToast('⚠️ ' + String((e && e.message) || e).slice(0, 120)); }
   };
   pushStateNow = async function(){ try { nativeRemindersSoon(); } catch(e){} return _ps.apply(this, arguments); };
@@ -6105,6 +6114,7 @@ if (NATIVE.ok){
   document.addEventListener('visibilitychange', () => { if (document.hidden) nativeRemindersSoon(); else stepNativeSync(); });
 }
 async function stepNotifToggle(){
+  if (NATIVE.ok){ progress.stepNotif = progress.stepNotif === false; save(); await trackerSync(true); showToast(progress.stepNotif === false ? '📌 ' + (LANG === 'ar' ? 'شريط الخطوات اتقفل' : 'Steps bar is off') : '📌 ' + (LANG === 'ar' ? 'شريط الخطوات شغال في الإشعارات' : 'Steps bar is on')); return renderSteps(); }
   if (progress.stepNotif){ progress.stepNotif = false; save(); stepNotifyClose(); return renderSteps(); }
   if (!('Notification' in window)) return showToast('⚠️ This browser cannot show notifications');
   let perm = Notification.permission; if (perm === 'default') perm = await Notification.requestPermission();
@@ -11112,7 +11122,7 @@ window.NUT = {dump:() => JSON.stringify(NU), load:o => { if (!o || typeof o !== 
 })();
 
 /* ================= v65: friends-only games, settings menu, hero Build page, active update prompt ================= */
-const APP_VER = 'tracky-v79';
+const APP_VER = 'tracky-v80';
 /* 1) games: only the friends duel remains; finishing a workout now pays GP directly (no ghost hunt) */
 ghEvent = function(evId, kind, ratio){
   if (kind !== 'fin') return null;
