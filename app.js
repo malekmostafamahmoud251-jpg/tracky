@@ -2111,6 +2111,8 @@ Fat|دهون|Lipides
 1 year|سنة|1 an
 App version|النسخة|Version
 Update now|حدّث دلوقتي|Mettre à jour
+Continue with Google|المتابعة باستخدام جوجل|Continuer avec Google
+Google sign-in is not ready for this app yet. Use the e-mail code instead.|تسجيل جوجل لسه مش جاهز للتطبيق ده. استخدم كود الإيميل.|La connexion Google n'est pas encore prête. Utilise le code e-mail.
 kcal burned (estimated from your sets, reps and weights)|سعرات محروقة (تقدير من مجموعاتك وتكراراتك وأوزانك)|kcal brûlées (estimées d'après tes séries, répétitions et charges)
 Share usage statistics|مشاركة إحصائيات الاستخدام|Partager les statistiques d'utilisation
 Sends your display name, app version, language and simple counts (screens opened, workouts logged, coach messages, minutes used) so the developer can improve Tracky and support you. Never your workouts, food, photos, notes or chat text.|بيبعت اسمك المعروض ونسخة التطبيق واللغة وأعداد بسيطة (الشاشات المفتوحة، التمارين المسجّلة، رسائل الكوتش، دقايق الاستخدام) عشان المطوّر يحسّن Tracky ويساعدك. مش بيبعت تمارينك ولا أكلك ولا صورك ولا ملاحظاتك ولا نص الشات.|Envoie ton nom affiché, la version, la langue et des compteurs simples (écrans ouverts, séances, messages du coach, minutes) pour que le développeur améliore Tracky et t'aide. Jamais tes séances, repas, photos, notes ou chats.
@@ -3338,6 +3340,7 @@ function renderAcct(){
   h += `<details style="margin-top:.6rem"><summary>🔒 ${E2(tr('Privacy'))}</summary><small class="insight2" style="display:block;margin-top:.4rem">${E2(privacyText())}</small></details>`;
   box.innerHTML = h; acctInfo();
   { const so = $('statsOn'); if (so) so.onchange = () => { settings.stats = so.checked; save(); if (so.checked) TEL.send(true); }; }
+  if (!a && acctCfg && acctCfg.google && $('gBtn') && gNativeMount('gBtn', 'acct')) return;
   if (!a && acctCfg && acctCfg.google && $('gBtn')) loadGsi(() => { try { google.accounts.id.initialize({client_id:acctCfg.google, callback:r => acctGoogle(r.credential)}); google.accounts.id.renderButton($('gBtn'), {theme:'filled_black', size:'large', text:'continue_with', width:260}); } catch(e){} });
 }
 function loadGsi(cb){ if (window.google && google.accounts && google.accounts.id) return cb(); if (window._gsiLoading){ window._gsiLoading.push(cb); return; } window._gsiLoading = [cb]; const s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.async = true; s.onload = () => { (window._gsiLoading || []).forEach(f => f()); window._gsiLoading = null; }; s.onerror = () => { window._gsiLoading = null; }; document.head.appendChild(s); }
@@ -4040,7 +4043,32 @@ function introAuthInit(){
   if (INTRO.edit) return;
   if (!acctCfg && !INTRO.cfgTried){ INTRO.cfgTried = true; acctLoadCfg().then(() => { if ($('intro').classList.contains('on') && (INTRO.step === 0 || INTRO.step === 5)) renderIntro(); }); return; }
   const b = $('gBtnI'); if (!b || !acctCfg || !acctCfg.google) return;
+  if (gNativeMount('gBtnI', 'intro')) return;
   loadGsi(() => { try { google.accounts.id.initialize({client_id:acctCfg.google, callback:r => introGoogle(r.credential)}); google.accounts.id.renderButton($('gBtnI'), {theme:'filled_black', size:'large', text:'continue_with', width:260}); } catch(e){} });
+}
+/* ---------- native Google sign-in (Android app): real account picker, no browser popup ---------- */
+const G_LOGO = '<svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.2C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.5 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.2C.9 16.4 0 20.100 0 24s.9 7.600 2.600 10.800l7.900-6.200z"/><path fill="#34A853" d="M24 48c6.500 0 11.900-2.100 15.900-5.800l-7.500-5.800c-2.100 1.400-4.800 2.300-8.400 2.300-6.300 0-11.600-4.100-13.500-9.800l-7.900 6.200C6.500 42.600 14.600 48 24 48z"/></svg>';
+function nativeG(){ try { const C = window.Capacitor; return C && C.Plugins && C.Plugins.SocialLogin && (!C.isNativePlatform || C.isNativePlatform()) ? C.Plugins.SocialLogin : null; } catch(e){ return null; } }
+let _gInit = '';
+async function nativeGoogle(){
+  const P = nativeG(); if (!P || !acctCfg || !acctCfg.google) throw new Error('Google sign-in failed');
+  if (_gInit !== acctCfg.google){ await P.initialize({google:{webClientId:acctCfg.google}}); _gInit = acctCfg.google; }
+  const r = await P.login({provider:'google', options:{}}), id = (r && r.result && r.result.idToken) || (r && r.idToken);
+  if (!id) throw new Error('Google sign-in failed'); return id;
+}
+async function gNativeClick(kind){
+  try { const id = await nativeGoogle(); if (kind === 'intro') await introGoogle(id); else await acctGoogle(id); }
+  catch(e){
+    const m = String((e && (e.code || e.message)) || e);
+    if (/cancel|dismiss|12501|-5/i.test(m)) return;
+    const msg = tr('Google sign-in is not ready for this app yet. Use the e-mail code instead.') + ' (' + m.slice(0, 80) + ')';
+    if (kind === 'intro'){ INTRO.msg = msg; renderIntro(); } else { acctMsg = msg; renderAcct(); }
+  }
+}
+function gNativeMount(id, kind){
+  const b = $(id); if (!b) return false; if (!nativeG()) return false;
+  b.innerHTML = '<button type="button" class="gnb">' + G_LOGO + '<span>' + escapeHTML(tr('Continue with Google')) + '</span></button>';
+  b.firstChild.onclick = () => gNativeClick(kind); return true;
 }
 function jwtName(t){ try { const b = t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'); return (JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(b), c => c.charCodeAt(0)))).name) || ''; } catch(e){ return ''; } }
 async function introGoogle(cred){
@@ -7870,6 +7898,36 @@ function shareData(){
 const b64u = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 8192) s += String.fromCharCode.apply(null, u8.subarray(i, i + 8192)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
 const unb64u = t => { const s = atob(t.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((t.length + 3) % 4)); const u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; };
 async function pipeBytes(u8, stream){ const w = stream.writable.getWriter(); w.write(u8).catch(() => {}); w.close().catch(() => {}); return new Uint8Array(await new Response(stream.readable).arrayBuffer()); }
+/* tiny raw-deflate decoder: fallback when DecompressionStream('deflate-raw') is missing (older Android WebView) */
+function inflateRaw(src){
+  const LB = [3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258], LE = [0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0];
+  const DB = [1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577], DE = [0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];
+  const CL = [16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];
+  const build = lens => { const count = new Uint16Array(16), sym = new Uint16Array(lens.length), offs = new Uint16Array(16);
+    for (let i = 0; i < lens.length; i++) count[lens[i]]++; count[0] = 0;
+    for (let i = 1; i < 15; i++) offs[i + 1] = offs[i] + count[i];
+    for (let s = 0; s < lens.length; s++) if (lens[s]) sym[offs[lens[s]]++] = s;
+    return {count, sym}; };
+  let pos = 0, bb = 0, bc = 0; const out = [];
+  const bits = n => { let v = bb; while (bc < n){ if (pos >= src.length) throw new Error('eof'); v |= src[pos++] << bc; bc += 8; } bb = v >>> n; bc -= n; return v & ((1 << n) - 1); };
+  const dec = h => { let code = 0, first = 0, idx = 0; for (let l = 1; l < 16; l++){ code |= bits(1); const c = h.count[l]; if (code - c < first) return h.sym[idx + (code - first)]; idx += c; first += c; first <<= 1; code <<= 1; } throw new Error('bad code'); };
+  let FL = null, FD = null;
+  const codes = (lc, dc) => { for (;;){ let s = dec(lc); if (s < 256) out.push(s); else if (s === 256) return; else { s -= 257; if (s > 28) throw new Error('bad len'); const len = LB[s] + bits(LE[s]), ds = dec(dc); if (ds > 29) throw new Error('bad dist'); const dist = DB[ds] + bits(DE[ds]); if (dist > out.length) throw new Error('far'); for (let i = 0; i < len; i++) out.push(out[out.length - dist]); } if (out.length > 400000) throw new Error('big'); } };
+  let last;
+  do {
+    last = bits(1); const type = bits(2);
+    if (type === 0){ bb = 0; bc = 0; const len = src[pos] | (src[pos + 1] << 8); pos += 4; for (let i = 0; i < len; i++) out.push(src[pos++]); }
+    else if (type === 1){ if (!FL){ const l = []; for (let i = 0; i < 288; i++) l.push(i < 144 ? 8 : i < 256 ? 9 : i < 280 ? 7 : 8); FL = build(l); FD = build(new Array(30).fill(5)); } codes(FL, FD); }
+    else if (type === 2){
+      const nl = bits(5) + 257, nd = bits(5) + 1, nc = bits(4) + 4, cl = new Array(19).fill(0);
+      for (let i = 0; i < nc; i++) cl[CL[i]] = bits(3);
+      const ch = build(cl), lens = [];
+      while (lens.length < nl + nd){ const s = dec(ch); if (s < 16) lens.push(s); else { let rep, v = 0; if (s === 16){ v = lens[lens.length - 1]; rep = 3 + bits(2); } else if (s === 17) rep = 3 + bits(3); else rep = 11 + bits(7); while (rep--) lens.push(v); } }
+      codes(build(lens.slice(0, nl)), build(lens.slice(nl, nl + nd)));
+    } else throw new Error('bad block');
+  } while (!last);
+  return Uint8Array.from(out);
+}
 async function shareEncode(obj){
   const raw = new TextEncoder().encode(JSON.stringify(obj));
   if (typeof CompressionStream === 'function'){ try { return 'z' + b64u(await pipeBytes(raw, new CompressionStream('deflate-raw'))); } catch(e){} }
@@ -7879,7 +7937,7 @@ async function shareDecode(code){
   code = String(code || '').trim(); const k = code.indexOf('#plan='); if (k >= 0) code = code.slice(k + 6); code = code.replace(/[^A-Za-z0-9_-]/g, '');
   if (code.length < 8 || code.length > 20000) throw new Error('bad');
   let u8 = unb64u(code.slice(1)); const t = code[0];
-  if (t === 'z'){ if (typeof DecompressionStream !== 'function') throw new Error('nodecomp'); u8 = await pipeBytes(u8, new DecompressionStream('deflate-raw')); }
+  if (t === 'z'){ try { if (typeof DecompressionStream !== 'function') throw 0; u8 = await pipeBytes(u8, new DecompressionStream('deflate-raw')); } catch(e){ try { u8 = inflateRaw(u8); } catch(e2){ throw new Error('nodecomp'); } } }
   else if (t !== 'j') throw new Error('bad');
   if (u8.length > 200000) throw new Error('big');
   return JSON.parse(new TextDecoder().decode(u8));
@@ -11018,7 +11076,7 @@ window.NUT = {dump:() => JSON.stringify(NU), load:o => { if (!o || typeof o !== 
 })();
 
 /* ================= v65: friends-only games, settings menu, hero Build page, active update prompt ================= */
-const APP_VER = 'tracky-v76';
+const APP_VER = 'tracky-v77';
 /* 1) games: only the friends duel remains; finishing a workout now pays GP directly (no ghost hunt) */
 ghEvent = function(evId, kind, ratio){
   if (kind !== 'fin') return null;
