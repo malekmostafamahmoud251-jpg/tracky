@@ -2111,6 +2111,8 @@ Fat|دهون|Lipides
 1 year|سنة|1 an
 App version|النسخة|Version
 Update now|حدّث دلوقتي|Mettre à jour
+Welcome back,|أهلًا بعودتك،|Content de te revoir,
+Notifications are working.|الإشعارات شغالة.|Les notifications fonctionnent.
 Continue with Google|المتابعة باستخدام جوجل|Continuer avec Google
 Google sign-in is not ready for this app yet. Use the e-mail code instead.|تسجيل جوجل لسه مش جاهز للتطبيق ده. استخدم كود الإيميل.|La connexion Google n'est pas encore prête. Utilise le code e-mail.
 kcal burned (estimated from your sets, reps and weights)|سعرات محروقة (تقدير من مجموعاتك وتكراراتك وأوزانك)|kcal brûlées (estimées d'après tes séries, répétitions et charges)
@@ -4091,7 +4093,7 @@ async function introLoggedIn(nm){
     const p = await acctApi('GET', '/u/data');
     if (p.t && p.d){
       if (!hasLocalData()) cloudApply(p.d, p.t); else await afterLogin();
-      if (settings.profileDone){ $('intro').classList.remove('on'); try { renderAllViews(); } catch(e){} showToast('👋 ' + tr('Welcome back! Your data was restored.')); return; }
+      if (settings.profileDone){ $('intro').classList.remove('on'); try { renderAllViews(); } catch(e){} showToast('👋 ' + tr('Welcome back! Your data was restored.')); try { openIntro(true); } catch(e){} return; }
     }
   } catch(e){}
   if (nm && !INTRO.d.name) INTRO.d.name = nm.split(' ')[0].slice(0, 16);
@@ -4117,7 +4119,7 @@ function renderIntro(){
   $('introBody').innerHTML = steps[s](); $('introBody').style.animation = 'none'; void $('introBody').offsetWidth; $('introBody').style.animation = '';
   $('introDots').innerHTML = [0,1,2,3,4,5].map(i => `<i class="${i <= s ? 'on' : ''}"></i>`).join('');
   $('introSkip').textContent = INTRO.edit ? 'Close' : 'Skip';
-  $('introFoot').innerHTML = s === 0 ? '<button class="' + (getAuth() || !(acctCfg && (acctCfg.google || acctCfg.email)) ? 'gold' : 'opt') + '" onclick="introNext()">' + (getAuth() ? tr('Continue') + ' →' : (acctCfg && (acctCfg.google || acctCfg.email)) ? tr('Continue without an account') + ' →' : 'Get started →') + '</button>'
+  $('introFoot').innerHTML = s === 0 ? '<button class="gold" onclick="introNext()">' + (getAuth() ? tr('Continue') + ' →' : tr('Get started →')) + '</button>'
     : (s === 5 ? '<button class="sec" onclick="introBack()">← Back</button>' : '<button class="sec" onclick="introBack()">← Back</button><button class="gold" onclick="introNext()">Next →</button>');
   const f = $('introBody').querySelector('input'); if (f && s === 1) setTimeout(() => f.focus(), 150);
   if (s === 0 || s === 5) introAuthInit();
@@ -4134,7 +4136,7 @@ function introNext(){
   INTRO.step++; renderIntro();
 }
 function introBack(){ readIntro(); if (INTRO.step > (INTRO.edit ? 1 : 0)) INTRO.step--; renderIntro(); }
-function skipIntro(){ settings.profileDone = true; save(); $('intro').classList.remove('on'); }
+function skipIntro(){ settings.profileDone = true; save(); $('intro').classList.remove('on'); setTimeout(() => { try { nativeAsk(); } catch(e){} }, 1500); }
 function finishIntro(useTpl){
   const d = INTRO.d; d.days = +d.days || 3; d.created = d.created || todayKey();
   settings.profile = d; settings.profileDone = true; if (d.name) settings.heroName = d.name;
@@ -4149,6 +4151,7 @@ function finishIntro(useTpl){
   document.querySelector(`.tab[data-tab="${state.days.length ? 'train' : 'builder'}"]`).click();
   showToast(useTpl ? '🎉 Your plan is ready. Check the starting weights!' : '✅ Profile saved');
   if (getAuth()) cloudPush(false, !lastCloudT());
+  setTimeout(() => { try { nativeAsk(); } catch(e){} }, 2500);
 }
 $('intro').addEventListener('click', e => {
   const b = e.target.closest('[data-k]'); if (!b) return;
@@ -6072,9 +6075,32 @@ async function nativeReminders(){
     if (out.length) await LN.schedule({notifications:out});
   } catch(e){}
 }
+/* v77: ask for step/notification permission right after onboarding too (not only on the next launch) */
+/* v77: inside the Android app reminders are local notifications (a WebView has no web push) */
+if (NATIVE.ok){
+  const _ps = pushStateNow;
+  enablePush = async function(){
+    const LN = NATIVE.ln(); if (!LN) throw new Error(tr('Reminders need notifications to be allowed.'));
+    let p = await LN.checkPermissions(); if (p.display !== 'granted') p = await LN.requestPermissions();
+    if (p.display !== 'granted') throw new Error(tr('Reminders need notifications to be allowed.'));
+    settings.pushOn = true; save(); nativeRemindersSoon();
+  };
+  disablePush = async function(){ settings.pushOn = false; save(); };
+  pushTest = async function(){
+    const LN = NATIVE.ln(); if (!LN) return;
+    try { let p = await LN.checkPermissions(); if (p.display !== 'granted') p = await LN.requestPermissions(); if (p.display !== 'granted') return showToast('⚠️ ' + tr('Reminders need notifications to be allowed.'));
+      await LN.schedule({notifications:[{id:9001, title:'Tracky 🔔', body:tr('Notifications are working.'), schedule:{at:new Date(Date.now() + 3000), allowWhileIdle:true}}]}); showToast('🔔 ' + tr('Sent. It should arrive in a few seconds.')); }
+    catch(e){ showToast('⚠️ ' + String((e && e.message) || e).slice(0, 120)); }
+  };
+  pushStateNow = async function(){ try { nativeRemindersSoon(); } catch(e){} return _ps.apply(this, arguments); };
+}
+if (NATIVE.ok){ let _en = 0; const show = m => { m = String(m || ''); if (_en < 3 && m && !/ResizeObserver|Script error|AbortError|NotAllowedError/i.test(m)){ _en++; try { showToast('⚠️ ' + m.slice(0, 120)); } catch(_){} } };
+  window.addEventListener('error', e => show(e.message)); window.addEventListener('unhandledrejection', e => show(e.reason && (e.reason.message || e.reason))); }
+let _naBusy = false;
+function nativeAsk(){ if (!NATIVE.ok || _naBusy || !settings || !settings.profileDone || progress.nativeAsked) return; _naBusy = true; showConfirm(LANG === 'ar' ? 'عشان الخطوات تتحسب والتطبيق مقفول وتوصلك التذكيرات في ميعادها، محتاج إذن النشاط البدني والإشعارات. تسمح؟' : 'To count steps while the app is closed and send reminders on time, Tracky needs the activity and notification permissions. Allow?', 'Tracky').then(y => { if (y) nativeEnable(); else { progress.nativeAsked = 1; save(); } }).finally(() => { _naBusy = false; }); }
 if (NATIVE.ok){
   setTimeout(() => { stepNativeSync(); nativeReminders(); }, 2500);
-  setTimeout(() => { if (settings && settings.profileDone && !progress.nativeAsked) showConfirm(LANG === 'ar' ? 'عشان الخطوات تتحسب والتطبيق مقفول وتوصلك التذكيرات في ميعادها، محتاج إذن النشاط البدني والإشعارات. تسمح؟' : 'To count steps while the app is closed and send reminders on time, Tracky needs the activity and notification permissions. Allow?', 'Tracky').then(y => { if (y) nativeEnable(); else { progress.nativeAsked = 1; save(); } }); }, 6000);
+  setTimeout(nativeAsk, 6000);
   setInterval(() => { if (!document.hidden) stepNativeSync(); }, 20000);
   document.addEventListener('visibilitychange', () => { if (document.hidden) nativeRemindersSoon(); else stepNativeSync(); });
 }
@@ -8525,6 +8551,15 @@ function renderTd(){
 function rkText(c){ return document.body.classList.contains('dark') ? c : 'color-mix(in srgb,' + c + ' 55%,#000)'; }
 document.querySelector(`.tab[data-tab="${state.days.length ? 'home' : 'builder'}"]`).click();
 if (!settings.profileDone) openIntro();
+/* v78: branded welcome screen on every launch, then always land on Home */
+(function(){
+  const L = document.getElementById('launch'); if (!L) return;
+  const done = () => { L.classList.add('out'); setTimeout(() => { try { L.remove(); } catch(e){} }, 500); };
+  if (!settings.profileDone){ done(); return; }
+  const nm = settings.heroName || (settings.profile || {}).name || '', sub = document.getElementById('launchSub');
+  if (sub && nm) sub.textContent = tr('Welcome back,') + ' ' + nm;
+  L.onclick = done; setTimeout(done, Math.max(400, 1700 - Math.round(performance.now())));
+})();
 remTick(); setTimeout(() => pushStateNow(false), 4000);
 if (settings.autoSync) setTimeout(() => syncPull(false, true), 2500);
 setTimeout(() => {
@@ -8742,8 +8777,9 @@ function resumeSave(){
 let _resT = 0; const resumeSoon = () => { clearTimeout(_resT); _resT = setTimeout(resumeSave, 400); };
 ['visibilitychange', 'pagehide', 'freeze'].forEach(ev => addEventListener(ev, () => { if (ev !== 'visibilitychange' || document.hidden) resumeSave(); }));
 addEventListener('scroll', resumeSoon, {passive:true}); document.addEventListener('click', resumeSoon, true);
+const RESUME_TAB = false; /* v78: the app always opens on Home */
 (function(){
-  const R = resumeRead(); if (!R || !settings.profileDone || $('intro').classList.contains('on')) return;
+  if (!RESUME_TAB) return; const R = resumeRead(); if (!R || !settings.profileDone || $('intro').classList.contains('on')) return;
   const age = Date.now() - (+R.t || 0); if (age > 36e5 * 12) return;
   const tabBtn = R.tab && document.querySelector('.tab[data-tab="' + R.tab + '"]'); if (!tabBtn) return;
   try {
@@ -11076,7 +11112,7 @@ window.NUT = {dump:() => JSON.stringify(NU), load:o => { if (!o || typeof o !== 
 })();
 
 /* ================= v65: friends-only games, settings menu, hero Build page, active update prompt ================= */
-const APP_VER = 'tracky-v77';
+const APP_VER = 'tracky-v79';
 /* 1) games: only the friends duel remains; finishing a workout now pays GP directly (no ghost hunt) */
 ghEvent = function(evId, kind, ratio){
   if (kind !== 'fin') return null;
