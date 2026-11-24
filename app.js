@@ -10934,7 +10934,7 @@ ACT.log_saved_meal = {risk:'low', d:'Log one of the user\'s saved meals by name.
 const FOOD_ALLOW = new Set(['search_food', 'get_food_log', 'get_nutrition_summary', 'log_food', 'update_food', 'delete_food', 'log_water', 'set_nutrition_goals', 'create_food', 'copy_day', 'save_meal', 'log_saved_meal', 'get_body', 'set_body_weight', 'get_sessions', 'get_plan']);
 function foodGuide(){
   const L = Object.entries(ACT).filter(([k, v]) => FOOD_ALLOW.has(k)).map(([k, v]) => `- ${k}(${v.a}): ${v.d}`).join('\n');
-  return '\n\nACTIONS: put JSON blocks at the very end of your reply, before the [[Q]] line, like [[ACT]]{"do":"log_food","meal":"lunch","items":[{"key":"rice_white","grams":200},{"name":"Home-made shawarma wrap","name_ar":"شاورما بيتي","grams":250,"cal":520,"p":35,"c":40,"f":22}]}[[/ACT]]. One block per action, up to 12. Read actions (get_*, search_food) run immediately and you receive the result; write actions are shown to the user as a card they confirm, so describe what you will do and never claim it is already done. To log foods use search_food first and pass its key; if the food is not in the database, estimate realistic values for the whole portion, log it with name/name_ar/grams/cal/p/c/f, and ALSO add a create_food action (values per 100 g) so it is saved for next time. To edit or delete entries call get_food_log first for exact ids. Weights are kg, dates YYYY-MM-DD. Available actions:\n' + L;
+  return '\n\nACTIONS: put JSON blocks at the very end of your reply, before the [[Q]] line, like [[ACT]]{"do":"log_food","meal":"lunch","items":[{"key":"rice_white","grams":200},{"name":"Home-made shawarma wrap","name_ar":"شاورما بيتي","grams":250,"cal":520,"p":35,"c":40,"f":22}]}[[/ACT]]. One block per action, up to 12. Read actions (get_*, search_food) run immediately and you receive the result; write actions are shown to the user as a card they confirm, so describe what you will do and never claim it is already done. To log foods: if DATABASE MATCHES are given use their keys; otherwise call search_food with only the food word the user wrote and pick a result ONLY if it is clearly the same food (never a similar-sounding or different dish); if none matches clearly, estimate realistic values for the whole portion, log it with name/name_ar/grams/cal/p/c/f, and ALSO add a create_food action (values per 100 g) so it is saved for next time. To edit or delete entries call get_food_log first for exact ids. Weights are kg, dates YYYY-MM-DD. Available actions:\n' + L;
 }
 const FOOD_RULES = [
 "You are Tracky Food AI: the nutrition specialist inside the Tracky app. You own the calorie tracker: you log meals, estimate calories and macros for any food (including Egyptian and home-cooked dishes and packaged products), create custom foods, set calorie goals, explain the user's food data and coach them to eat better. You have a separate chat from the main Tracky Coach, but you share the same data: you can see the user's training and body weight, and the main Coach sees their diet.",
@@ -10942,6 +10942,7 @@ const FOOD_RULES = [
 "NUTRITION RULES: cooking method matters (raw vs cooked weight, fried vs grilled); say which you assumed. Fat loss: moderate deficit, protein about 1.8-2.2 g per kg; muscle gain: small surplus; adjust from the weight trend, not formulas alone. Never suggest crash diets, extreme restriction, dehydration or laxatives. If the user shows signs of an eating disorder or a medical condition, be kind and suggest a professional. Do not diagnose.",
 "CONNECTION WITH THE MAIN COACH: if the diet suggests the training plan should change (for example a deficit that is too aggressive for their volume, low protein on a bulk, or no fuel on training days), say so and tell the user to ask the main Coach in the Coach tab to adjust the plan. Training facts in your context are for reference; do not edit their workout plan yourself.",
 "PHOTOS (strict): when a photo is attached, the photo is the ONLY source for what the user is asking about. Never mention, calculate or log foods that are not visible in the photo, and never use the diary, saved meals, custom foods or earlier messages to guess what the photo contains. If it is a NUTRITION LABEL: read it exactly, state the serving size and the pack weight you read, give calories and macros for the amount the user says (or the whole pack if a net weight is printed, else one serving), and show the numbers per 100 g as well. If it is a MEAL: list each visible food with estimated grams and the calories and macros of each, then the total. If you cannot read something say exactly what you could not read and ask for a clearer photo; do not make numbers up. After analyzing, offer to log it with a log_food action and let the user confirm; do not log it silently. The photo stays available in the next messages of the conversation, so when the user says things like 'calculate what is in the photo' use that same photo.",
+"FIDELITY (strict, most important): log or calculate ONLY the foods the user names in the CURRENT message, with exactly the amounts they gave ('200 g rice' means rice, 200 g, nothing else). Never add foods from the diary, saved meals, custom foods, earlier messages, the database search results or your own guesses. Earlier messages are background only: never repeat or re-log their foods. If the user gives no amount, assume one normal serving and say so. If a food is unclear, ask one short question instead of guessing other foods. When DATABASE MATCHES are provided, use exactly those keys and grams.",
 "SCOPE: food, nutrition, hydration, supplements and body-weight goals. For anything else say briefly that you focus on food and that the main Coach can help.",
 "STYLE: Reply in the user's language and dialect (Egyptian Arabic if they write Egyptian). Be brief and concrete: give the number first (kcal and protein), then one practical tip. When the food is in the database prefer its exact values; for restaurant or branded items give a realistic average and say it is an estimate. For a dish, split it into ingredients when logging so the macros are honest. Never invent data that is not in the context.",
 "FOLLOW-UPS: end normal answers with up to three short next messages the user might tap: [[Q]]one|two|three[[/Q]] in the user's language. Skip for one-line action confirmations."
@@ -10956,16 +10957,42 @@ function foodCtx(){
   const ad = adaptive(); L.push(ad.need ? 'Real-maintenance estimate: not enough data yet.' : `Real maintenance about ${ad.tdee} kcal; weight changing ${ad.perWeek} ${unitName()}/week on ~${ad.intake} kcal.`);
   const pts = bodyLog.filter(x => +x.kg > 0).slice(-4); if (pts.length) L.push('Recent weigh-ins: ' + pts.map(x => `${x.date} ${x.kg} kg`).join(', ') + '.');
   const wk = rangeDays(7).filter(trainedOn).length; L.push(`Training: ${wk} sessions in the last 7 days; trained today: ${trainedOn(k) ? 'yes' : 'no'}. Plan days: ${state.days.map(d => d.name).join(' | ')}.`);
-  const cf = Object.values(NU.custom).slice(0, 25).map(f => f.en || f.ar); if (cf.length) L.push('Custom foods: ' + cf.join(', ') + '.'); const cb = Object.values(NU.combos).slice(0, 12).map(c => c.n); if (cb.length) L.push('Saved meals: ' + cb.join(', ') + '.');
+  const cf = Object.values(NU.custom).slice(0, 25).map(f => f.en || f.ar); if (cf.length) L.push('Custom foods the user created (use ONLY if the user names one): ' + cf.join(', ') + '.'); const cb = Object.values(NU.combos).slice(0, 12).map(c => c.n); if (cb.length) L.push('Saved meals (use ONLY if the user names one): ' + cb.join(', ') + '.');
   const ins = insights().slice(0, 6); if (ins.length) L.push('Auto insights: ' + ins.map(x => x.t).join(' | '));
   return L.join('\n');
 }
 function foodCtxLite(){ const k = todayKey(), tg = targetFor(k), tot = sumM(peek(k).meals); return `Today is ${k}.\n` + (hasGoal() ? `Daily goal: ${tg.kcal} kcal, protein ${tg.p} g, carbs ${tg.c} g, fat ${tg.f} g. ` : '') + `Eaten so far today: ${Math.round(tot.cal)} kcal, P ${Math.round(tot.p)} g (use only to say what remains after adding the photo item).`; }
+/* ---- Food AI v82: exact local answer first (no AI guessing), database hints, and a filter for invented extras ---- */
+const FC_CMD = /(^|[\s،,])(احسب\s+(?:لي|لى)|حسب\s+(?:لي|لى)|احسب(?:لي|لى|ها|هم)?|حسب(?:لي|لى)?|كام|كم|سعرات|سعره|سعرة|حرارية|حراري|calculate|calc|calories|calorie|kcal|how many|how much|what's|what is|tell me)(?=$|[\s،,؟?!.])/gi;
+function fcClean(text){ return String(text || '').replace(/[؟?!]/g, ' ').replace(FC_CMD, ' ').replace(/\s+/g, ' ').trim(); }
+function fcLocal(text){
+  try {
+    const raw = String(text || '').trim(); if (!raw || raw.length > 140) return null;
+    if (!(/[0-9٠-٩]/.test(raw) || FC_CMD.test(raw) || /(اكلت|شربت|سجل|ate\b|had\b|drank|log\b)/i.test(raw))) return null; FC_CMD.lastIndex = 0;
+    const P = parseMeal(fcClean(raw)); if (!P.items.length || P.bad.length) return null;
+    const ar = hasAr(raw) || LANG === 'ar', its = P.items.slice(0, 12); let T = {cal:0, p:0, c:0, f:0};
+    const lines = its.map(y => { const v = per(y.f, y.g); T.cal += v.cal; T.p += v.p; T.c += v.c; T.f += v.f;
+      return `• ${y.g} ${ar ? 'جم' : 'g'} ${ar ? (y.f.ar || y.f.en) : (y.f.en || y.f.ar)}${y.est ? (ar ? ' (كمية مقدّرة)' : ' (estimated amount)') : ''}: **${Math.round(v.cal)}** ${ar ? 'سعرة' : 'kcal'} · ${ar ? 'بروتين' : 'P'} ${r1(v.p)} · ${ar ? 'كارب' : 'C'} ${r1(v.c)} · ${ar ? 'دهون' : 'F'} ${r1(v.f)}`; });
+    if (its.length > 1) lines.push(`${ar ? 'الإجمالي' : 'Total'}: **${Math.round(T.cal)}** ${ar ? 'سعرة' : 'kcal'} · ${ar ? 'بروتين' : 'P'} ${r1(T.p)} · ${ar ? 'كارب' : 'C'} ${r1(T.c)} · ${ar ? 'دهون' : 'F'} ${r1(T.f)}`);
+    lines.push(ar ? 'القيم من قاعدة بيانات التطبيق. دوس سجّل لو عايز تضيفها لليوم.' : 'Values come from the app database. Tap confirm to add it to today.');
+    const act = {do:'log_food', meal:P.meal || undefined, items:its.map(y => ({key:y.f.k, grams:y.g}))};
+    return {text:lines.join('\n'), full:lines.join('\n') + '\n[[ACT]]' + JSON.stringify(act) + '[[/ACT]]'};
+  } catch(e){ console.error('fcLocal', e); return null; }
+}
+function fcHint(text){
+  try { const P = parseMeal(fcClean(text)); if (!P.items.length) return {hint:'', keys:new Set(), strict:false};
+    return {hint:'\n\nDATABASE MATCHES for the foods in the user message (use exactly these keys and grams when logging): ' + P.items.map(y => `"${y.seg}" -> key ${y.f.k} (${y.f.en}), ${y.g} g${y.est ? ' (amount assumed)' : ''}`).join('; ') + '.', keys:new Set(P.items.map(y => y.f.k)), strict:!P.bad.length};
+  } catch(e){ return {hint:'', keys:new Set(), strict:false}; }
+}
+function fcFilter(full, H){
+  if (!H || !H.strict || !H.keys.size) return full;
+  return String(full).replace(/\[\[ACT\]\]([\s\S]*?)\[\[\/ACT\]\]/g, (m, j) => { try { const a = JSON.parse(j); if (a && a.do === 'log_food' && Array.isArray(a.items)){ const it = a.items.filter(x => !(x && x.key && getFood(String(x.key)) && !H.keys.has(String(x.key)))); if (!it.length) return ''; a.items = it; return '[[ACT]]' + JSON.stringify(a) + '[[/ACT]]'; } } catch(_){} return m; });
+}
 const FCH = {el:null, busy:false, img:null, last:null, drafted:''};
 const fcSave = () => { const L = [...FCH.el.querySelectorAll('#fcMsgs .msg')].filter(x => x.dataset.raw && x.dataset.raw !== '…' && !x.dataset.tmp).map(x => ({r:x.classList.contains('user') ? 'u' : 'a', t:String(x.dataset.raw).slice(0, 4000)})); NU.chat = L.slice(-40); nSave(); };
 function fcAdd(type, text, tmp){ const box = FCH.el.querySelector('#fcMsgs'), d = document.createElement('div'); d.className = 'msg ' + type; if (text === '…') d.innerHTML = '<span class="dots"><i></i><i></i><i></i></span>'; else d.innerHTML = mdLite(text); d.dataset.raw = text; if (tmp) d.dataset.tmp = 1; box.appendChild(d); box.scrollTop = 1e9; return d; }
 const fcSet = (d, t) => { d.innerHTML = mdLite(t); d.dataset.raw = t; const b = FCH.el.querySelector('#fcMsgs'); b.scrollTop = 1e9; };
-function fcHist(){ return (NU.chat || []).slice(-16).map(m => ({role:m.r === 'u' ? 'user' : 'model', parts:[{text:String(m.t).replace(/\n\[(Actions|User)[^\]]*\]/g, '')}]})); }
+function fcHist(){ return (NU.chat || []).slice(-6).map(m => ({role:m.r === 'u' ? 'user' : 'model', parts:[{text:String(m.t).replace(/\n\[(Actions|User)[^\]]*\]/g, '')}]})); }
 async function fcSend(over){
   if (FCH.busy) return; const ta = FCH.el.querySelector('#fcIn'), text = String(typeof over === 'string' ? over : ta.value).trim(), img = FCH.img; if (!text && !img) return;
   const msg = text || T('Analyze this photo: read the label or identify the food, then give me the calories and macros.', 'حلل الصورة دي: اقرا الجدول أو اتعرّف على الأكل، وهات السعرات والماكروز.');
@@ -10973,11 +11000,13 @@ async function fcSend(over){
   FCH.el.querySelectorAll('.qfu').forEach(x => x.remove()); const hist = fcHist();
   const ub = fcAdd('user', (img ? '📷 ' : '') + msg); if (img){ const im = document.createElement('img'); im.src = 'data:image/jpeg;base64,' + img; im.className = 'fc-img'; ub.prepend(im); }
   ta.value = ''; FCH.drafted = ''; FCH.img = null; fcSizeIn(); fcThumb(); fcSave();
+  if (!img){ const L = fcLocal(msg); if (L){ const lb = fcAdd('ai', L.text); offerActs(lb, L.full, {box:() => FCH.el.querySelector('#fcMsgs'), save:fcSave, allow:FOOD_ALLOW}); fcSave(); return; } }
+  const HH = img ? {hint:'', keys:new Set(), strict:false} : fcHint(msg);
   if (!coachReady()){ fcAdd('ai', '⚠️ ' + T('Add your Gemini API key in Settings to use the Food AI.', 'ضيف مفتاح Gemini في الإعدادات عشان تستخدم الـ Food AI.'), 1); return; }
-  FCH.busy = true; const send = FCH.el.querySelector('#fcGo'); if (send) send.disabled = true; const loading = fcAdd('ai', '…', 1); let bubble = null; const pt = window._askTemp; window._askTemp = .4;
+  FCH.busy = true; const send = FCH.el.querySelector('#fcGo'); if (send) send.disabled = true; const loading = fcAdd('ai', '…', 1); let bubble = null; const pt = window._askTemp; window._askTemp = .15;
   try {
-    const full = await agentRound({rules:FOOD_RULES + foodGuide(), hist, ctx:(useImg ? foodCtxLite() + '\n\nA PHOTO IS ATTACHED. Answer only from the photo and the user message below; ignore the diary for deciding what is in the photo.' : foodCtx()) + '\n\nUser message: ' + msg, text:msg, allow:FOOD_ALLOW, images:useImg ? [{t:'Meal or label photo:', d:useImg}] : null, onChunk:p => { if (!bubble){ loading.remove(); bubble = fcAdd('ai', ''); } fcSet(bubble, stripActs(cleanPlan(p))); }});
-    if (!bubble){ loading.remove(); bubble = fcAdd('ai', ''); } const clean = stripActs(cleanPlan(full));
+    let full = await agentRound({rules:FOOD_RULES + foodGuide(), hist, ctx:(useImg ? foodCtxLite() + '\n\nA PHOTO IS ATTACHED. Answer only from the photo and the user message below; ignore the diary for deciding what is in the photo.' : foodCtx() + HH.hint) + '\n\nUser message (current, the ONLY foods to handle): ' + msg, text:msg, allow:FOOD_ALLOW, images:useImg ? [{t:'Meal or label photo:', d:useImg}] : null, onChunk:p => { if (!bubble){ loading.remove(); bubble = fcAdd('ai', ''); } fcSet(bubble, stripActs(cleanPlan(p))); }});
+    full = fcFilter(full, HH); if (!bubble){ loading.remove(); bubble = fcAdd('ai', ''); } const clean = stripActs(cleanPlan(full));
     if (!clean && !parseActs(full).length){ bubble.remove(); throw new Error(T('The AI returned an empty answer.', 'الذكاء الاصطناعي رجّع رد فاضي.')); }
     fcSet(bubble, clean || '👍'); engTag(bubble); const fu = followUps(full); if (fu.length){ const w = document.createElement('div'); w.className = 'qfu'; w.innerHTML = fu.map(q => `<button type="button" class="sec tiny">${E(q)}</button>`).join(''); bubble.after(w); }
     offerActs(bubble, full, {box:() => FCH.el.querySelector('#fcMsgs'), save:fcSave, allow:FOOD_ALLOW}); fcSave();
@@ -11117,12 +11146,12 @@ window.coachRound = coachRound; window.offerActs = offerActs;
 /* ---------- init ---------- */
 nLoad(); renderFood(); try { renderHome(); } catch(e){}
 
-window.NUT = {dump:() => JSON.stringify(NU), load:o => { if (!o || typeof o !== 'object' || Array.isArray(o)) return; try { localStorage.setItem(NK, JSON.stringify(o)); } catch(e){} nLoad(); try { refresh(); } catch(e){} }, _t:{bcValid, offLookup, parseMeal, searchFoods, targetFor, adaptive, statsFor, ACT, parseActs, NU:() => NU}, report:openReport, open:st => { openFood({stage:st}); }, active:nutriActive, mealsToday:() => peek(todayKey()).meals.length, remPlan:() => { const r = NU.set && NU.set.rem; if (!r || !r.on) return []; const have = {}; peek(todayKey()).meals.forEach(m => { have[m.meal] = 1; }); return [['b', 'breakfast'], ['l', 'lunch'], ['d', 'dinner']].map(([k, m]) => ({k, t:r[k], done:!!have[m]})); }, protPct:() => { const t = targetFor(todayKey()); return Math.round(sumM(peek(todayKey()).meals).p / t.p * 100); }};
+window.NUT = {parse:t => { const P = parseMeal(fcClean(t)); return {items:P.items.map(i => [i.f.k, i.g]), bad:P.bad}; }, local:t => { const L = fcLocal(t); return L && L.text; }, dump:() => JSON.stringify(NU), load:o => { if (!o || typeof o !== 'object' || Array.isArray(o)) return; try { localStorage.setItem(NK, JSON.stringify(o)); } catch(e){} nLoad(); try { refresh(); } catch(e){} }, _t:{bcValid, offLookup, parseMeal, searchFoods, targetFor, adaptive, statsFor, ACT, parseActs, NU:() => NU}, report:openReport, open:st => { openFood({stage:st}); }, active:nutriActive, mealsToday:() => peek(todayKey()).meals.length, remPlan:() => { const r = NU.set && NU.set.rem; if (!r || !r.on) return []; const have = {}; peek(todayKey()).meals.forEach(m => { have[m.meal] = 1; }); return [['b', 'breakfast'], ['l', 'lunch'], ['d', 'dinner']].map(([k, m]) => ({k, t:r[k], done:!!have[m]})); }, protPct:() => { const t = targetFor(todayKey()); return Math.round(sumM(peek(todayKey()).meals).p / t.p * 100); }};
 
 })();
 
 /* ================= v65: friends-only games, settings menu, hero Build page, active update prompt ================= */
-const APP_VER = 'tracky-v81';
+const APP_VER = 'tracky-v82';
 /* 1) games: only the friends duel remains; finishing a workout now pays GP directly (no ghost hunt) */
 ghEvent = function(evId, kind, ratio){
   if (kind !== 'fin') return null;
