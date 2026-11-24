@@ -5995,14 +5995,36 @@ SKILL_TREE.push(...buildCollectables(LIB_BASE));
 const STEP = {on:false, g:9.8, s:0, p1:undefined, p2:undefined, last:0, run:0, thr:1.0, sv:0, wl:null, ui:0};
 const pdDay = k => ((progress.steps || {})[k]) || 0, stepGoal = () => +progress.stepGoal || 10000;
 const strideM = () => ((settings.profile && +settings.profile.height) || 170) * .415 / 100;
-const stepKm = n => n * strideM() / 1000, stepKcal = n => Math.round(.57 * userKg() * stepKm(n));
+/* ---- v83: walking calories from pace (cadence -> speed -> MET) and body weight; slow, medium and fast walking burn differently ---- */
+const heightM = () => (((settings.profile && +settings.profile.height) || 170) / 100);
+const stepLenAt = c => heightM() * Math.min(.62, .30 + .0016 * c);                         // step length grows with cadence
+const MET_T = [[2.5, 2.3], [3.2, 2.8], [4, 3], [4.8, 3.5], [5.6, 4.3], [6.4, 5], [7.2, 6.9], [8, 8.3], [9.7, 9.8], [11.3, 11]];   // speed km/h -> MET (Compendium of Physical Activities)
+function metAt(v){ if (v <= MET_T[0][0]) return MET_T[0][1]; for (let i = 1; i < MET_T.length; i++){ const a = MET_T[i - 1], b = MET_T[i]; if (v <= b[0]) return a[1] + (b[1] - a[1]) * (v - a[0]) / (b[0] - a[0]); } return MET_T[MET_T.length - 1][1]; }
+function paceCalc(steps, secs, kg){ if (!(steps > 0) || !(secs > 0)) return {kcal:0, km:0, h:0, v:0}; const c = steps / secs * 60, L = stepLenAt(c), km = steps * L / 1000, h = secs / 3600, v = km / h; return {kcal:(metAt(v) - 1) * kg * h, km, h, v}; }   // net kcal: resting energy is already in the daily budget
+function stepBands(k){
+  const a = [0, 0, 0, 0, 0, 0, 0, 0], add = arr => { if (Array.isArray(arr)) arr.forEach((x, i) => { if (i < 8) a[i] += +x || 0; }); };
+  add((progress.stepsPace || {})[k]); add((progress.stepsPaceW || {})[k]);
+  let known = 0; for (let i = 0; i < 8; i += 2) known += a[i]; const rest = Math.max(0, pdDay(k) - known); if (rest > 0){ a[2] += rest; a[3] += rest * .6; }   // steps with no pace data count as a normal walk (100 steps/min)
+  return a;
+}
+function stepStats(k){
+  const a = stepBands(k), kg = userKg(); let kcal = 0, km = 0, h = 0, st = 0; const sh = [0, 0, 0, 0];
+  for (let i = 0; i < 4; i++){ const s = a[i * 2], t = a[i * 2 + 1]; if (s > 0 && t > 0){ const r = paceCalc(s, t, kg); kcal += r.kcal; km += r.km; h += r.h; sh[i] = s; st += s; } }
+  return {kcal, km, v:h > 0 ? km / h : 0, n:st, share:st ? sh.map(x => Math.round(x / st * 100)) : [0, 100, 0, 0]};
+}
+const stepKm = (n, k) => k ? stepStats(k).km : paceCalc(n, n * .6, 0).km, stepKcal = (n, k) => Math.round(k ? stepStats(k).kcal : paceCalc(n, n * .6, userKg()).kcal);
+function paceLabel(v, sh){ const ar = LANG === 'ar'; if (sh && sh[3] >= 30) return ar ? 'جري' : 'Running'; return v <= 0 ? '—' : v < 4 ? (ar ? 'بطيء' : 'Slow') : v < 5.6 ? (ar ? 'متوسط' : 'Medium') : (ar ? 'سريع' : 'Fast'); }
 function stepMonth(ym){ let n = 0, d = 0, gd = 0; Object.entries(progress.steps || {}).forEach(([k, v]) => { if (k.slice(0, 7) === ym && v > 0){ n += v; d++; if (v >= stepGoal()) gd++; } }); return {steps:n, days:d, goalDays:gd, km:stepKm(n), kcal:stepKcal(n)}; }
 function gymKcalMonth(ym){ let k = 0; sessions.forEach(s => { if (localKey(s.date).slice(0, 7) === ym) k += sessionKcal(s); }); return Math.round(k); }
-function addSteps(n){ const k = todayKey(); if (STEP.day && STEP.day !== k) setTimeout(renderSteps, 0); STEP.day = k; progress.steps = progress.steps || {}; progress.steps[k] = (progress.steps[k] || 0) + n;
+function paceFeedW(k, n){   // browser version: same idea as the Android service, cadence over 8-second windows
+  const now = Date.now(), W = STEP.pw, put = (st, ms) => { if (st <= 0) return; let b = 1, secs = ms / 1000; if (ms < 3000){ secs = st * .6; } else { const c = st * 60000 / ms; b = c < 85 ? 0 : c < 110 ? 1 : c < 135 ? 2 : 3; } progress.stepsPaceW = progress.stepsPaceW || {}; const a = progress.stepsPaceW[k] = progress.stepsPaceW[k] || [0, 0, 0, 0, 0, 0, 0, 0]; a[b * 2] += st; a[b * 2 + 1] += Math.round(secs); };
+  if (!W || now - W.last > 20000){ if (W) put(W.s, Math.max(0, W.last - W.t)); put(n, n * 600); STEP.pw = {t:now, s:0, last:now}; return; }
+  W.s += n; W.last = now; if (now - W.t >= 8000){ put(W.s, now - W.t); W.t = now; W.s = 0; } }
+function addSteps(n){ const k = todayKey(); if (STEP.day && STEP.day !== k) setTimeout(renderSteps, 0); STEP.day = k; progress.steps = progress.steps || {}; progress.steps[k] = (progress.steps[k] || 0) + n; try { paceFeedW(k, n); } catch(_){}
   if (!STEP.sv) STEP.sv = setTimeout(() => { STEP.sv = 0; save(); }, 8000);
   if (!STEP.ui) STEP.ui = setTimeout(() => { STEP.ui = 0; stepLive(); }, 400);
   if (!STEP.nq) STEP.nq = setTimeout(() => { STEP.nq = 0; stepNotify(); }, 6000); }
-function stepLive(){ const k = todayKey(), n = pdDay(k), a = $('stepN'); if (!a) return; const w = stepKcal(n), g = gymKcalDay(k); a.textContent = n.toLocaleString(); $('stepK').textContent = w; $('stepG').textContent = g; $('stepT').textContent = w + g; $('stepKm').textContent = stepKm(n).toFixed(2); $('stepBar').style.width = Math.min(100, n / stepGoal() * 100) + '%'; }
+function stepLive(){ const k = todayKey(), n = pdDay(k), a = $('stepN'); if (!a) return; const w = stepKcal(n, k), g = gymKcalDay(k), ps = stepStats(k); a.textContent = n.toLocaleString(); $('stepK').textContent = w; $('stepG').textContent = g; $('stepT').textContent = w + g; $('stepKm').textContent = stepKm(n, k).toFixed(2); if ($('stepV')) $('stepV').textContent = ps.v.toFixed(1); if ($('stepPL')) $('stepPL').textContent = paceLabel(ps.v, ps.share); $('stepBar').style.width = Math.min(100, n / stepGoal() * 100) + '%'; }
 function stepMotion(e){
   const a = e.accelerationIncludingGravity; if (!a || a.x == null) return;
   const t = e.timeStamp || performance.now(), m = Math.hypot(a.x, a.y, a.z);
@@ -6020,9 +6042,10 @@ async function stepStart(){
 }
 function stepStop(){ window.removeEventListener('devicemotion', stepMotion); STEP.on = false; try { STEP.wl && STEP.wl.release(); } catch(e){} STEP.wl = null; clearTimeout(STEP.sv); STEP.sv = 0; save(); renderSteps(); stepNotifyClose(); }
 function renderSteps(){
-  const b = $('stepBox'); if (!b) return; const k = todayKey(), n = pdDay(k), goal = stepGoal(), d7 = [...Array(7)].map((_, i) => { const d = shiftDays(k, i - 6); return [d.slice(8), pdDay(d)]; }), mx = Math.max(goal, ...d7.map(x => x[1]));
+  const b = $('stepBox'); if (!b) return; const k = todayKey(), n = pdDay(k), goal = stepGoal(), PS = stepStats(k), d7 = [...Array(7)].map((_, i) => { const d = shiftDays(k, i - 6); return [d.slice(8), pdDay(d)]; }), mx = Math.max(goal, ...d7.map(x => x[1]));
   b.innerHTML = `<div class="box"><h3>👣 Steps today</h3><div class="stepnum"><b id="stepN">${n.toLocaleString()}</b><small>/ ${goal.toLocaleString()}</small></div><div class="qbar"><i id="stepBar" style="width:${Math.min(100, n / goal * 100)}%"></i></div>
-    <div class="stepmeta"><span>🚶 <b id="stepK">${stepKcal(n)}</b> kcal</span><span>🏋️ <b id="stepG">${gymKcalDay(k)}</b> kcal</span><span>🔥 <b id="stepT">${stepKcal(n) + gymKcalDay(k)}</b> total</span><span>📏 <b id="stepKm">${stepKm(n).toFixed(2)}</b> km</span></div>
+    <div class="stepmeta"><span>🚶 <b id="stepK">${stepKcal(n, k)}</b> kcal</span><span>🏋️ <b id="stepG">${gymKcalDay(k)}</b> kcal</span><span>🔥 <b id="stepT">${stepKcal(n, k) + gymKcalDay(k)}</b> total</span><span>📏 <b id="stepKm">${stepKm(n, k).toFixed(2)}</b> km</span></div>
+    <div class="stepmeta"><span>⚡ <b id="stepPL">${paceLabel(PS.v, PS.share)}</b> · <b id="stepV">${PS.v.toFixed(1)}</b> ${LANG === 'ar' ? 'كم/س' : 'km/h'}</span><span>🐢 ${PS.share[0]}%</span><span>🚶 ${PS.share[1]}%</span><span>🏃 ${PS.share[2] + PS.share[3]}%</span><span data-st="kg" style="cursor:pointer">⚖️ <b>${(+userKg()).toFixed(1)}</b> kg ✎</span></div>
     <div class="stepbars">${d7.map(x => `<div><i style="height:${Math.round(x[1] / mx * 100)}%"></i><small>${x[0]}</small></div>`).join('')}</div>
     <div class="stepacts">${NATIVE.ok ? (NATIVE.st && NATIVE.st.granted ? '' : '<button type="button" class="sec tiny" data-st="native">' + (LANG === 'ar' ? '🔓 فعّل العدّ في الخلفية' : '🔓 Enable background steps') + '</button>') : `<button type="button" class="sec tiny" data-st="toggle">${STEP.on ? '⏸ Stop counting' : '▶ Start counting'}</button>`}<button type="button" class="sec tiny" data-st="add">＋ Add steps</button><button type="button" class="sec tiny" data-st="goal">🎯 Goal</button>${NATIVE.ok ? (NATIVE.st && NATIVE.st.granted ? `<button type="button" class="sec tiny" data-st="notif">${progress.stepNotif === false ? '📌 ' + (LANG === 'ar' ? 'شريط الإشعارات: مقفول' : 'Notification bar: Off') : '📌 ' + (LANG === 'ar' ? 'شريط الإشعارات: شغال' : 'Notification bar: On')}</button>` : '') : `<button type="button" class="sec tiny" data-st="notif">${progress.stepNotif ? '📌 Notification bar: On' : '📌 Notification bar: Off'}</button>`}</div>
     <small class="stepnote">${NATIVE.ok ? (NATIVE.st && NATIVE.st.granted ? (LANG === 'ar' ? '✅ الخطوات بتتحسب في الخلفية حتى لو التطبيق أو الموبايل مقفول. الرقم بيتحدّث لما تفتح التطبيق.' : '✅ Steps are counted in the background, even with the app closed or the phone locked. The number updates when you open Tracky.') : (LANG === 'ar' ? 'محتاج إذن النشاط البدني عشان العدّ يشتغل في الخلفية.' : 'Needs the activity permission to count in the background.')) : STEP.on ? 'Counting… keep Tracky open with the screen on. Counting pauses when the screen is off.' : 'Counts steps from your phone motion sensor while Tracky is open. Calories are an estimate from your weight and height.'}</small></div>`;
@@ -6032,14 +6055,15 @@ document.addEventListener('click', e => { const t = e.target.closest('[data-st]'
   else if (a === 'native') nativeEnable();
   else if (a === 'add'){ const v = parseInt(prompt('Steps to add today'), 10); if (v > 0 && v < 100000){ addSteps(v); save(); renderSteps(); } }
   else if (a === 'notif') stepNotifToggle();
+  else if (a === 'kg'){ const v = parseFloat(String(prompt(LANG === 'ar' ? 'وزنك بالكيلو (بيتحسب عليه حرق السعرات)' : 'Your body weight in kg (calories burned are based on it)', (+userKg()).toFixed(1)) || '').replace(',', '.')); if (v >= 25 && v <= 300){ addBodyEntry(v); save(); try { renderAllViews(); } catch(_){} renderSteps(); trackerSync(true); } else if (v) showToast('⚠️ ' + (LANG === 'ar' ? 'اكتب وزن من 25 لـ 300 كجم' : 'Enter a weight from 25 to 300 kg')); }
   else if (a === 'goal'){ const v = parseInt(prompt('Daily step goal', stepGoal()), 10); if (v >= 1000 && v <= 100000){ progress.stepGoal = v; save(); renderSteps(); } } });
 document.addEventListener('visibilitychange', () => { if (STEP.on && document.visibilityState === 'visible'){ try { navigator.wakeLock.request('screen').then(w => { STEP.wl = w; }).catch(() => {}); } catch(e){} } else if (document.visibilityState === 'hidden' && progress.steps){ clearTimeout(STEP.sv); STEP.sv = 0; save(); stepNotify(); } });
 
 const gymKcalDay = k => Math.round(sessions.reduce((t, s) => t + (localKey(s.date) === k ? sessionKcal(s) : 0), 0));
 async function stepNotify(){
   if (!progress.stepNotif || !STEP.on || !('Notification' in window) || Notification.permission !== 'granted') return;
-  try { const reg = await navigator.serviceWorker.ready, k = todayKey(), n = pdDay(k), w = stepKcal(n), g = gymKcalDay(k);
-    await reg.showNotification('👣 ' + n.toLocaleString() + ' / ' + stepGoal().toLocaleString() + ' steps', {body:'🔥 ' + (w + g) + ' kcal (walking ' + w + ' · gym ' + g + ') · 📏 ' + stepKm(n).toFixed(2) + ' km', tag:'tracky-steps', renotify:false, silent:true, requireInteraction:true, icon:'icons/icon-192.png', badge:'icons/icon-192.png'}); } catch(e){}
+  try { const reg = await navigator.serviceWorker.ready, k = todayKey(), n = pdDay(k), w = stepKcal(n, k), g = gymKcalDay(k);
+    await reg.showNotification('👣 ' + n.toLocaleString() + ' / ' + stepGoal().toLocaleString() + ' steps', {body:'🔥 ' + (w + g) + ' kcal (walking ' + w + ' · gym ' + g + ') · 📏 ' + stepKm(n, k).toFixed(2) + ' km', tag:'tracky-steps', renotify:false, silent:true, requireInteraction:true, icon:'icons/icon-192.png', badge:'icons/icon-192.png'}); } catch(e){}
 }
 async function stepNotifyClose(){ try { const reg = await navigator.serviceWorker.ready; (await reg.getNotifications({tag:'tracky-steps'})).forEach(n => n.close()); } catch(e){} }
 /* ---------- Android app (Capacitor) bridge: background steps + scheduled local reminders. Does nothing in a normal browser. ---------- */
@@ -6048,7 +6072,7 @@ async function stepNativeSync(){
   const P = NATIVE.ok && NATIVE.ped(); if (!P) return;
   try {
     const st = await P.status(), was = NATIVE.st && NATIVE.st.granted; NATIVE.st = st; if (!st.available || !st.granted){ if (was) renderSteps(); return; }
-    await P.schedule(); const r = await P.getDays(), D = (r && r.days) || {}; progress.steps = progress.steps || {}; progress.stepsNat = progress.stepsNat || {}; let ch = false;
+    await P.schedule(); const r = await P.getDays(), D = (r && r.days) || {}; if (r && r.pace && typeof r.pace === 'object'){ progress.stepsPace = progress.stepsPace || {}; Object.keys(r.pace).forEach(d => { progress.stepsPace[d] = r.pace[d]; }); } progress.steps = progress.steps || {}; progress.stepsNat = progress.stepsNat || {}; let ch = false;
     Object.keys(D).forEach(k => { const nat = +D[k] || 0, prev = +progress.stepsNat[k] || 0; if (nat > prev){ progress.steps[k] = (progress.steps[k] || 0) + (nat - prev); progress.stepsNat[k] = nat; ch = true; } });
     if (ch){ save(); stepLive(); } if (!was) renderSteps();
     const tk = todayKey(); NATIVE.off = (progress.steps[tk] || 0) - (+D[tk] || 0); NATIVE.offDay = tk; trackerSync();
@@ -6057,9 +6081,9 @@ async function stepNativeSync(){
 /* v80: permanent "steps today" notification in the shade (Android foreground service), like a health app */
 async function trackerSync(force){
   const P = NATIVE.ok && NATIVE.ped(); if (!P || !(NATIVE.st && NATIVE.st.granted)) return;
-  const on = progress.stepNotif !== false, sig = [on, stepGoal(), LANG, Math.round(userKg()), strideM().toFixed(2), NATIVE.off || 0, NATIVE.offDay].join('|');
+  const on = progress.stepNotif !== false, tk0 = todayKey(), n0 = pdDay(tk0), SS = stepStats(tk0), ref = paceCalc(100, 60, userKg()), kps = n0 > 30 && SS.n > 0 ? SS.kcal / SS.n : ref.kcal / 100, mps = n0 > 30 && SS.n > 0 ? SS.km * 1000 / SS.n : ref.km * 10, sig = [on, stepGoal(), LANG, userKg().toFixed(1), kps.toFixed(3), mps.toFixed(2), NATIVE.off || 0, NATIVE.offDay].join('|');
   if (!force && NATIVE.trk === sig) return; NATIVE.trk = sig;
-  try { if (on) await P.startTracker({goal:stepGoal(), lang:LANG, kg:userKg(), stride:strideM(), off:NATIVE.off || 0, offDay:NATIVE.offDay || ''}); else await P.stopTracker(); } catch(e){}
+  try { if (on) await P.startTracker({goal:stepGoal(), lang:LANG, kg:userKg(), stride:strideM(), kps, mps, off:NATIVE.off || 0, offDay:NATIVE.offDay || ''}); else await P.stopTracker(); } catch(e){}
 }
 async function nativeEnable(){
   const P = NATIVE.ped(), LN = NATIVE.ln();
@@ -11151,7 +11175,7 @@ window.NUT = {parse:t => { const P = parseMeal(fcClean(t)); return {items:P.item
 })();
 
 /* ================= v65: friends-only games, settings menu, hero Build page, active update prompt ================= */
-const APP_VER = 'tracky-v82';
+const APP_VER = 'tracky-v83';
 /* 1) games: only the friends duel remains; finishing a workout now pays GP directly (no ghost hunt) */
 ghEvent = function(evId, kind, ratio){
   if (kind !== 'fin') return null;
