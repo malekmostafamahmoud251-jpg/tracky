@@ -1,5 +1,5 @@
 /* Tracky service worker: instant start from cache, silent update in the background, push notifications */
-const VER = 'tracky-v88', SHELL = ['manifest.json', 'icons/icon-192.png', 'icons/icon-512.png'];
+const VER = 'tracky-v89', SHELL = ['manifest.json', 'icons/icon-192.png', 'icons/icon-512.png'];
 const ABS = u => new URL(u, self.registration.scope).href;
 
 /* store index.html and the app script it points to (script first, so the page never references a missing file) */
@@ -33,6 +33,7 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const r = e.request, u = new URL(r.url);
   if (r.method !== 'GET' || u.origin !== location.origin) return;           // Worker, Gemini, Open Food Facts: never cached
+  if (/version\.json$|\.apk$/.test(u.pathname)) return;                    // the update check and the APK download always go to the network
   if (r.mode === 'navigate' && !/\/(?:index\.html)?$/.test(u.pathname)) return;   // other pages and file downloads (download.html, privacy.html, Tracky.apk) go straight to the network
   if (r.mode === 'navigate') {                                              // open instantly from the cache, check for a new version quietly
     e.respondWith((async () => {

@@ -6132,7 +6132,7 @@ function walkFinish(r){
   save(); if (NATIVE.ok) stepNativeSync(); renderSteps(); try { trackerSync(true); } catch(e){} showToast('✅ ' + (LANG === 'ar' ? `المشية: ${km.toFixed(2)} كم بسرعة ${v.toFixed(1)} كم/س` : `Walk: ${km.toFixed(2)} km at ${v.toFixed(1)} km/h`));
 }
 /* ---- v88: in-app APK update. The app reads version.json next to the download page; when a newer build exists it offers a one-tap update (Android asks you to confirm the install). ---- */
-const APK_SITE = 'https://malekmostafamahmoud251-jpg.github.io/tracky-download/';
+const APK_SITE = 'https://malekmostafamahmoud251-jpg.github.io/tracky/';   // Tracky.apk and version.json live next to the app
 async function apkCheck(force){
   const P = NATIVE.ok && NATIVE.ped(); if (!P || !P.appVersion || !P.installApk) return;
   try {
@@ -11288,7 +11288,7 @@ window.NUT = {parse:t => { const P = parseMeal(fcClean(t)); return {items:P.item
 })();
 
 /* ================= v65: friends-only games, settings menu, hero Build page, active update prompt ================= */
-const APP_VER = 'tracky-v88';
+const APP_VER = 'tracky-v89';
 /* 1) games: only the friends duel remains; finishing a workout now pays GP directly (no ghost hunt) */
 ghEvent = function(evId, kind, ratio){
   if (kind !== 'fin') return null;
