@@ -6010,9 +6010,10 @@ function stepBands(k){
 function stepStats(k){
   const a = stepBands(k), kg = userKg(); let kcal = 0, km = 0, h = 0, st = 0; const sh = [0, 0, 0, 0];
   for (let i = 0; i < 4; i++){ const s = a[i * 2], t = a[i * 2 + 1]; if (s > 0 && t > 0){ const r = paceCalc(s, t, kg); kcal += r.kcal; km += r.km; h += r.h; sh[i] = s; st += s; } }
-  return {kcal, km, v:h > 0 ? km / h : 0, n:st, share:st ? sh.map(x => Math.round(x / st * 100)) : [0, 100, 0, 0]};
+  return {kcal, km, h, v:h > 0 ? km / h : 0, n:st, share:st ? sh.map(x => Math.round(x / st * 100)) : [0, 100, 0, 0]};
 }
 const stepKm = (n, k) => k ? stepStats(k).km : paceCalc(n, n * .6, 0).km, stepKcal = (n, k) => Math.round(k ? stepStats(k).kcal : paceCalc(n, n * .6, userKg()).kcal);
+const paceMin = v => { if (!(v > .8)) return '—'; const m = 60 / v; return Math.floor(m) + ':' + String(Math.round((m % 1) * 60) % 60).padStart(2, '0'); };
 function paceLabel(v, sh){ const ar = LANG === 'ar'; if (sh && sh[3] >= 30) return ar ? 'جري' : 'Running'; return v <= 0 ? '—' : v < 4 ? (ar ? 'بطيء' : 'Slow') : v < 5.6 ? (ar ? 'متوسط' : 'Medium') : (ar ? 'سريع' : 'Fast'); }
 function stepMonth(ym){ let n = 0, d = 0, gd = 0; Object.entries(progress.steps || {}).forEach(([k, v]) => { if (k.slice(0, 7) === ym && v > 0){ n += v; d++; if (v >= stepGoal()) gd++; } }); return {steps:n, days:d, goalDays:gd, km:stepKm(n), kcal:stepKcal(n)}; }
 function gymKcalMonth(ym){ let k = 0; sessions.forEach(s => { if (localKey(s.date).slice(0, 7) === ym) k += sessionKcal(s); }); return Math.round(k); }
@@ -6024,7 +6025,7 @@ function addSteps(n){ const k = todayKey(); if (STEP.day && STEP.day !== k) setT
   if (!STEP.sv) STEP.sv = setTimeout(() => { STEP.sv = 0; save(); }, 8000);
   if (!STEP.ui) STEP.ui = setTimeout(() => { STEP.ui = 0; stepLive(); }, 400);
   if (!STEP.nq) STEP.nq = setTimeout(() => { STEP.nq = 0; stepNotify(); }, 6000); }
-function stepLive(){ const k = todayKey(), n = pdDay(k), a = $('stepN'); if (!a) return; const w = stepKcal(n, k), g = gymKcalDay(k), ps = stepStats(k); a.textContent = n.toLocaleString(); $('stepK').textContent = w; $('stepG').textContent = g; $('stepT').textContent = w + g; $('stepKm').textContent = stepKm(n, k).toFixed(2); if ($('stepV')) $('stepV').textContent = ps.v.toFixed(1); if ($('stepPL')) $('stepPL').textContent = paceLabel(ps.v, ps.share); $('stepBar').style.width = Math.min(100, n / stepGoal() * 100) + '%'; }
+function stepLive(){ const k = todayKey(), n = pdDay(k), a = $('stepN'); if (!a) return; const w = stepKcal(n, k), g = gymKcalDay(k), ps = stepStats(k); a.textContent = n.toLocaleString(); $('stepK').textContent = w; $('stepG').textContent = g; $('stepT').textContent = w + g; $('stepKm').textContent = stepKm(n, k).toFixed(2); if ($('stepV')) $('stepV').textContent = ps.v.toFixed(1); if ($('stepPL')) $('stepPL').textContent = paceLabel(ps.v, ps.share); if ($('stepWT')) $('stepWT').textContent = Math.round(ps.h * 60); if ($('stepAP')) $('stepAP').textContent = paceMin(ps.v); $('stepBar').style.width = Math.min(100, n / stepGoal() * 100) + '%'; }
 function stepMotion(e){
   const a = e.accelerationIncludingGravity; if (!a || a.x == null) return;
   const t = e.timeStamp || performance.now(), m = Math.hypot(a.x, a.y, a.z);
@@ -6046,7 +6047,8 @@ function renderSteps(){
   b.innerHTML = `<div class="box"><h3>👣 Steps today</h3><div class="stepnum"><b id="stepN">${n.toLocaleString()}</b><small>/ ${goal.toLocaleString()}</small></div><div class="qbar"><i id="stepBar" style="width:${Math.min(100, n / goal * 100)}%"></i></div>
     <div class="stepmeta"><span>🚶 <b id="stepK">${stepKcal(n, k)}</b> kcal</span><span>🏋️ <b id="stepG">${gymKcalDay(k)}</b> kcal</span><span>🔥 <b id="stepT">${stepKcal(n, k) + gymKcalDay(k)}</b> total</span><span>📏 <b id="stepKm">${stepKm(n, k).toFixed(2)}</b> km</span></div>
     <div class="stepmeta"><span>⚡ <b id="stepPL">${paceLabel(PS.v, PS.share)}</b> · <b id="stepV">${PS.v.toFixed(1)}</b> ${LANG === 'ar' ? 'كم/س' : 'km/h'}</span><span>🐢 ${PS.share[0]}%</span><span>🚶 ${PS.share[1]}%</span><span>🏃 ${PS.share[2] + PS.share[3]}%</span><span data-st="kg" style="cursor:pointer">⚖️ <b>${(+userKg()).toFixed(1)}</b> kg ✎</span></div>
-    <div id="walkBox"></div>
+    <div class="stepmeta"><span>⏱ <b id="stepWT">${Math.round(PS.h * 60)}</b> ${LANG === 'ar' ? 'د مشي' : 'min walking'}</span><span>🏁 <b id="stepAP">${paceMin(PS.v)}</b> ${LANG === 'ar' ? 'د/كم متوسط' : 'min/km avg'}</span></div>
+    ${walkSessions(k)}<div id="walkBox"></div>
     <div class="stepbars">${d7.map(x => `<div><i style="height:${Math.round(x[1] / mx * 100)}%"></i><small>${x[0]}</small></div>`).join('')}</div>
     <div class="stepacts">${NATIVE.ok ? (NATIVE.st && NATIVE.st.granted ? '' : '<button type="button" class="sec tiny" data-st="native">' + (LANG === 'ar' ? '🔓 فعّل العدّ في الخلفية' : '🔓 Enable background steps') + '</button>') : `<button type="button" class="sec tiny" data-st="toggle">${STEP.on ? '⏸ Stop counting' : '▶ Start counting'}</button>`}<button type="button" class="sec tiny" data-st="add">＋ Add steps</button><button type="button" class="sec tiny" data-st="goal">🎯 Goal</button><button type="button" class="sec tiny" data-st="walk">🛰️ ${WALK.on ? (LANG === 'ar' ? 'وقّف مشية GPS' : 'Stop GPS walk') : (LANG === 'ar' ? 'مشية بـ GPS' : 'GPS walk')}</button>${NATIVE.ok ? (NATIVE.st && NATIVE.st.granted ? `<button type="button" class="sec tiny" data-st="notif">${progress.stepNotif === false ? '📌 ' + (LANG === 'ar' ? 'شريط الإشعارات: مقفول' : 'Notification bar: Off') : '📌 ' + (LANG === 'ar' ? 'شريط الإشعارات: شغال' : 'Notification bar: On')}</button>` : '') : `<button type="button" class="sec tiny" data-st="notif">${progress.stepNotif ? '📌 Notification bar: On' : '📌 Notification bar: Off'}</button>`}</div>
     <small class="stepnote">${NATIVE.ok ? (NATIVE.st && NATIVE.st.granted ? (LANG === 'ar' ? '✅ الخطوات بتتحسب في الخلفية حتى لو التطبيق أو الموبايل مقفول. الرقم بيتحدّث لما تفتح التطبيق.' : '✅ Steps are counted in the background, even with the app closed or the phone locked. The number updates when you open Tracky.') : (LANG === 'ar' ? 'محتاج إذن النشاط البدني عشان العدّ يشتغل في الخلفية.' : 'Needs the activity permission to count in the background.')) : STEP.on ? 'Counting… keep Tracky open with the screen on. Counting pauses when the screen is off.' : 'Counts steps from your phone motion sensor while Tracky is open. Calories are an estimate from your weight and height.'}</small></div>`;
@@ -6058,6 +6060,8 @@ const WALK = {on:false, id:null, tick:null, wl:null, km:0, mov:0, t0:0, kcal:0, 
 const haversine = (a, b) => { const R = 6371000, r = Math.PI / 180, dLa = (b.lat - a.lat) * r, dLo = (b.lon - a.lon) * r, h = Math.sin(dLa / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
 function walkState(v, cad){   // v in m/s (GPS), cad in steps/min (sensor); either may be missing
   const ar = LANG === 'ar'; const kmh = v == null ? null : v * 3.6;
+  if (kmh != null && kmh > 9 && cad != null && cad < 60) return {k:'veh', t:ar ? 'في مواصلات (مش بيتحسب جري)' : 'In a vehicle (not counted as running)', i:'🚗'};   // fast but no steps: car, bus or bike
+  if (kmh == null && cad == null) return {k:'unk', t:ar ? 'غير معروف' : 'Unknown', i:'❔'};
   if (kmh != null && kmh < 1.6 && !(cad > 40)) return {k:'still', t:ar ? 'واقف' : 'Standing', i:'🧍'};
   if (kmh == null){ if (!(cad > 20)) return {k:'still', t:ar ? 'واقف' : 'Standing', i:'🧍'}; return cad < 85 ? {k:'slow', t:ar ? 'مشي بطيء' : 'Slow walk', i:'🐢'} : cad < 110 ? {k:'mid', t:ar ? 'مشي متوسط' : 'Medium walk', i:'🚶'} : cad < 135 ? {k:'fast', t:ar ? 'مشي سريع' : 'Fast walk', i:'💨'} : {k:'run', t:ar ? 'جري' : 'Running', i:'🏃'}; }
   if (kmh < 1.6) return {k:'still', t:ar ? 'واقف' : 'Standing', i:'🧍'};
@@ -6088,6 +6092,11 @@ function accCad(){   // steps/min over the last ~5 s; null if the sensor is sile
   if (p.length < 3) return ACC.mv < .35 ? 0 : p.length * 12;
   const span = (p[p.length - 1] - p[0]) / 60000; return span > 0 ? Math.min(210, (p.length - 1) / span) : 0;
 }
+function walkSessions(k){   // today's GPS sessions, kept apart from the all-day step totals
+  const w = (progress.walks || []).filter(x => x.date === k); if (!w.length) return ''; const ar = LANG === 'ar';
+  const row = x => { const kind = x.v >= 7.2 ? (ar ? '🏃 جري' : '🏃 Running') : x.v >= 1.6 ? (ar ? '🚶 مشي' : '🚶 Walking') : (ar ? '🧍 ثبات' : '🧍 Still'); return `<span>${kind} · ${x.km.toFixed(2)} km · ${Math.round(x.min)} ${ar ? 'د' : 'min'} · ${paceMin(x.v)} /km · 🔥 ${x.kcal}</span>`; };
+  return `<div class="stepmeta" style="flex-wrap:wrap"><b>${ar ? '🛰️ جلسات النهارده' : '🛰️ Sessions today'}</b>${w.map(row).join('')}</div>`;
+}
 function walkCad(){
   const a = accCad(); if (a != null) return a;                         // fastest source
   const h = WALK.hist, n = h.length; if (n < 2) return null; const x = h[Math.max(0, n - 5)], b = h[n - 1], dt = (b.t - x.t) / 60000; return dt > 0 ? Math.max(0, (b.s - x.s) / dt) : null;
@@ -6102,6 +6111,7 @@ function walkFix(pos){
   if (v > 12){ WALK.last = cur; return; }                            // GPS jump (faster than a sprinter): drop it
   WALK.v = WALK.v ? WALK.v * .5 + v * .5 : v;
   if (d < Math.max(2, c.accuracy * .35) && v < .7){ WALK.last = cur; WALK.v *= .6; return; }   // jitter while standing: no distance
+  { const ac = accCad(); if (v > 2.5 && ac != null && ac < 60){ WALK.last = cur; return; } }   // fast but no steps: a vehicle, not a walk
   WALK.km += d / 1000; WALK.mov += dt; WALK.kcal += (metAt(v * 3.6) - 1) * userKg() * dt / 3600; WALK.last = cur;
 }
 function walkUI(){
@@ -11316,7 +11326,7 @@ window.NUT = {parse:t => { const P = parseMeal(fcClean(t)); return {items:P.item
 })();
 
 /* ================= v65: friends-only games, settings menu, hero Build page, active update prompt ================= */
-const APP_VER = 'tracky-v90';
+const APP_VER = 'tracky-v91';
 /* 1) games: only the friends duel remains; finishing a workout now pays GP directly (no ghost hunt) */
 ghEvent = function(evId, kind, ratio){
   if (kind !== 'fin') return null;
