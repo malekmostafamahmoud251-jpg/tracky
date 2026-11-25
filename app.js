@@ -6069,13 +6069,13 @@ function walkState(v, cad){   // v in m/s (GPS), cad in steps/min (sensor); eith
 function walkCad(){ const h = WALK.hist, n = h.length; if (n < 2) return null; const a = h[Math.max(0, n - 12)], b = h[n - 1], dt = (b.t - a.t) / 60000; return dt > 0 ? Math.max(0, (b.s - a.s) / dt) : null; }
 function walkFix(pos){
   const c = pos.coords, t = pos.timestamp || Date.now(); WALK.acc = c.accuracy; WALK.fix = Date.now(); WALK.err = '';
-  if (!(c.accuracy <= 35)) return;                                   // weak fix: ignore it
+  if (!(c.accuracy <= (WALK.last ? 35 : 80))) return;                // weak fix: ignore it (the very first fix may be rough, it only sets the start point)
   const cur = {lat:c.latitude, lon:c.longitude, t}, L = WALK.last;
   if (!L){ WALK.last = cur; return; }
   const d = haversine(L, cur), dt = (t - L.t) / 1000; if (dt <= 0.4) return;
   let v = d / dt; if (c.speed != null && c.speed >= 0 && c.accuracy <= 20) v = .6 * c.speed + .4 * v;
   if (v > 12){ WALK.last = cur; return; }                            // GPS jump (faster than a sprinter): drop it
-  WALK.v = WALK.v ? WALK.v * .65 + v * .35 : v;
+  WALK.v = WALK.v ? WALK.v * .5 + v * .5 : v;
   if (d < Math.max(2, c.accuracy * .35) && v < .7){ WALK.last = cur; WALK.v *= .6; return; }   // jitter while standing: no distance
   WALK.km += d / 1000; WALK.mov += dt; WALK.kcal += (metAt(v * 3.6) - 1) * userKg() * dt / 3600; WALK.last = cur;
 }
@@ -6100,10 +6100,13 @@ async function walkStart(){
   if (!navigator.geolocation && !(P && P.startWalk)) return showToast('⚠️ ' + (ar ? 'الجهاز مفيهوش GPS' : 'This device has no GPS'));
   Object.assign(WALK, {on:true, nat:false, km:0, mov:0, kcal:0, v:0, acc:null, last:null, hist:[], fix:0, err:'', sum:null, t0:Date.now(), st0:pdDay(todayKey()), nsteps:0, tn:0, polling:false});
   if (P && P.startWalk){            // Android app: a foreground service records the walk even with the screen off
-    try { await new Promise(res => navigator.geolocation.getCurrentPosition(res, res, {enableHighAccuracy:true, timeout:20000, maximumAge:60000})); } catch(e){}   // shows the location permission prompt the first time
-    try { await P.startWalk({kg:userKg()}); WALK.nat = true; } catch(e){ WALK.nat = false; showToast('⚠️ ' + (ar ? 'محتاج إذن الموقع. فعّله من إعدادات التطبيق.' : 'Location permission is needed. Turn it on in the app settings.')); WALK.on = false; renderSteps(); return; }
+    let okLoc = false;
+    try { if (P.requestLocation){ const g = await P.requestLocation(); okLoc = !!g.granted; if (g.granted && !g.precise) showToast('ℹ️ ' + (ar ? 'اختار "الموقع الدقيق (Precise)" علشان السرعة تطلع صح.' : 'Choose "Precise" location so the speed is accurate.')); } } catch(e){}
+    if (!okLoc){ WALK.on = false; renderSteps(); showToast('⚠️ ' + (ar ? 'محتاج إذن الموقع. من إعدادات الموبايل ← التطبيقات ← Tracky ← الأذونات ← الموقع ← اسمح أثناء استخدام التطبيق.' : 'Location permission is needed. Phone Settings > Apps > Tracky > Permissions > Location > Allow while using the app.')); return; }
+    try { await P.startWalk({kg:userKg()}); WALK.nat = true; } catch(e){ WALK.nat = false; WALK.on = false; renderSteps(); showToast('⚠️ ' + (ar ? 'تعذّر تشغيل المشية: ' : 'Could not start the walk: ') + (e && e.message || e)); return; }
     WALK.tick = setInterval(walkTick, 1000); renderSteps(); walkUI(); showToast('🛰️ ' + (ar ? 'المشية شغالة. تقدر تقفل الشاشة.' : 'Walk is recording. You can lock the screen.')); return;
   }
+  try { navigator.geolocation.getCurrentPosition(walkFix, () => {}, {enableHighAccuracy:false, maximumAge:120000, timeout:4000}); } catch(e){}   // a quick rough first fix, so the walk starts right away
   try { WALK.wl = await navigator.wakeLock.request('screen'); } catch(e){}
   WALK.id = navigator.geolocation.watchPosition(walkFix, e => { WALK.err = e.code === 1 ? (ar ? 'محتاج إذن الموقع. فعّله من إعدادات التطبيق.' : 'Location permission is needed. Turn it on in the app settings.') : (ar ? 'مش لاقي إشارة GPS' : 'No GPS signal'); }, {enableHighAccuracy:true, maximumAge:1000, timeout:30000});
   WALK.tick = setInterval(walkTick, 1000); renderSteps(); walkUI();
@@ -11254,7 +11257,7 @@ window.NUT = {parse:t => { const P = parseMeal(fcClean(t)); return {items:P.item
 })();
 
 /* ================= v65: friends-only games, settings menu, hero Build page, active update prompt ================= */
-const APP_VER = 'tracky-v85';
+const APP_VER = 'tracky-v86';
 /* 1) games: only the friends duel remains; finishing a workout now pays GP directly (no ghost hunt) */
 ghEvent = function(evId, kind, ratio){
   if (kind !== 'fin') return null;
@@ -11493,13 +11496,18 @@ const TEL = {
   on(){ return settings.stats !== false; },
   iid(){ if (!/^[0-9a-f]{24}$/.test(settings.iid || '')){ settings.iid = Array.from(crypto.getRandomValues(new Uint8Array(12))).map(x => x.toString(16).padStart(2, '0')).join(''); save(); } return settings.iid; },
   add(k, n){ if (TEL.on()) TEL.c[k] = (TEL.c[k] || 0) + (n || 1); },
+  async devInfo(){   // phone brand and model: from the Android app when possible, else from the browser's client hints
+    if (TEL._dev) return TEL._dev; const o = {};
+    try { const P = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.TrackyPedometer; if (P && P.deviceInfo){ const r = await P.deviceInfo(); o.b = r.brand; o.m = r.model; o.o = 'Android ' + r.os; } } catch(e){}
+    if (!o.m) try { const u = navigator.userAgentData; if (u && u.getHighEntropyValues){ const h = await u.getHighEntropyValues(['model', 'platformVersion']); o.m = h.model || ''; o.o = ((u.platform || '') + ' ' + (h.platformVersion || '')).trim(); } } catch(e){}
+    TEL._dev = o; return o; },
   async send(force){
     if (!TEL.on() || !APP_CONFIG.coachUrl || !navigator.onLine) return;
     if (!force && Date.now() - TEL.last < 25 * 60e3) return; if (Date.now() - TEL.last < 60e3) return;
-    TEL.last = Date.now(); const sent = Object.assign({}, TEL.c);
+    TEL.last = Date.now(); const sent = Object.assign({}, TEL.c); let dev = {}; try { dev = await TEL.devInfo(); } catch(e){}
     try {
       const r = await fetch(APP_CONFIG.coachUrl + '/t', { method:'POST', keepalive:true, headers:Object.assign({'Content-Type':'application/json'}, authHdr()),
-        body:JSON.stringify({iid:TEL.iid(), name:settings.heroName || '', ver:(typeof APP_VER !== 'undefined' ? APP_VER : ''), lang:LANG, plat:/Android/i.test(navigator.userAgent) ? 'android' : /iPhone|iPad/i.test(navigator.userAgent) ? 'ios' : 'web', pwa:(matchMedia('(display-mode: standalone)').matches || navigator.standalone) ? 1 : 0, n:sent})});
+        body:JSON.stringify({iid:TEL.iid(), dev, name:settings.heroName || '', ver:(typeof APP_VER !== 'undefined' ? APP_VER : ''), lang:LANG, plat:/Android/i.test(navigator.userAgent) ? 'android' : /iPhone|iPad/i.test(navigator.userAgent) ? 'ios' : 'web', pwa:(matchMedia('(display-mode: standalone)').matches || navigator.standalone) ? 1 : 0, n:sent})});
       if (!r.ok) return; const j = await r.json();
       if (!j.skip) Object.keys(sent).forEach(k => { TEL.c[k] = (TEL.c[k] || 0) - sent[k]; if (TEL.c[k] <= 0) delete TEL.c[k]; });
       setBlocked(!!j.blocked);
