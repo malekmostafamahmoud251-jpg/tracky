@@ -6097,6 +6097,7 @@ async function walkPoll(){
 function walkTick(){ if (!WALK.on) return; WALK.hist.push({t:Date.now(), s:walkSteps()}); if (WALK.hist.length > 40) WALK.hist.shift(); if (WALK.nat) walkPoll(); else if (WALK.tn++ % 6 === 5 && NATIVE.ok) stepNativeSync(); walkUI(); }
 async function walkStart(){
   const ar = LANG === 'ar', P = NATIVE.ok && NATIVE.ped();
+  if (P && !P.startWalk) return showToast('⚠️ ' + (ar ? 'نسخة الـ APK على موبايلك قديمة وملهاش مشية GPS في الخلفية. ثبّت الـ APK الجديد.' : 'The APK on this phone is old and has no background GPS walk. Install the new APK.'));
   if (!navigator.geolocation && !(P && P.startWalk)) return showToast('⚠️ ' + (ar ? 'الجهاز مفيهوش GPS' : 'This device has no GPS'));
   Object.assign(WALK, {on:true, nat:false, km:0, mov:0, kcal:0, v:0, acc:null, last:null, hist:[], fix:0, err:'', sum:null, t0:Date.now(), st0:pdDay(todayKey()), nsteps:0, tn:0, polling:false});
   if (P && P.startWalk){            // Android app: a foreground service records the walk even with the screen off
@@ -6108,7 +6109,7 @@ async function walkStart(){
   }
   try { navigator.geolocation.getCurrentPosition(walkFix, () => {}, {enableHighAccuracy:false, maximumAge:120000, timeout:4000}); } catch(e){}   // a quick rough first fix, so the walk starts right away
   try { WALK.wl = await navigator.wakeLock.request('screen'); } catch(e){}
-  WALK.id = navigator.geolocation.watchPosition(walkFix, e => { WALK.err = e.code === 1 ? (ar ? 'محتاج إذن الموقع. فعّله من إعدادات التطبيق.' : 'Location permission is needed. Turn it on in the app settings.') : (ar ? 'مش لاقي إشارة GPS' : 'No GPS signal'); }, {enableHighAccuracy:true, maximumAge:1000, timeout:30000});
+  WALK.id = navigator.geolocation.watchPosition(walkFix, e => { WALK.err = e.code === 1 ? (ar ? 'المتصفح منع الموقع لموقع Tracky. دوس على 🔒 جنب اللينك ← الأذونات ← الموقع ← السماح، وبعدين ابدأ المشية تاني. (ومن تطبيق الـ APK الجديد بتشتغل والشاشة مقفولة.)' : 'The browser blocked location for Tracky. Tap the 🔒 next to the address, then Permissions > Location > Allow, and start the walk again. (The new APK app also works with the screen off.)') : (ar ? 'مش لاقي إشارة GPS' : 'No GPS signal'); }, {enableHighAccuracy:true, maximumAge:1000, timeout:30000});
   WALK.tick = setInterval(walkTick, 1000); renderSteps(); walkUI();
 }
 async function walkResume(){        // the app was closed during a walk: pick it up again
@@ -6130,6 +6131,36 @@ function walkFinish(r){
   if (km >= .05){ progress.walks = progress.walks || []; progress.walks.push({date:todayKey(), km:+km.toFixed(3), min:+min.toFixed(1), v:+v.toFixed(2), kcal:Math.round(r.kcal || 0), steps, t:Date.now()}); progress.walks = progress.walks.slice(-60); }
   save(); if (NATIVE.ok) stepNativeSync(); renderSteps(); try { trackerSync(true); } catch(e){} showToast('✅ ' + (LANG === 'ar' ? `المشية: ${km.toFixed(2)} كم بسرعة ${v.toFixed(1)} كم/س` : `Walk: ${km.toFixed(2)} km at ${v.toFixed(1)} km/h`));
 }
+/* ---- v88: in-app APK update. The app reads version.json next to the download page; when a newer build exists it offers a one-tap update (Android asks you to confirm the install). ---- */
+const APK_SITE = 'https://malekmostafamahmoud251-jpg.github.io/tracky-download/';
+async function apkCheck(force){
+  const P = NATIVE.ok && NATIVE.ped(); if (!P || !P.appVersion || !P.installApk) return;
+  try {
+    let last = 0; try { last = +localStorage.getItem('apkChk') || 0; } catch(e){}
+    if (!force && Date.now() - last < 4 * 3600e3) return; try { localStorage.setItem('apkChk', Date.now()); } catch(e){}
+    const v = await P.appVersion(), r = await fetch(APK_SITE + 'version.json?t=' + Date.now(), {cache:'no-store'}).then(x => x.ok ? x.json() : null);
+    let skip = 0; try { skip = +localStorage.getItem('apkSkip') || 0; } catch(e){}
+    if (r && +r.versionCode > +v.code && (force || +r.versionCode > skip)) apkBanner(r, v);
+    else if (force) showToast('✅ ' + (LANG === 'ar' ? 'عندك آخر نسخة من التطبيق' : 'You have the latest app version'));
+  } catch(e){ if (force) showToast('⚠️ ' + (LANG === 'ar' ? 'مقدرتش أتأكد من التحديث. جرّب لما النت يبقى أحسن.' : 'Could not check for updates. Try again with a better connection.')); }
+}
+function apkBanner(r, v){
+  const ar = LANG === 'ar'; const old = document.getElementById('apkBar'); if (old) old.remove();
+  const d = document.createElement('div'); d.id = 'apkBar';
+  d.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:9999;background:#141C33;color:#fff;border:2px solid #F5C542;border-radius:16px;padding:.8rem .9rem;box-shadow:0 10px 30px #0008;font-weight:700;direction:' + (ar ? 'rtl' : 'ltr');
+  d.innerHTML = `<div>📲 ${ar ? 'فيه نسخة جديدة من التطبيق' : 'A new app version is available'} <small style="opacity:.7">(${escapeHTML(String(r.versionName || r.versionCode))})</small></div><div style="display:flex;gap:.5rem;margin-top:.6rem"><button id="apkGo" style="flex:1;border:0;border-radius:12px;padding:.6rem;background:#F5C542;color:#080D1B;font-weight:800">${ar ? 'حدّث الآن' : 'Update now'}</button><button id="apkLater" style="border:1px solid #fff4;border-radius:12px;padding:.6rem .9rem;background:transparent;color:#fff;font-weight:700">${ar ? 'بعدين' : 'Later'}</button></div>`;
+  document.body.appendChild(d);
+  document.getElementById('apkLater').onclick = () => { try { localStorage.setItem('apkSkip', +r.versionCode); } catch(e){} d.remove(); };
+  document.getElementById('apkGo').onclick = async () => {
+    const btn = document.getElementById('apkGo'); btn.disabled = true; btn.textContent = ar ? 'بنزّل…' : 'Downloading…';
+    try { const x = await NATIVE.ped().installApk({url:APK_SITE + 'Tracky.apk?v=' + r.versionCode});
+      if (x && x.needPermission){ showToast('ℹ️ ' + (ar ? 'فعّل "السماح من هذا المصدر" لـ Tracky، وارجع دوس حدّث الآن.' : 'Turn on "Allow from this source" for Tracky, then come back and tap Update now.')); btn.disabled = false; btn.textContent = ar ? 'حدّث الآن' : 'Update now'; return; }
+      showToast('✅ ' + (ar ? 'دوس Install في شاشة التثبيت.' : 'Tap Install on the next screen.')); d.remove();
+    } catch(e){ btn.disabled = false; btn.textContent = ar ? 'حدّث الآن' : 'Update now'; showToast('⚠️ ' + (ar ? 'فشل التحديث: ' : 'Update failed: ') + (e && e.message || e)); }
+  };
+}
+setTimeout(() => { try { apkCheck(false); } catch(e){} }, 7000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) try { apkCheck(false); } catch(e){} });
 document.addEventListener('click', e => { const t = e.target.closest('[data-st]'); if (!t) return; const a = t.dataset.st;
   if (a === 'toggle') (STEP.on ? stepStop() : stepStart());
   else if (a === 'native') nativeEnable();
@@ -11257,7 +11288,7 @@ window.NUT = {parse:t => { const P = parseMeal(fcClean(t)); return {items:P.item
 })();
 
 /* ================= v65: friends-only games, settings menu, hero Build page, active update prompt ================= */
-const APP_VER = 'tracky-v86';
+const APP_VER = 'tracky-v88';
 /* 1) games: only the friends duel remains; finishing a workout now pays GP directly (no ghost hunt) */
 ghEvent = function(evId, kind, ratio){
   if (kind !== 'fin') return null;
