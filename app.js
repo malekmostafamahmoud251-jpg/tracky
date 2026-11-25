@@ -6056,7 +6056,7 @@ function renderSteps(){
 }
 /* ---- v84: GPS walk. Real speed and distance from GPS, steps from the phone's step sensor, state (still / slow / medium / fast / running) from both.
    At the end the walk calibrates your real step length per pace, which makes background step distance and calories more accurate. ---- */
-const WALK = {on:false, id:null, tick:null, wl:null, km:0, mov:0, t0:0, kcal:0, v:0, acc:null, last:null, st0:0, hist:[], fix:0, err:''};
+const WALK = {on:false, id:null, tick:null, wl:null, km:0, mov:0, t0:0, kcal:0, v:0, acc:null, last:null, st0:0, hist:[], fix:0, err:'', paused:false, pausedMs:0, pauseT:0, pts:[], rt:[]};
 const haversine = (a, b) => { const R = 6371000, r = Math.PI / 180, dLa = (b.lat - a.lat) * r, dLo = (b.lon - a.lon) * r, h = Math.sin(dLa / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
 function walkState(v, cad){   // v in m/s (GPS), cad in steps/min (sensor); either may be missing
   const ar = LANG === 'ar'; const kmh = v == null ? null : v * 3.6;
@@ -6102,6 +6102,7 @@ function walkCad(){
   const h = WALK.hist, n = h.length; if (n < 2) return null; const x = h[Math.max(0, n - 5)], b = h[n - 1], dt = (b.t - x.t) / 60000; return dt > 0 ? Math.max(0, (b.s - x.s) / dt) : null;
 }
 function walkFix(pos){
+  if (WALK.paused) return;
   const c = pos.coords, t = pos.timestamp || Date.now(); WALK.acc = c.accuracy; WALK.fix = Date.now(); WALK.err = '';
   if (!(c.accuracy <= (WALK.last ? 35 : 80))) return;                // weak fix: ignore it (the very first fix may be rough, it only sets the start point)
   const cur = {lat:c.latitude, lon:c.longitude, t}, L = WALK.last;
@@ -6112,31 +6113,64 @@ function walkFix(pos){
   WALK.v = WALK.v ? WALK.v * .5 + v * .5 : v;
   if (d < Math.max(2, c.accuracy * .35) && v < .7){ WALK.last = cur; WALK.v *= .6; return; }   // jitter while standing: no distance
   { const ac = accCad(); if (v > 2.5 && ac != null && ac < 60){ WALK.last = cur; return; } }   // fast but no steps: a vehicle, not a walk
+  WALK.pts.push([cur.lat, cur.lon]); if (WALK.pts.length > 400) WALK.pts = WALK.pts.filter((_, i) => i % 2 === 0);
   WALK.km += d / 1000; WALK.mov += dt; WALK.kcal += (metAt(v * 3.6) - 1) * userKg() * dt / 3600; WALK.last = cur;
 }
+function walkMap(pts, h){   // tiny route map: pts = [[lat,lon],...]
+  if (!pts || pts.length < 2) return `<div class="wmap" style="height:${h}px"><span>🛰️</span></div>`;
+  const la = pts.map(p => p[0]), lo = pts.map(p => p[1]), k = Math.cos(la[0] * Math.PI / 180), W = 320, H = h, pad = 14;
+  const x0 = Math.min(...lo), y0 = Math.min(...la), dx = Math.max((Math.max(...lo) - x0) * k, 1e-5), dy = Math.max(Math.max(...la) - y0, 1e-5), sc = Math.min((W - pad * 2) / dx, (H - pad * 2) / dy);
+  const X = p => pad + ((p[1] - x0) * k) * sc + (W - pad * 2 - dx * sc) / 2, Y = p => H - pad - (p[0] - y0) * sc - (H - pad * 2 - dy * sc) / 2;
+  const d = pts.map((p, i) => (i ? 'L' : 'M') + X(p).toFixed(1) + ',' + Y(p).toFixed(1)).join(' '), a = pts[0], b = pts[pts.length - 1];
+  return `<div class="wmap" style="height:${h}px"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet"><path d="${d}" fill="none" stroke="#fbbf24" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${X(a).toFixed(1)}" cy="${Y(a).toFixed(1)}" r="5" fill="#22c55e"/><circle cx="${X(b).toFixed(1)}" cy="${Y(b).toFixed(1)}" r="7" fill="#7c5cff" stroke="#fff" stroke-width="2.5"/></svg></div>`;
+}
+function walkRoute(){ return WALK.nat ? (WALK.rt || []) : (WALK.pts || []); }
+const fmtDur = sec => { sec = Math.max(0, Math.round(sec)); const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); };
 function walkUI(){
-  const box = $('walkBox'); if (!box) return; const ar = LANG === 'ar';
+  const box = $('walkBox'); if (!box) return; const ar = LANG === 'ar', T2 = (a, b) => ar ? a : b;
   if (!WALK.on && !WALK.sum){ box.innerHTML = ''; return; }
-  if (!WALK.on && WALK.sum){ const s = WALK.sum; box.innerHTML = `<div class="walkp"><b>✅ ${ar ? 'آخر مشية' : 'Last walk'}</b> · ${s.km.toFixed(2)} km · ${Math.round(s.min)} ${ar ? 'د' : 'min'} · ⚡ ${s.v.toFixed(1)} km/h · 🔥 ${Math.round(s.kcal)} kcal · 👣 ${s.steps}${s.cal ? ' · 📏 ' + s.cal.toFixed(2) + ' m' : ''}</div>`; return; }
-  const cad = walkCad(), stale = Date.now() - WALK.fix > 5000, gpsOk = !stale && WALK.acc != null && WALK.acc <= 40 && WALK.v > 0.5, vv = gpsOk ? WALK.v : (cad != null && cad > 20 ? cad * stepLenAt(cad) / 60 : (WALK.nat ? WALK.v : 0)), st = walkState(gpsOk || (cad != null && cad > 20) ? vv : (cad === 0 ? 0 : (stale ? null : WALK.v)), cad), el = (Date.now() - WALK.t0) / 60000, steps = walkSteps();
-  box.innerHTML = `<div class="walkp"><b>${st.i} ${st.t}</b> · ⚡ ${(vv * 3.6).toFixed(1)} km/h · 📏 ${WALK.km.toFixed(2)} km · ⏱ ${Math.floor(el)}:${String(Math.floor((el % 1) * 60)).padStart(2, '0')} · 🔥 ${Math.round(WALK.kcal)} kcal · 👣 ${steps}${cad != null ? ' · ' + Math.round(cad) + '/min' : ''}<br><small>${WALK.err ? '⚠️ ' + WALK.err : WALK.acc == null ? (ar ? '🛰️ بدوّر على إشارة GPS… اخرج لمكان مفتوح وسيب الشاشة شغالة.' : '🛰️ Looking for GPS… step outside and keep the screen on.') : (ar ? 'دقة GPS ±' : 'GPS accuracy ±') + Math.round(WALK.acc) + ' m' + (WALK.nat ? (ar ? ' · تقدر تقفل الشاشة' : ' · you can lock the screen') : (ar ? ' · سيب الشاشة شغالة' : ' · keep the screen on'))}</small></div>`;
+  const cell = (ic, v, u, l) => `<div class="wk"><span>${ic}</span><b>${v}</b><small>${u}</small><em>${l}</em></div>`;
+  if (!WALK.on && WALK.sum){ const s = WALK.sum, pace = s.v > .8 ? paceMin(s.v) : '—';
+    box.innerHTML = `<div class="walkp wcard"><div class="wh"><b>✅ ${T2('ملخص المشية', 'Walk summary')}</b><span class="wbadge ok">${T2('انتهت', 'Finished')}</span></div>${walkMap(s.route, 120)}
+      <div class="wbig"><b>${s.km.toFixed(2)}</b> km</div>
+      <div class="wgrid">${cell('⏱', fmtDur(s.min * 60), '', T2('وقت المشي', 'Moving time'))}${cell('⚡', s.v.toFixed(1), 'km/h', T2('متوسط السرعة', 'Avg speed'))}${cell('🏁', pace, 'min/km', T2('الإيقاع', 'Pace'))}${cell('🔥', Math.round(s.kcal), 'kcal', T2('سعرات الجلسة', 'Session kcal'))}${cell('👣', s.steps, '', T2('خطوات الجلسة', 'Session steps'))}${s.cal ? cell('📏', s.cal.toFixed(2), 'm', T2('طول خطوتك', 'Your stride')) : ''}</div>
+      <small>${T2('السعرات تقديرية حسب وزنك وسرعتك. الجلسة جزء من خطوات اليوم ومش بتتحسب مرتين.', 'Calories are estimates from your weight and speed. This walk is part of today\'s steps and is not counted twice.')}</small></div>`; return; }
+  const now = Date.now(), cad = walkCad(), stale = now - WALK.fix > 5000, paused = !!WALK.paused;
+  const gpsOk = !stale && WALK.acc != null && WALK.acc <= 40 && WALK.v > 0.5, vv = paused ? 0 : gpsOk ? WALK.v : (cad != null && cad > 20 ? cad * stepLenAt(cad) / 60 : (WALK.nat ? WALK.v : 0));
+  const st = walkState(gpsOk || (cad != null && cad > 20) ? vv : (cad === 0 ? 0 : (stale ? null : WALK.v)), cad);
+  const act = Math.max(0, (now - WALK.t0 - (WALK.pausedMs || 0) - (paused ? now - (WALK.pauseT || now) : 0)) / 1000), steps = walkSteps(), avg = WALK.mov > 5 ? WALK.km / (WALK.mov / 3600) : 0;
+  const gps = paused ? ['⏸', T2('متوقفة مؤقتًا', 'Paused'), 'wb-p'] : WALK.acc == null ? ['🛰️', T2('بدوّر على GPS', 'Searching'), 'wb-s'] : (stale || WALK.acc > 40) ? ['⚠️', T2('إشارة ضعيفة', 'Weak signal'), 'wb-w'] : ['📍', T2('GPS متصل', 'Connected'), 'wb-ok'];
+  const k = todayKey(), PS = stepStats(k), dn = pdDay(k);
+  box.innerHTML = `<div class="walkp wcard"><div class="wh"><b>${paused ? '⏸ ' + T2('متوقفة', 'Paused') : st.i + ' ' + st.t}</b><span class="wbadge ${gps[2]}">${gps[0]} ${gps[1]}${WALK.acc != null && !paused ? ' ±' + Math.round(WALK.acc) + 'm' : ''}</span></div>
+    ${walkMap(walkRoute(), 110)}
+    <div class="wbig"><b>${WALK.km.toFixed(2)}</b> km <small>${T2('مسافة الجلسة', 'session distance')}</small></div>
+    <div class="wgrid">${cell('⚡', (vv * 3.6).toFixed(1), 'km/h', T2('السرعة الحالية', 'Current speed'))}${cell('📈', avg.toFixed(1), 'km/h', T2('متوسط السرعة', 'Avg speed'))}${cell('⏱', fmtDur(act), '', T2('وقت الجلسة', 'Session time'))}${cell('🔥', Math.round(WALK.kcal), 'kcal', T2('سعرات الجلسة', 'Session kcal'))}${cell('👣', steps, '', T2('خطوات الجلسة', 'Session steps'))}${cell('🎚', cad != null ? Math.round(cad) : '—', '/min', T2('الإيقاع', 'Cadence'))}</div>
+    <div class="wact"><button type="button" class="sec" data-st="walkpause">${paused ? '▶ ' + T2('كمّل', 'Resume') : '⏸ ' + T2('إيقاف مؤقت', 'Pause')}</button><button type="button" data-st="walk" class="wstop">⏹ ${T2('إنهاء المشية', 'End walk')}</button></div>
+    <small class="wtoday">${T2('اليوم كله', 'All today')}: 👣 ${dn.toLocaleString()} · 📏 ${stepKm(dn, k).toFixed(2)} km · 🚶 ${stepKcal(dn, k)} kcal<br>${WALK.err ? '⚠️ ' + WALK.err : T2('الجلسة جزء من اليوم (مش بتتعد مرتين). السعرات تقديرية من وزنك وسرعتك.' + (WALK.nat ? ' تقدر تقفل الشاشة.' : ' سيب الشاشة شغالة.'), 'The session is part of today (not counted twice). Calories are estimates from your weight and speed.' + (WALK.nat ? ' You can lock the screen.' : ' Keep the screen on.'))}</small></div>`;
+}
+async function walkPause(){
+  if (!WALK.on) return; const P = WALK.nat && NATIVE.ped(), want = !WALK.paused;
+  try { if (P){ const r = want ? await P.pauseWalk() : await P.resumeWalk(); WALK.paused = !!r.paused; WALK.pausedMs = r.pausedMs || 0; } else { WALK.paused = want; if (want) WALK.pauseT = Date.now(); else { WALK.pausedMs = (WALK.pausedMs || 0) + Date.now() - WALK.pauseT; WALK.last = null; WALK.v = 0; WALK.err = ''; } } }
+  catch(e){ return showToast('⚠️ ' + (LANG === 'ar' ? 'تحتاج APK أحدث للإيقاف المؤقت' : 'Pause needs the newer APK')); }
+  if (WALK.paused) WALK.pauseT = Date.now(); walkUI();
 }
 function walkSteps(){ return WALK.nat ? (WALK.nsteps || 0) : Math.max(0, pdDay(todayKey()) - WALK.st0); }
 async function walkPoll(){
   const P = NATIVE.ped(); if (!WALK.on || !WALK.nat || !P || WALK.polling) return; WALK.polling = true;
   try { const r = await P.getWalk();
     if (!r.active){ walkFinish({km:r.km, mov:r.mov, kcal:r.kcal, steps:r.steps}); return; }       // the service ended on its own
-    WALK.km = r.km; WALK.mov = r.mov; WALK.kcal = r.kcal; WALK.v = r.v; WALK.acc = r.fixT ? r.acc : null; WALK.fix = r.fixT || 0; WALK.nsteps = r.steps; WALK.t0 = r.t0 || WALK.t0;
+    WALK.km = r.km; WALK.mov = r.mov; WALK.kcal = r.kcal; WALK.v = r.v; WALK.acc = r.fixT ? r.acc : null; WALK.fix = r.fixT || 0; WALK.nsteps = r.steps; WALK.t0 = r.t0 || WALK.t0; WALK.paused = !!r.paused; WALK.pausedMs = r.pausedMs || 0;
+    if (typeof r.route === 'string' && r.route !== WALK.rs){ WALK.rs = r.route; WALK.rt = r.route.split(';').filter(Boolean).map(q => q.split(',').map(Number)).filter(q => q.length === 2 && isFinite(q[0]) && isFinite(q[1])); }
   } catch(e){} finally { WALK.polling = false; }
 }
-function walkTick(){ if (!WALK.on) return; if (!WALK.nat){ const c = accCad(), now = Date.now(), gpsFresh = now - WALK.fix < 4000 && WALK.acc != null && WALK.acc <= 60 && WALK.v > .4;
+function walkTick(){ if (!WALK.on) return; if (WALK.paused){ if (WALK.nat) walkPoll(); walkUI(); return; } if (!WALK.nat){ const c = accCad(), now = Date.now(), gpsFresh = now - WALK.fix < 4000 && WALK.acc != null && WALK.acc <= 60 && WALK.v > .4;
     if (!gpsFresh && c != null && c > 25){ const sp = c * stepLenAt(c) / 60; if (sp < 4.5){ WALK.km += sp / 1000; WALK.mov += 1; WALK.v = sp; WALK.kcal += (metAt(sp * 3.6) - 1) * userKg() / 3600; } }
     else if (!gpsFresh && c === 0) WALK.v *= .5; } WALK.hist.push({t:Date.now(), s:walkSteps()}); if (WALK.hist.length > 40) WALK.hist.shift(); if (WALK.nat) walkPoll(); else if (WALK.tn++ % 6 === 5 && NATIVE.ok) stepNativeSync(); walkUI(); }
 async function walkStart(){
   const ar = LANG === 'ar', P = NATIVE.ok && NATIVE.ped();
   if (P && !P.startWalk) return showToast('⚠️ ' + (ar ? 'نسخة الـ APK على موبايلك قديمة وملهاش مشية GPS في الخلفية. ثبّت الـ APK الجديد.' : 'The APK on this phone is old and has no background GPS walk. Install the new APK.'));
   if (!navigator.geolocation && !(P && P.startWalk)) return showToast('⚠️ ' + (ar ? 'الجهاز مفيهوش GPS' : 'This device has no GPS'));
-  Object.assign(WALK, {on:true, nat:false, km:0, mov:0, kcal:0, v:0, acc:null, last:null, hist:[], fix:0, err:'', sum:null, t0:Date.now(), st0:pdDay(todayKey()), nsteps:0, tn:0, polling:false});
+  Object.assign(WALK, {paused:false, pausedMs:0, pauseT:0, pts:[], rt:[], on:true, nat:false, km:0, mov:0, kcal:0, v:0, acc:null, last:null, hist:[], fix:0, err:'', sum:null, t0:Date.now(), st0:pdDay(todayKey()), nsteps:0, tn:0, polling:false});
   accOn();
   if (P && P.startWalk){            // Android app: a foreground service records the walk even with the screen off
     let okLoc = false;
@@ -6152,7 +6186,7 @@ async function walkStart(){
 }
 async function walkResume(){        // the app was closed during a walk: pick it up again
   const P = NATIVE.ok && NATIVE.ped(); if (WALK.on || !P || !P.getWalk) return;
-  try { const r = await P.getWalk(); if (r && r.active){ Object.assign(WALK, {on:true, nat:true, km:r.km, mov:r.mov, kcal:r.kcal, v:r.v, acc:r.fixT ? r.acc : null, fix:r.fixT || 0, nsteps:r.steps, t0:r.t0 || Date.now(), hist:[], sum:null, err:'', polling:false, tn:0}); accOn(); clearInterval(WALK.tick); WALK.tick = setInterval(walkTick, 1000); renderSteps(); walkUI(); } } catch(e){}
+  try { const r = await P.getWalk(); if (r && r.active){ Object.assign(WALK, {on:true, nat:true, km:r.km, mov:r.mov, kcal:r.kcal, v:r.v, acc:r.fixT ? r.acc : null, fix:r.fixT || 0, nsteps:r.steps, t0:r.t0 || Date.now(), hist:[], sum:null, err:'', polling:false, tn:0, paused:!!r.paused, pausedMs:r.pausedMs || 0, pauseT:Date.now()}); accOn(); clearInterval(WALK.tick); WALK.tick = setInterval(walkTick, 1000); renderSteps(); walkUI(); } } catch(e){}
 }
 async function walkStop(){
   try { navigator.geolocation.clearWatch(WALK.id); } catch(e){} clearInterval(WALK.tick); accOff(); try { WALK.wl && WALK.wl.release(); } catch(e){} WALK.wl = null;
@@ -6165,7 +6199,7 @@ function walkFinish(r){
     const L = km * 1000 / steps, cad = steps / min;
     if (L > .35 && L < 1.4 && cad > 40 && cad < 220){ const b = cad < 85 ? 0 : cad < 110 ? 1 : cad < 135 ? 2 : 3; progress.stepCal = progress.stepCal || [0, 0, 0, 0]; progress.stepCal[b] = progress.stepCal[b] > 0 ? progress.stepCal[b] * .6 + L * .4 : L; cal = progress.stepCal[b]; }
   }
-  WALK.sum = {km, min, v, kcal:r.kcal || 0, steps, cal};
+  WALK.sum = {km, min, v, kcal:r.kcal || 0, steps, cal, route:walkRoute().slice()};
   if (km >= .05){ progress.walks = progress.walks || []; progress.walks.push({date:todayKey(), km:+km.toFixed(3), min:+min.toFixed(1), v:+v.toFixed(2), kcal:Math.round(r.kcal || 0), steps, t:Date.now()}); progress.walks = progress.walks.slice(-60); }
   save(); if (NATIVE.ok) stepNativeSync(); renderSteps(); try { trackerSync(true); } catch(e){} showToast('✅ ' + (LANG === 'ar' ? `المشية: ${km.toFixed(2)} كم بسرعة ${v.toFixed(1)} كم/س` : `Walk: ${km.toFixed(2)} km at ${v.toFixed(1)} km/h`));
 }
@@ -6204,7 +6238,7 @@ document.addEventListener('click', e => { const t = e.target.closest('[data-st]'
   else if (a === 'native') nativeEnable();
   else if (a === 'add'){ const v = parseInt(prompt('Steps to add today'), 10); if (v > 0 && v < 100000){ addSteps(v); save(); renderSteps(); } }
   else if (a === 'notif') stepNotifToggle();
-  else if (a === 'walk') (WALK.on ? walkStop() : walkStart());
+  else if (a === 'walk') (WALK.on ? walkStop() : walkStart()); else if (a === 'walkpause') walkPause();
   else if (a === 'kg'){ const v = parseFloat(String(prompt(LANG === 'ar' ? 'وزنك بالكيلو (بيتحسب عليه حرق السعرات)' : 'Your body weight in kg (calories burned are based on it)', (+userKg()).toFixed(1)) || '').replace(',', '.')); if (v >= 25 && v <= 300){ addBodyEntry(v); save(); try { renderAllViews(); } catch(_){} renderSteps(); trackerSync(true); } else if (v) showToast('⚠️ ' + (LANG === 'ar' ? 'اكتب وزن من 25 لـ 300 كجم' : 'Enter a weight from 25 to 300 kg')); }
   else if (a === 'goal'){ const v = parseInt(prompt('Daily step goal', stepGoal()), 10); if (v >= 1000 && v <= 100000){ progress.stepGoal = v; save(); renderSteps(); } } });
 document.addEventListener('visibilitychange', () => { if (STEP.on && document.visibilityState === 'visible'){ try { navigator.wakeLock.request('screen').then(w => { STEP.wl = w; }).catch(() => {}); } catch(e){} } else if (document.visibilityState === 'hidden' && progress.steps){ clearTimeout(STEP.sv); STEP.sv = 0; save(); stepNotify(); } });
@@ -11326,7 +11360,7 @@ window.NUT = {parse:t => { const P = parseMeal(fcClean(t)); return {items:P.item
 })();
 
 /* ================= v65: friends-only games, settings menu, hero Build page, active update prompt ================= */
-const APP_VER = 'tracky-v93';
+const APP_VER = 'tracky-v94';
 /* 1) games: only the friends duel remains; finishing a workout now pays GP directly (no ghost hunt) */
 ghEvent = function(evId, kind, ratio){
   if (kind !== 'fin') return null;
