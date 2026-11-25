@@ -4776,7 +4776,7 @@ async function geminiSdk(key, model, system, hist, userParts, onChunk, maxTokens
   const stream = await ai.models.generateContentStream({
     model,
     contents: hist.concat([{role:'user', parts:userParts}]),
-    config: {systemInstruction:system, temperature:(window._askTemp ?? 0.7), topP:0.95, maxOutputTokens:Math.max(maxTokens || 4096, 1024)}
+    config: Object.assign({systemInstruction:system, temperature:(window._askTemp ?? 0.7), topP:0.95, maxOutputTokens:Math.max(maxTokens || 4096, 1024)}, window._askGen && window._askGen.thinkingConfig ? {thinkingConfig:window._askGen.thinkingConfig} : {})
   });
   let full = '';
   for await (const chunk of stream){ const t = chunk.text; if (t){ full += t; onChunk(full); } }
@@ -4800,7 +4800,7 @@ async function askCoach(system, hist, userText, onChunk, maxTokens, images){
   const body = JSON.stringify({
     systemInstruction: { parts: [{ text: system }] },
     contents: hist.concat([{ role: 'user', parts: userParts }]),
-    generationConfig: { temperature: (window._askTemp ?? 0.7), maxOutputTokens: Math.max(maxTokens || 4096, 1024), topP: 0.95 },
+    generationConfig: Object.assign({ temperature: (window._askTemp ?? 0.7), maxOutputTokens: Math.max(maxTokens || 4096, 1024), topP: 0.95 }, window._askGen && window._askGen.thinkingConfig ? {thinkingConfig:window._askGen.thinkingConfig} : {}),
     safetySettings: GEMINI_SAFETY
   });
   const preferred = geminiModel(), models = [preferred].concat(GEMINI_FALLBACKS.filter(m => m !== preferred));
@@ -5998,8 +5998,8 @@ const strideM = () => ((settings.profile && +settings.profile.height) || 170) * 
 /* ---- v83: walking calories from pace (cadence -> speed -> MET) and body weight; slow, medium and fast walking burn differently ---- */
 const heightM = () => (((settings.profile && +settings.profile.height) || 170) / 100);
 const stepLenAt = c => { const b = c < 85 ? 0 : c < 110 ? 1 : c < 135 ? 2 : 3, cal = +((progress.stepCal || [])[b]) || 0; return cal > .3 && cal < 1.4 ? cal : heightM() * Math.min(.62, .30 + .0016 * c); };   // step length: measured with GPS when available, else height x cadence model
-const MET_T = [[2.5, 2.3], [3.2, 2.8], [4, 3], [4.8, 3.5], [5.6, 4.3], [6.4, 5], [7.2, 6.9], [8, 8.3], [9.7, 9.8], [11.3, 11]];   // speed km/h -> MET (Compendium of Physical Activities)
-function metAt(v){ if (v <= MET_T[0][0]) return MET_T[0][1]; for (let i = 1; i < MET_T.length; i++){ const a = MET_T[i - 1], b = MET_T[i]; if (v <= b[0]) return a[1] + (b[1] - a[1]) * (v - a[0]) / (b[0] - a[0]); } return MET_T[MET_T.length - 1][1]; }
+/* Energy cost: the ACSM equations used by pro fitness apps. VO2 (ml/kg/min) from speed; walking and running have different curves, blended between 6.4 and 8 km/h. Returns gross MET (resting = 1), callers subtract 1 for net active kcal. */
+function metAt(v){ const S = Math.max(0, v) * 1000 / 60, walk = .1 * S, run = .2 * S, w = v <= 6.4 ? 0 : v >= 8 ? 1 : (v - 6.4) / 1.6; return 1 + (walk + (run - walk) * w) / 3.5; }
 function paceCalc(steps, secs, kg){ if (!(steps > 0) || !(secs > 0)) return {kcal:0, km:0, h:0, v:0}; const c = steps / secs * 60, L = stepLenAt(c), km = steps * L / 1000, h = secs / 3600, v = km / h; return {kcal:(metAt(v) - 1) * kg * h, km, h, v}; }   // net kcal: resting energy is already in the daily budget
 function stepBands(k){
   const a = [0, 0, 0, 0, 0, 0, 0, 0], add = arr => { if (Array.isArray(arr)) arr.forEach((x, i) => { if (i < 8) a[i] += +x || 0; }); };
@@ -11178,15 +11178,15 @@ async function fcSend(over){
   if (!img){ const L = fcLocal(msg); if (L){ const lb = fcAdd('ai', L.text); offerActs(lb, L.full, {box:() => FCH.el.querySelector('#fcMsgs'), save:fcSave, allow:FOOD_ALLOW}); fcSave(); return; } }
   const HH = img ? {hint:'', keys:new Set(), strict:false} : fcHint(msg);
   if (!coachReady()){ fcAdd('ai', '⚠️ ' + T('Add your Gemini API key in Settings to use the Food AI.', 'ضيف مفتاح Gemini في الإعدادات عشان تستخدم الـ Food AI.'), 1); return; }
-  FCH.busy = true; const send = FCH.el.querySelector('#fcGo'); if (send) send.disabled = true; const loading = fcAdd('ai', '…', 1); let bubble = null; const pt = window._askTemp; window._askTemp = .15;
+  FCH.busy = true; const send = FCH.el.querySelector('#fcGo'); if (send) send.disabled = true; const loading = fcAdd('ai', '…', 1); let bubble = null; const pt = window._askTemp, pg = window._askGen; window._askTemp = .15; window._askGen = {thinkingConfig:{thinkingBudget:0}};   // no slow 'thinking' phase: the answer starts streaming right away
   try {
-    let full = await agentRound({rules:FOOD_RULES + foodGuide(), hist, ctx:(useImg ? foodCtxLite() + '\n\nA PHOTO IS ATTACHED. Answer only from the photo and the user message below; ignore the diary for deciding what is in the photo.' : foodCtx() + HH.hint) + '\n\nUser message (current, the ONLY foods to handle): ' + msg, text:msg, allow:FOOD_ALLOW, images:useImg ? [{t:'Meal or label photo:', d:useImg}] : null, onChunk:p => { if (!bubble){ loading.remove(); bubble = fcAdd('ai', ''); } fcSet(bubble, stripActs(cleanPlan(p))); }});
+    let full = await agentRound({rules:FOOD_RULES + foodGuide(), hist, ctx:(useImg ? foodCtxLite() + '\n\nA PHOTO IS ATTACHED. Answer only from the photo and the user message below; ignore the diary for deciding what is in the photo. BE FAST AND SHORT: one line per food with kcal, P, C, F, then the total, then the log action. No long explanations.' : foodCtx() + HH.hint) + '\n\nUser message (current, the ONLY foods to handle): ' + msg, text:msg, allow:FOOD_ALLOW, images:useImg ? [{t:'Meal or label photo:', d:useImg}] : null, onChunk:p => { if (!bubble){ loading.remove(); bubble = fcAdd('ai', ''); } fcSet(bubble, stripActs(cleanPlan(p))); }});
     full = fcFilter(full, HH); if (!bubble){ loading.remove(); bubble = fcAdd('ai', ''); } const clean = stripActs(cleanPlan(full));
     if (!clean && !parseActs(full).length){ bubble.remove(); throw new Error(T('The AI returned an empty answer.', 'الذكاء الاصطناعي رجّع رد فاضي.')); }
     fcSet(bubble, clean || '👍'); engTag(bubble); const fu = followUps(full); if (fu.length){ const w = document.createElement('div'); w.className = 'qfu'; w.innerHTML = fu.map(q => `<button type="button" class="sec tiny">${E(q)}</button>`).join(''); bubble.after(w); }
     offerActs(bubble, full, {box:() => FCH.el.querySelector('#fcMsgs'), save:fcSave, allow:FOOD_ALLOW}); fcSave();
   } catch(err){ if (loading.isConnected) loading.remove(); console.error('Food AI', err); const off = navigator.onLine === false; const d = fcAdd('ai', '⚠️ ' + (off ? T('You appear to be offline.', 'شكلك مش متصل بالإنترنت.') : String((err && err.message) || err).slice(0, 220)), 1); const b = document.createElement('button'); b.type = 'button'; b.className = 'sec tiny'; b.textContent = '🔄 ' + T('Retry', 'إعادة'); b.onclick = () => { d.remove(); fcSend(msg); }; d.appendChild(b); }
-  finally { window._askTemp = pt === undefined ? null : pt; FCH.busy = false; if (send) send.disabled = false; }
+  finally { window._askTemp = pt === undefined ? null : pt; window._askGen = pg; FCH.busy = false; if (send) send.disabled = false; }
 }
 function fcSizeIn(){ const ta = FCH.el && FCH.el.querySelector('#fcIn'); if (!ta) return; ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 140) + 'px'; }
 function fcThumb(){ const w = FCH.el.querySelector('#fcThumb'); if (!w) return; w.innerHTML = FCH.img ? `<img src="data:image/jpeg;base64,${FCH.img}" alt=""><button type="button" data-tone="none" aria-label="Remove">✕</button>` : ''; w.style.display = FCH.img ? 'flex' : 'none'; const x = w.querySelector('button'); if (x) x.onclick = () => { FCH.img = null; fcThumb(); }; }
@@ -11205,7 +11205,7 @@ function fcBuild(){
   ta.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !('ontouchstart' in window) && !e.isComposing){ e.preventDefault(); fcSend(); } });
   el.querySelector('#fcGo').onclick = () => fcSend(); el.querySelector('#fcMic').onclick = () => micToggle(() => ta);
   el.querySelector('#fcCam').onclick = () => el.querySelector('#fcFile').click();
-  el.querySelector('#fcFile').onchange = async e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return; try { const d = await fileToJpeg(f, 1280, .82); FCH.img = d.split(',')[1]; fcThumb(); } catch(_){ showToast('⚠️ ' + I('Could not read that image.')); } };
+  el.querySelector('#fcFile').onchange = async e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return; try { const d = await fileToJpeg(f, 960, .7); FCH.img = d.split(',')[1]; fcThumb(); } catch(_){ showToast('⚠️ ' + I('Could not read that image.')); } };
   el.querySelector('#fcClr').onclick = async () => { if (!(await showConfirm(T('Clear the Food AI chat? Your food log is not affected.', 'مسح شات الـ Food AI؟ سجل أكلك مش هيتأثر.'), T('Clear chat', 'مسح الشات')))) return; NU.chat = []; FCH.last = null; nSave(); FCH.el = null; renderFood(); };
   el.addEventListener('click', e => { const q = e.target.closest('.qfu button'); if (q){ q.closest('.qfu').remove(); fcSend(q.textContent); return; } const c = e.target.closest('.fc-chips button'); if (c){ if (c.dataset.fill){ ta.value = I(c.dataset.p); FCH.drafted = ta.value; ta.focus(); fcSizeIn(); } else fcSend(I(c.dataset.p)); } });
   return el;
@@ -11326,7 +11326,7 @@ window.NUT = {parse:t => { const P = parseMeal(fcClean(t)); return {items:P.item
 })();
 
 /* ================= v65: friends-only games, settings menu, hero Build page, active update prompt ================= */
-const APP_VER = 'tracky-v91';
+const APP_VER = 'tracky-v93';
 /* 1) games: only the friends duel remains; finishing a workout now pays GP directly (no ghost hunt) */
 ghEvent = function(evId, kind, ratio){
   if (kind !== 'fin') return null;
