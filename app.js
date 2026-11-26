@@ -6450,7 +6450,8 @@ function gEx(name, slot, isMain, pos){
   return {name, slot, sets, reps, weight:w, rpe, note:G.goal === 'fat' && kind !== 'k' ? note.replace(/Rest [^.]*\./, 'Rest 45-60 s.') : note};
 }
 function genPlan(){
-  const used = {}; G.home = G.eq === 'home';
+  G.home = G.eq === 'home'; if (G.style === 'sci') return (GPLAN = sciPlan());
+  const used = {};
   GPLAN = GSPLIT[G.days].map((k, di) => { const [nm, col, base] = GD[k]; let slots = base.slice();
     const type = /^(up|push|pull)/.test(k) ? 'u' : /^(lo|legs)/.test(k) ? 'l' : 'f', X = {u:{upper:['lateral','biceps','triceps'], arms:['biceps','triceps','lateral']}, l:{lower:['glute','calf'], glutes:['glute']}, f:{upper:['lateral'], arms:['biceps','triceps'], lower:['glute'], glutes:['glute']}}[type][G.focus] || [];
     X.forEach(s => { if (!slots.includes(s)) slots.push(s); }); if (G.exp === 'b') slots = slots.slice(0, 6); if (G.goal === 'fat') slots.push('cond');
@@ -6461,12 +6462,184 @@ function genPlan(){
     return {name:nm, color:col, ex}; });
   return GPLAN;
 }
-function genSets(){ const o = {}; GPLAN.forEach(d => d.ex.forEach(e => { const m = muscleOf(e.name); if (m) o[m] = (o[m] || 0) + e.sets; })); return o; }
+/* ---------- Science-based plan engine ----------
+   Principles taken from evidence-based low-volume / high-intensity coaching, applied to each person's inputs:
+   1. Every muscle is trained about twice a week (the split is chosen from your days).
+   2. Weekly HARD sets per muscle depend on experience, goal and focus (about 6-14), each set close to failure.
+   3. Stable exercises first (machine, smith, cable), exercises that load the muscle in its stretched position are preferred.
+   4. Order by fatigue: heavy compounds when fresh, isolation later. Each muscle gets a different variation on its second day.
+   5. Long rests for heavy lifts, shorter for isolation; warm-up sets ramp up with the load and shrink for muscles already warm.
+   6. Double progression (reps first, then weight); keep the plan 8-12 weeks, deload when you stall.
+   Different inputs and a different seed give a different plan. */
+// muscle|name|equipment(m machine,s smith,c cable,d dumbbell,f barbell,b bodyweight)|compound|stretch bias 0-2|fatigue 1-3
+const EXK = `chestU|Smith High-Incline Press|s|1|2|2
+chestU|Incline Machine Press|m|1|2|1
+chestU|Incline Dumbbell Press|d|1|2|2
+chestU|Incline Barbell Press|f|1|2|3
+chestU|Low-to-High Cable Crossover|c|0|2|1
+chestM|Chest Press Machine|m|1|1|1
+chestM|Smith Flat Press|s|1|1|2
+chestM|Dumbbell Press|d|1|2|2
+chestM|Bench Press|f|1|1|3
+chestM|Machine Fly|m|0|2|1
+chestM|Cable Crossover|c|0|2|1
+chestM|Dumbbell Fly|d|0|2|1
+lats|Wide-Grip Machine Pulldown|m|1|1|1
+lats|Lat Pulldown|c|1|1|1
+lats|Close-Grip Cable Pulldown|c|1|1|1
+lats|Neutral-Grip Machine Pulldown|m|1|1|1
+lats|Pull-Up|b|1|1|2
+lats|Dumbbell Pullover|d|0|2|1
+backRow|T-Bar Row|s|1|1|2
+backRow|Chest-Supported Machine Row|m|1|1|1
+backRow|Seated Machine Row|m|1|1|1
+backRow|Seated Cable Row|c|1|1|1
+backRow|Single-Arm Cable Row|c|1|1|1
+backRow|Chest-Supported Dumbbell Row|d|1|1|1
+backRow|Single-Arm Dumbbell Row|d|1|1|2
+backRow|Barbell Row|f|1|1|3
+deltSide|Machine Lateral Raise|m|0|0|1
+deltSide|Cable Lateral Raise|c|0|1|1
+deltSide|Leaning Cable Lateral Raise|c|0|2|1
+deltSide|Lateral Raise|d|0|0|1
+deltRear|Seated Machine Rear Delt Fly|m|0|1|1
+deltRear|Reverse Pec Deck|m|0|1|1
+deltRear|Cable Face Pull|c|0|1|1
+deltRear|Chest-Supported Dumbbell Rear Delt Fly|d|0|1|1
+deltPress|Machine Overhead Press|m|1|1|2
+deltPress|Seated Dumbbell Overhead Press|d|1|1|2
+deltPress|Overhead Press|f|1|1|3
+biceps|Incline Dumbbell Curl|d|0|2|1
+biceps|Face-Away Cable Curl|c|0|2|1
+biceps|Preacher Machine Curl|m|0|1|1
+biceps|Dumbbell Preacher Curl|d|0|1|1
+biceps|Cable Curl|c|0|1|1
+biceps|Hammer Dumbbell Curl|d|0|0|1
+triceps|Overhead Cable Triceps Extension|c|0|2|1
+triceps|Single-Arm Cable Pushdown|c|0|1|1
+triceps|Rope Cable Triceps Pushdown|c|0|0|1
+triceps|Dumbbell Skull Crusher|d|0|2|1
+triceps|Overhead Dumbbell Triceps Extension|d|0|2|1
+triceps|Machine Triceps Extension|m|0|1|1
+quads|Hack Squat|m|1|2|2
+quads|Leg Press|m|1|1|2
+quads|Smith Machine Squat|s|1|2|2
+quads|Squat|f|1|2|3
+quadsIso|Leg Extension|m|0|1|1
+hams|Seated Machine Leg Curl|m|0|2|1
+hams|Lying Machine Leg Curl|m|0|1|1
+hinge|Stiff-Leg Deadlift|f|1|2|3
+hinge|Romanian Deadlift|f|1|2|3
+hinge|Romanian Dumbbell Deadlift|d|1|2|2
+hinge|45-Degree Machine Back Extension|m|1|1|2
+glutes|Machine Hip Thrust|m|1|1|1
+glutes|Barbell Hip Thrust|f|1|1|2
+glutes|Cable Glute Kickback|c|0|1|1
+glutes|Cable Pull-Through|c|1|2|1
+glutes|Machine Hip Abduction|m|0|1|1
+calves|Leg Press Calf Raise|m|0|2|1
+calves|Standing Machine Calf Raise|m|0|2|1
+calves|Seated Machine Calf Raise|m|0|1|1
+calves|Smith Calf Raise|s|0|2|1
+calves|Standing Dumbbell Calf Raise|d|0|2|1
+abs|Cable Crunch|c|0|1|1
+abs|Lat Pulldown Crunch|c|0|1|1
+abs|Machine Crunch|m|0|1|1
+abs|Hanging Leg Raise|b|0|1|1
+abs|Half-Kneeling Cable Pallof Press|c|0|0|1
+adductors|Hip Adduction Machine|m|0|2|1
+adductors|Cable Hip Adduction|c|0|2|1`.split('\n').map(l => { const [m, n, e, c, s, f] = l.split('|'); return {m, n, e, c:+c, s:+s, f:+f}; });
+const EXM_MUSCLE = {quadsIso:'legs', hinge:'legs', chestU:'chest', chestM:'chest', lats:'back', backRow:'back', deltSide:'shoulders', deltRear:'shoulders', deltPress:'shoulders', biceps:'arms', triceps:'arms', quads:'legs', hams:'legs', glutes:'glutes', calves:'legs', abs:'core', adductors:'legs'};
+const SCI_GP = {hinge:'hinge', chestU:'hpress2', chestM:'hpress', lats:'vpull', backRow:'hrow', deltSide:'lateral', deltRear:'reardelt', deltPress:'vpress', biceps:'biceps', triceps:'triceps', quads:'quad', hams:'legcurl', glutes:'glute', calves:'calf', abs:'core'};
+// every muscle: [label, size (big=1/small=0), sub-groups]
+const SCI_M = {chest:['Chest',1,['chestU','chestM']], back:['Back',1,['lats','backRow']], delts:['Side delts',0,['deltSide']], rear:['Rear delts',0,['deltRear']], biceps:['Biceps',0,['biceps']], triceps:['Triceps',0,['triceps']], quads:['Quads',1,['quads','quadsIso'],0], hams:['Hamstrings',1,['hams','hinge']], glutes:['Glutes',1,['glutes']], calves:['Calves',0,['calves']], abs:['Abs',0,['abs']], adds:['Adductors',0,['adductors']]};
+const SCI_DAY = {
+  fbA:['chest','back','quads','hams','delts','biceps','abs'], fbB:['back','chest','glutes','quads','triceps','rear','calves'], fbC:['chest','back','quads','hams','delts','biceps','triceps','calves'],
+  upA:['chest','back','delts','rear','biceps','triceps'], upB:['back','chest','delts','triceps','biceps','rear'], loA:['quads','hams','glutes','calves','abs','adds'], loB:['hams','quads','glutes','calves','abs','adds'],
+  push:['chest','delts','triceps'], pull:['back','rear','biceps','abs'], legs:['quads','hams','glutes','calves','adds'], pushB:['chest','delts','triceps'], pullB:['back','rear','biceps'], legsB:['hams','quads','glutes','calves','abs']
+};
+const SCI_FOCUS = {upper:['chest','back','delts','rear'], lower:['quads','hams','glutes','calves'], glutes:['glutes'], arms:['biceps','triceps','delts','rear']};
+GOPT.style = [['sci','Science-based (recommended)'],['mod','Classic template']];
+GOPT.time = [[45,'45 min'],[60,'60 min'],[90,'90 min']];
+G.style = 'sci'; G.time = 60;
+(function(){   // make sure the engine's exercises exist in the library (the total stays at 3000)
+  const add = [], seen = new Set();
+  EXK.forEach(x => { const k = x.n.toLowerCase(); if (EXM.has(k) || seen.has(k)) return; seen.add(k); const eq = /Barbell|^Squat$|^Bench Press$/.test(x.n) ? 'Barbell' : /Dumbbell/.test(x.n) ? 'Dumbbell' : /Cable/.test(x.n) ? 'Cable' : /Machine|Smith|Pec Deck/.test(x.n) ? 'Machine' : 'Bodyweight'; add.push([x.n, EXM_MUSCLE[x.m], eq === 'Bodyweight' ? 1 : 0, eq]); });
+  if (!add.length) return;
+  const keep = new Set(EXK.map(x => x.n.toLowerCase()).concat(Object.values(GP).flatMap(g => Object.values(g[2]).flat()).map(n => n.toLowerCase()))), idx = [];
+  for (let i = 0; i < LIB.length; i++) if (!keep.has(LIB[i][0].toLowerCase()) && LIB[i].h) idx.push(i);
+  const step = idx.length / add.length, drop = new Set(add.map((_, j) => idx[Math.floor(j * step)]));
+  const out = LIB.filter((_, i) => !drop.has(i)); LIB.length = 0; LIB.push(...out, ...add); LIB.forEach(l => { if (!l.nk) l.nk = nzK(l[0]); }); EXM.clear(); LIB.forEach(l => EXM.set(l[0].trim().toLowerCase(), l));
+})();
+const sciRnd = s => { let h = 2166136261; for (let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } h ^= h >>> 15; h = Math.imul(h, 2246822519); return ((h ^ (h >>> 13)) >>> 0) / 4294967296; };
+function sciAttr(n, kind){   // attributes for library names that are not in the table
+  const st = /Machine|Smith|Hack|Leg Press|Pec Deck/.test(n) ? 'm' : /Cable|Band/.test(n) ? 'c' : /Dumbbell/.test(n) ? 'd' : /Barbell/.test(n) ? 'f' : 'b';
+  return {n, e:st, c:kind === 'c' ? 1 : 0, s:/incline|overhead|preacher|crossover|fly|romanian|stiff|pullover|lying|deficit|spider/i.test(n) ? 1 : 0, f:/Barbell|Deadlift|Squat/.test(n) ? 3 : 1};
+}
+function sciCands(sub, eq){   // every usable exercise for one muscle sub-group
+  const bad = injRe(), okEq = {gym:'mscdfb', mach:'mscb', db:'db', home:'b', kb:'db'}[eq] || 'mscdfb', out = new Map();
+  EXK.filter(x => x.m === sub && okEq.includes(x.e)).forEach(x => out.set(x.n, x));
+  const gs = SCI_GP[sub]; if (gs) gPool(gs, eq).forEach(n => { if (!out.has(n)) out.set(n, Object.assign({m:sub}, sciAttr(n, GP[gs][1]))); });
+  return [...out.values()].filter(x => EXM.has(x.n.toLowerCase()) && !(bad && bad.test(x.n)));
+}
+function sciScore(x, ctx){
+  const stab = {m:3, s:3, c:2.5, d:2, f:1, b:1}[x.e] || 1, ex = ctx.exp, iso = !x.c, g = G.goal;
+  let sc = stab * ({b:1.4, m:1, a:.7}[ex]) + 1.1 * x.s - (iso ? .35 : .6) * x.f * ({b:1.3, m:1, a:.8}[ex]);
+  if (g === 'strength' && x.c) sc += 1.2 + (x.e === 'f' && ex !== 'b' ? 1.1 : 0); if (g === 'size') sc += .25 * x.s; if (g === 'fat' && x.c) sc += .8;
+  if (ctx.week.has(x.n)) sc -= 3.2; if (ctx.day.has(x.n)) sc -= 8;                       // vary exercises between days, never repeat in a session
+  return sc + sciRnd(G.seed + '|' + x.n + '|' + ctx.salt) * 1.3;                             // seed makes every generation different
+}
+function sciTargets(){   // weekly hard sets per muscle
+  const base = {b:[7, 5], m:[10, 7], a:[12, 8]}[G.exp], gm = {size:1, strength:.9, fat:.85, fit:.75}[G.goal], foc = SCI_FOCUS[G.focus] || [], o = {};
+  Object.entries(SCI_M).forEach(([k, [, big]]) => { let t = base[big ? 0 : 1] * gm; if (G.goal === 'strength' && !big) t *= .8; if (foc.length) t *= foc.includes(k) ? 1.35 : .85; if (k === 'adds' || k === 'abs' || k === 'rear') t *= .7; o[k] = Math.max(3, Math.round(t)); });
+  return o;
+}
+function sciWarm(x, seen){   // warm-up ramp: grows with the load, shrinks when the muscle is already warm
+  const heavy = x.c && x.f >= 2, n = !x.c ? (seen ? 0 : 1) : heavy ? (seen ? 2 : 3) : (seen ? 1 : 2);
+  const t = n === 0 ? 'No warm-up needed, the muscle is already warm.' : n === 3 ? 'Warm-up, 3 light sets: ~50% x 3-6, ~75-80% x 3, ~85-90% x 1-3 reps.' : n === 2 ? 'Warm-up, 2 sets: ~50% x 3-6, then ~75-80% x 3 reps.' : 'Warm-up, 1 set of ~60% x 3-6 reps.';
+  return [n, t];
+}
+const SCI_CUE = {chest:'Control the lowering and get a full stretch at the bottom. Elbows about 45-75 degrees from your torso.', back:'Lead with the elbows, bring the shoulder blades together and do not swing.', delts:'Lift with the side delt, not with momentum. Keep the torso still.', rear:'Unlock the shoulder blades first and feel it in the rear delt.', biceps:'Keep the shoulder still, no body swing. The whole rep comes from the biceps.', triceps:'Elbows stay fixed, only the forearm moves.', quads:'Go as deep as you can control with a stable foot.', hams:'Get a full stretch at the start of every rep.', glutes:'Squeeze hard at the top, ribs down.', calves:'Full stretch at the bottom, pause, then squeeze at the top.', abs:'Curl the spine ribs-to-pelvis; do not just pull with the arms.', adds:'Set yourself in with the handles and stay still.'};
+function sciPlan(){
+  const split = GSPLIT[G.days], tgt = sciTargets(), cnt = {}, week = new Set(), prog = {}, cap = {45:6, 60:8, 90:10}[G.time] || 8, exp = G.exp;
+  split.forEach(k => SCI_DAY[k].forEach(m => cnt[m] = (cnt[m] || 0) + 1));
+  const room = split.length * Math.floor((G.time - 5) / 3.1), want = Object.values(tgt).reduce((a, b) => a + b, 0); G.trim = want > room ? Math.round(room / want * 100) : 100;
+  if (want > room) Object.keys(tgt).forEach(m => { tgt[m] = Math.max(2, Math.round(tgt[m] * room / want)); });
+  const plan = split.map((k, di) => {
+    const [nm, col] = GD[k], items = [], day = new Set(), seenM = new Set();
+    SCI_DAY[k].forEach(m => { prog[m] = (prog[m] || 0) + 1; const f = cnt[m], total = tgt[m]; let sets = Math.floor(total / f) + (prog[m] <= total % f ? 1 : 0); sets = Math.max(exp === 'b' ? 2 : 1, Math.min(m === 'abs' || m === 'adds' ? 3 : 6, sets));
+      const subs = SCI_M[m][2], rot = SCI_M[m][3] !== 0, nEx = Math.max(1, Math.min(2, Math.round(sets / 2.5)));
+      for (let e = 0; e < nEx; e++){ const sub = subs[((rot ? prog[m] - 1 : 0) + e) % subs.length], sh = e === nEx - 1 ? sets - Math.floor(sets / nEx) * (nEx - 1) : Math.floor(sets / nEx);
+        items.push({m, sub, sets:Math.max(1, sh), pri:e, di, si:items.length}); } });
+    // choose exercises
+    items.forEach(it => { let c = sciCands(it.sub, G.eq); if (!c.length){ const o = SCI_M[it.m][2].find(q => q !== it.sub && sciCands(q, G.eq).length); if (o){ it.sub = o; c = sciCands(o, G.eq); } } if (!c.length){ it.skip = 1; return; } const prev = items.find(q => q.m === it.m && q.pri < it.pri && q.x), ctx = {exp, week, day, salt:it.m + di}; c.forEach(x => { x.sc = sciScore(x, ctx) + (it.pri === 0 && SCI_M[it.m][1] && x.c ? 1.6 : 0) + (prev && prev.x.c !== x.c ? 1.4 : 0); }); c.sort((a, b) => b.sc - a.sc);
+      let pick = c[(G.alt[di + ':' + it.m + ':' + it.sub + ':' + it.pri] || 0) % c.length]; it.x = pick; day.add(pick.n); week.add(pick.n); });
+    let ex = items.filter(i => !i.skip);
+    // order by fatigue: heavy compounds first, then other compounds, then isolation (focus muscles earlier inside each group)
+    const foc = SCI_FOCUS[G.focus] || [], rank = i => (i.x.c ? (i.x.f >= 2 ? 0 : 1) : 2) * 10 + (foc.includes(i.m) ? 0 : 1) * 3 + i.pri;
+    ex.sort((a, b) => rank(a) - rank(b));
+    ex = ex.map((i, n) => { const x = i.x, seen = seenM.has(i.m) || (/^(chest|delts)$/.test(i.m) && seenM.has('chest') || i.m === 'back' && seenM.has('rear')); seenM.add(i.m);
+      const heavy = x.c && x.f >= 2, str = G.goal === 'strength', fat = G.goal === 'fat';
+      let reps = /Plank|Carry/.test(x.n) ? '30-45' : x.c ? (heavy ? (str ? '3-5' : fat ? '8-10' : '5-8') : (str ? '4-6' : fat ? '10-12' : '6-10')) : (/calf/i.test(x.n) ? '6-10' : '8-12'); if (fat && !x.c) reps = '10-15';
+      let rest = x.c ? (heavy ? (str ? 300 : 240) : 180) : 120; if (fat) rest = Math.min(rest, 90); const [wuN, wu] = sciWarm(x, seen), rir = exp === 'b' ? '1-2' : exp === 'm' ? '0-1' : '0';
+      let w = 0, k2 = GK[(EXM.get(x.n.toLowerCase()) || [])[3]]; if (k2 && !G.home){ k2 *= (x.c ? (heavy ? 1 : .8) : .45) * (/Squat|Leg Press$|Deadlift/.test(x.n) ? 1.3 : 1) * ({b:.7, m:1, a:1.25}[exp]); w = Math.max(2.5, Math.round(userKg() * k2 / 2.5) * 2.5); }
+      const note = (n === 0 ? 'PREP (under 10 min): Pallof Press, Pallof Rotation, External Rotation, Scapular Push-Up Plus, 10 easy reps each. ' : '') + wu + ' ' + SCI_CUE[i.m] + ` Every work set ${rir === '0' ? 'to failure' : rir + ' reps from failure (last set closer)'} with full range. Rest §R§. When you hit the top of the rep range on every set, add weight.`;
+      return {name:x.n, slot:SCI_GP[i.sub], muscle:i.m, sets:i.sets, reps, weight:w, rpe:exp === 'b' ? 8 : exp === 'm' ? 9 : 10, rest, wu:wuN, note, key:di + ':' + i.m + ':' + i.sub + ':' + i.pri, c:x.c, f:x.f}; });
+    // time budget: shorten rests first, then drop the least important exercises
+    const mins = e => e.wu * 1.3 + e.sets * (.8 + e.rest / 60), est = a => 5 + a.reduce((t, e) => t + mins(e), 0), limit = G.time;
+    for (let g = 0; g < 3 && est(ex) > limit; g++) ex.forEach(e => { if (!e.c || g > 0) e.rest = Math.max(90, Math.round(e.rest * .8 / 15) * 15); });
+    while (est(ex) > limit && ex.some(e => e.sets > 2)){ const e = ex.filter(q => q.sets > 2).sort((a, b) => b.sets - a.sets)[0]; e.sets--; }
+    while ((est(ex) > limit || ex.length > cap) && ex.length > 3){ let bi = -1, bs = -1; ex.forEach((e, i) => { const sc = (e.c ? 0 : 5) + (foc.includes(e.muscle) ? 0 : 3) + (ex.filter(q => q.muscle === e.muscle).length > 1 ? 4 : 0) + i * .01; if (sc > bs){ bs = sc; bi = i; } }); ex.splice(bi, 1); }
+    ex.forEach(e => { e.min = Math.round(mins(e)); e.note = e.note.replace('§R§', (e.rest >= 240 ? '3-5 min' : e.rest >= 150 ? '2-3 min' : e.rest >= 100 ? '1.5-2 min' : 'about 1 min')); }); return {name:nm, color:col, ex, est:Math.round(est(ex))}; });
+  return plan;
+}
+function genSets(){ const o = {}; if (G.style === 'sci'){ GPLAN.forEach(d => d.ex.forEach(e => { const l = SCI_M[e.muscle][0]; o[l] = (o[l] || 0) + e.sets; })); return o; } GPLAN.forEach(d => d.ex.forEach(e => { const m = muscleOf(e.name); if (m) o[m] = (o[m] || 0) + e.sets; })); return o; }
 function genRender(){
   const m = $('modalGen'); genPlan(); const chips = (k, label) => `<div class="gen-l">${label}</div><div class="cchips">${GOPT[k].map(([v, l]) => `<button type="button" class="cchip${String(G[k]) === String(v) ? ' on' : ''}" style="--rc:var(--accent)" data-g="${k}:${v}">${l}</button>`).join('')}</div>`, ws = genSets();
-  m.querySelector('.modal').innerHTML = `<h3>✨ Plan Generator</h3><small class="insight2">A modern split built from your goal, days and equipment. You can swap any exercise.</small>${chips('goal','Goal')}${chips('days','Days per week')}${chips('eq','Equipment')}${chips('exp','Experience')}${chips('focus','Focus')}${injBlock()}
+  m.querySelector('.modal').innerHTML = `<h3>✨ Plan Generator</h3><small class="insight2">A modern split built from your goal, days and equipment. You can swap any exercise.</small>${chips('style','Method')}${chips('goal','Goal')}${chips('days','Days per week')}${G.style === 'sci' ? chips('time','Time per session') : ''}${chips('eq','Equipment')}${chips('exp','Experience')}${chips('focus','Focus')}${injBlock()}
+    ${G.style === 'sci' ? `<div class="walkp"><b>🧠 How this plan was built for you</b><br><small>• <b>${G.days} days</b> → every muscle is trained about ${G.days >= 4 ? 'twice' : G.days === 3 ? '2-3 times' : 'twice'} a week.<br>• Weekly hard sets are set per muscle from your experience, goal and focus (see the numbers below), and each set is taken close to failure with full range.<br>• Stable exercises (machines, smith, cables) come first, and moves that load the muscle in its stretched position are preferred. Each muscle gets a different variation on its other days.<br>• Heavy lifts first while you are fresh. Long rests on heavy lifts (up to 5 min), shorter on isolation. Warm-up sets ramp up with the load and shrink when the muscle is already warm.<br>• Progress by reps first, then weight. Keep the plan 8-12 weeks, and take an easier week if you stall for two sessions. A different 🔀 gives a different plan built on the same rules.${G.trim < 100 ? `<br>⏱ Volume was trimmed to ${G.trim}% so every session fits ${G.time} min. Pick a longer session time for more sets.` : ''}</small></div>` : ''}
     <div class="gen-l">Sets per week</div><div class="cchips">${Object.entries(ws).map(([k, v]) => `<span class="cchip" style="--rc:var(--accent)">${k} ${v}</span>`).join('')}</div>
-    ${GPLAN.map((d, di) => `<div class="gen-day" style="border-top:4px solid ${d.color}"><b>${d.name}</b>${d.ex.map(e => `<div class="gen-ex"><div><span>${escapeHTML(e.name)}</span><small>${e.sets} × ${e.reps} · RPE ${e.rpe}${e.weight ? ' · ~' + e.weight + ' kg' : ''}</small></div><button type="button" class="sec tiny" data-g="swap:${e.key}" aria-label="Swap">🔄</button></div>`).join('')}</div>`).join('')}
+    ${GPLAN.map((d, di) => `<div class="gen-day" style="border-top:4px solid ${d.color}"><b>${d.name}</b>${d.est ? ` <small class="insight2">~${d.est} min</small>` : ''}${d.ex.map(e => `<div class="gen-ex"><div><span>${escapeHTML(e.name)}</span><small>${e.sets} × ${e.reps} · RPE ${e.rpe}${e.weight ? ' · ~' + e.weight + ' kg' : ''}${e.rest ? ' · ⏱ ' + (Math.round(e.rest / 6) / 10) + ' min rest' : ''}${e.wu != null ? ' · 🔥 ' + e.wu + ' warm-up' : ''}</small></div><button type="button" class="sec tiny" data-g="swap:${e.key}" aria-label="Swap">🔄</button></div>`).join('')}</div>`).join('')}
     <div class="stepacts gen-act"><button type="button" id="genUse" style="flex:1">✅ Use this plan</button><button type="button" class="sec tiny" data-g="shuffle:1" aria-label="Shuffle">🔀</button><button type="button" class="sec tiny" data-g="close:1" aria-label="Close">✕</button></div>`;
 }
 function openGen(){
@@ -6475,7 +6648,7 @@ function openGen(){
   if (!$('modalGen')){ document.body.insertAdjacentHTML('beforeend', '<div class="overlay" id="modalGen"><div class="modal" style="max-height:90vh;overflow-y:auto"></div></div>');
     $('modalGen').addEventListener('click', async e => { const t = e.target.closest('[data-g],#genUse'); if (!t) return; if (t.id === 'genUse'){
         if (state.days.length && !(await showConfirm('Replace your current plan with this one?', '✨ Plan Generator'))) return;
-        state.days = GPLAN.map(d => ({id:makeId(), name:d.name, color:d.color, exercises:d.ex.map(x => ({name:x.name, sets:x.sets, reps:x.reps, weight:x.weight, rpe:x.rpe, note:x.note}))})); save(); renderAllViews(); closeModal('modalGen'); showToast('✅ Plan ready. Check the starting weights.'); return; }
+        state.days = GPLAN.map(d => ({id:makeId(), name:d.name, color:d.color, exercises:d.ex.map(x => Object.assign({name:x.name, sets:x.sets, reps:x.reps, weight:x.weight, rpe:x.rpe, note:x.note}, x.rest ? {rest:x.rest} : {}))})); save(); renderAllViews(); closeModal('modalGen'); showToast('✅ Plan ready. Check the starting weights.'); return; }
       const gi = t.dataset.g.indexOf(':'), k = t.dataset.g.slice(0, gi), v = t.dataset.g.slice(gi + 1); if (k === 'close') return closeModal('modalGen'); if (k === 'fixplan') return injFixPlan(); if (k === 'inj'){ const a = settings.injuries || []; settings.injuries = a.includes(v) ? a.filter(x => x !== v) : a.concat(v); save(); G.alt = {}; } else if (k === 'shuffle') G.seed++; else if (k === 'swap') G.alt[v] = (G.alt[v] || 0) + 1; else { G[k] = k === 'days' ? +v : v; G.alt = {}; } genRender(); }); }
   genRender(); $('modalGen').classList.add('active');
 }
@@ -11360,7 +11533,7 @@ window.NUT = {parse:t => { const P = parseMeal(fcClean(t)); return {items:P.item
 })();
 
 /* ================= v65: friends-only games, settings menu, hero Build page, active update prompt ================= */
-const APP_VER = 'tracky-v94';
+const APP_VER = 'tracky-v97';
 /* 1) games: only the friends duel remains; finishing a workout now pays GP directly (no ghost hunt) */
 ghEvent = function(evId, kind, ratio){
   if (kind !== 'fin') return null;
