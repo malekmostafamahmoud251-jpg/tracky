@@ -3989,9 +3989,9 @@ function showReport(off = 0, auto = false){
   $('repExtra').innerHTML = `<h4>${escapeHTML(tr('Monthly check-in'))}</h4>` + ckh + `<h4>${escapeHTML(tr('Muscle balance (sets)'))}</h4>` + mbal + '<h4>Days trained</h4><div class="cal">' + cal + '</div>'
     + (wa.length ? '<h4>Weekly volume</h4>' + bars(wa.map(a => [a[0], toDisp(a[1])]), Math.max(...wa.map(a => toDisp(a[1]))), k => { const d = new Date(k); return (d.getUTCMonth() + 1) + '/' + d.getUTCDate(); }, 'var(--ok)') : '')
     + '<h4>Sessions per month</h4>' + bars(mb, mmax, k => k.slice(5), 'var(--accent)');
-  { const sm = stepMonth(ym), gk = gymKcalMonth(ym);
+  { const sm = stepMonth(ym), gk = gymKcalMonth(ym), ok = otherKcalMonth(ym);
     $('repGrid').insertAdjacentHTML('beforeend', tile(sm.steps.toLocaleString(), '👣 Total steps', sm.days ? Math.round(sm.steps / sm.days).toLocaleString() + ' / day avg' : '') + tile(sm.km.toFixed(1) + ' km', '📏 Distance walked') + tile(sm.goalDays + ' / ' + sm.days, '🎯 Days hit step goal')
-      + tile(sm.kcal.toLocaleString() + ' kcal', '🔥 Burned by walking') + tile(gk.toLocaleString() + ' kcal', '🏋️ Burned in gym (est.)') + tile((sm.kcal + gk).toLocaleString() + ' kcal', 'Total burned', '', 'up')); }
+      + tile(sm.kcal.toLocaleString() + ' kcal', '🔥 Burned by walking') + tile(gk.toLocaleString() + ' kcal', '🏋️ Burned in gym (est.)') + (ok ? tile(ok.toLocaleString() + ' kcal', '➕ Other activity (est.)') : '') + tile((sm.kcal + gk + ok).toLocaleString() + ' kcal', 'Total burned', '', 'up')); }
   renderReportBody(ym);
   try { renderAiReport(ym, auto); } catch(e){}
   $('modalReport').classList.add('active');
@@ -4494,7 +4494,7 @@ function showAnalysis(d){
   const rec = d.rec, mus = {}, A = animOn(); let sets = 0, reps = 0, vol = 0, heavy = 0, e1 = 0, rpeS = 0, rpeN = 0, topEx = null;
   rec.exercises.forEach(e => { const m = muscleOf(e.name), k = m || 'other', ev = e.sets.reduce((a,t) => a + t.weight * t.reps, 0); mus[k] = mus[k] || {sets:0, vol:0}; mus[k].sets += e.sets.length; mus[k].vol += ev;
     e.sets.forEach(t => { sets++; reps += t.reps; vol += t.weight * t.reps; heavy = Math.max(heavy, t.weight); e1 = Math.max(e1, e1rm(t.weight, t.reps)); }); if (e.rpe){ rpeS += e.rpe; rpeN++; } if (!topEx || ev > topEx.v) topEx = {n:e.name, v:ev}; });
-  const kb = kcalBreakdown(rec), mins = kb.mins, kcal = kb.kcal;
+  const kb = kcalBreakdown(rec), mins = kb.mins, kcal = kb.net;   // same net basis as the day card
   const tot = Object.values(mus).reduce((a,m) => a + m.sets, 0) || 1, rows = Object.entries(mus).sort((a,b) => b[1].sets - a[1].sets);
   const prevS = sessions.slice(0, -1).reverse().find(x => x.dayName && x.dayName === rec.dayName), pv = prevS ? prevS.volume : 0, dv = pv > 0 ? Math.round((vol - pv) / pv * 100) : null;
   const notes = [];
@@ -6032,18 +6032,20 @@ const paceMin = v => { if (!(v > .8)) return '—'; const m = 60 / v; return Mat
 function paceLabel(v, sh){ const ar = LANG === 'ar'; if (sh && sh[3] >= 30) return ar ? 'جري' : 'Running'; return v <= 0 ? '—' : v < 4 ? (ar ? 'بطيء' : 'Slow') : v < 5.6 ? (ar ? 'متوسط' : 'Medium') : (ar ? 'سريع' : 'Fast'); }
 /* ---- v99: ONE source of truth for the day. Day totals = steps outside GPS sessions (pace model) + the GPS sessions themselves, so the day card, the walk card, the month and the notification always agree. Impossible records are kept but flagged, never deleted. ---- */
 const dayOfMs = ms => { const d = new Date(ms); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+function dayBounds(k){ const [y, m, d] = k.split('-').map(Number); return [new Date(y, m - 1, d).getTime(), new Date(y, m - 1, d + 1).getTime()]; }
+function walkFrac(t0, t1, k){ const [a, b] = dayBounds(k); if (!(t1 > t0)) return t0 >= a && t0 < b ? 1 : 0; return Math.max(0, Math.min(t1, b) - Math.max(t0, a)) / (t1 - t0); }   // share of a session that falls inside local day k (midnight split)
 function walkNorm(w){   // idempotent: fills what older records lack, flags impossible ones (kept, only excluded from totals)
   if (!w || w.nrm === 1) return w; const kg = +userKg() || 70;
   w.min = +w.min || 0; w.km = +w.km || 0; w.kcal = +w.kcal || 0; w.steps = +w.steps || 0; w.v = w.min > 0 ? w.km / (w.min / 60) : 0;
   if (!w.t0 && w.t) w.t0 = w.t - Math.round(w.min * 60000);
   if (!w.id) w.id = 'w' + Math.round((w.t0 || w.t || 0) / 1000);
   if (!w.type) w.type = w.v >= 7.2 && !(w.steps >= 50 && w.min > 0 && w.steps / w.min < 115) ? 'run' : w.v >= 1.6 ? 'walk' : 'still';
-  w.bad = (w.min > 0 && w.min <= 480 && w.km >= 0 && w.km <= 100 && w.v <= 25 && w.kcal >= 0 && w.kcal <= 40 + w.km * kg * 2.5 + w.min * kg * .02 && !(w.type === 'still' && w.km > .3)) ? 0 : 1;
+  w.bad = (w.min > 0 && w.min <= 480 && w.km >= 0 && w.km <= 100 && w.v <= 25 && (w.t0 || 0) < Date.now() + 6e4 && w.kcal >= 0 && w.kcal <= 40 + w.km * kg * 2.5 + w.min * kg * .02 && !(w.type === 'still' && w.km > .3)) ? 0 : 1;
   w.nrm = 1; return w;
 }
 function walkList(k, live){   // valid GPS sessions of day k (+ the walk in progress); vehicle trips and invalid records are not counted as walking
   const a = (progress.walks || []).map(walkNorm).filter(w => w && w.date === k && !w.bad && w.type !== 'veh' && w.type !== 'still');
-  if (live !== false && WALK.on && dayOfMs(WALK.t0 || Date.now()) === k) a.push({live:1, km:WALK.km || 0, min:(WALK.mov || 0) / 60, kcal:WALK.kcal || 0, steps:walkSteps()});
+  if (live !== false && WALK.on){ const fr = walkFrac(WALK.t0 || Date.now(), Date.now(), k); if (fr > 0) a.push({live:1, km:(WALK.km || 0) * fr, min:(WALK.mov || 0) / 60 * fr, kcal:(WALK.kcal || 0) * fr, steps:walkSteps() * fr}); }
   return a;
 }
 function walkDay(k){   // walking only: steps outside sessions + sessions
@@ -6051,10 +6053,11 @@ function walkDay(k){   // walking only: steps outside sessions + sessions
   let km = PS.km * f, sec = PS.h * 3600 * f, kcal = PS.kcal * f; S.forEach(x => { km += x.km; sec += x.min * 60; kcal += x.kcal; });
   return {steps:n, km, sec, h:sec / 3600, kcal:Math.round(kcal), v:sec > 0 ? km / (sec / 3600) : 0, share:PS.share, sess:S};
 }
-function dayTotals(k){ const d = walkDay(k); d.gym = gymKcalDay(k); d.total = d.kcal + d.gym; return d; }   // walking + gym, never overlapping
+function dayTotals(k){ const d = walkDay(k); d.gym = gymKcalDay(k); d.other = otherKcalDay(k); d.total = d.kcal + d.gym + d.other; return d; }   // Total activity = walking + workout + other, each counted once
 function stepMonth(ym){ let n = 0, d = 0, gd = 0, km = 0, kc = 0; const ks = new Set(Object.keys(progress.steps || {})); (progress.walks || []).forEach(w => { if (w && w.date) ks.add(w.date); });
   ks.forEach(k => { if (k.slice(0, 7) !== ym) return; const v = pdDay(k), t = walkDay(k); if (!(v > 0) && !t.sess.length) return; n += v; d++; if (v >= stepGoal()) gd++; km += t.km; kc += t.kcal; }); return {steps:n, days:d, goalDays:gd, km, kcal:Math.round(kc)}; }
-function gymKcalMonth(ym){ let k = 0; sessions.forEach(s => { if (localKey(s.date).slice(0, 7) === ym) k += sessionKcal(s); }); return Math.round(k); }
+function gymKcalMonth(ym){ let k = 0; sessions.forEach(s => { if (!s.cardio && localKey(s.date).slice(0, 7) === ym) k += sessionKcal(s); }); return Math.round(k); }
+function otherKcalMonth(ym){ let k = 0; sessions.forEach(s => { if (s.cardio && localKey(s.date).slice(0, 7) === ym) k += sessionKcal(s); }); return Math.round(k); }
 function paceFeedW(k, n){   // browser version: same idea as the Android service, cadence over 8-second windows
   const now = Date.now(), W = STEP.pw, put = (st, ms) => { if (st <= 0) return; let b = 1, secs = ms / 1000; if (ms < 3000){ secs = st * .6; } else { const c = st * 60000 / ms; b = c < 85 ? 0 : c < 110 ? 1 : c < 135 ? 2 : 3; } progress.stepsPaceW = progress.stepsPaceW || {}; const a = progress.stepsPaceW[k] = progress.stepsPaceW[k] || [0, 0, 0, 0, 0, 0, 0, 0]; a[b * 2] += st; a[b * 2 + 1] += Math.round(secs); };
   if (!W || now - W.last > 20000){ if (W) put(W.s, Math.max(0, W.last - W.t)); put(n, n * 600); STEP.pw = {t:now, s:0, last:now}; return; }
@@ -6063,7 +6066,7 @@ function addSteps(n){ const k = todayKey(); if (STEP.day && STEP.day !== k) setT
   if (!STEP.sv) STEP.sv = setTimeout(() => { STEP.sv = 0; save(); }, 8000);
   if (!STEP.ui) STEP.ui = setTimeout(() => { STEP.ui = 0; stepLive(); }, 400);
   if (!STEP.nq) STEP.nq = setTimeout(() => { STEP.nq = 0; stepNotify(); }, 6000); }
-function stepLive(){ const k = todayKey(), a = $('stepN'); if (!a) return; const T = dayTotals(k); a.textContent = T.steps.toLocaleString(); $('stepK').textContent = T.kcal; $('stepG').textContent = T.gym; $('stepT').textContent = T.total; $('stepKm').textContent = T.km.toFixed(2); if ($('stepV')) $('stepV').textContent = T.v.toFixed(1); if ($('stepPL')) $('stepPL').textContent = paceLabel(T.v, T.share); if ($('stepWT')) $('stepWT').textContent = Math.round(T.sec / 60); if ($('stepAP')) $('stepAP').textContent = paceMin(T.v); $('stepBar').style.width = Math.min(100, T.steps / stepGoal() * 100) + '%'; }
+function stepLive(){ const k = todayKey(), a = $('stepN'); if (!a) return; const T = dayTotals(k); a.textContent = T.steps.toLocaleString(); $('stepK').textContent = T.kcal; $('stepG').textContent = T.gym; $('stepT').textContent = T.total; if ($('stepO')) $('stepO').textContent = T.other; $('stepKm').textContent = T.km.toFixed(2); if ($('stepV')) $('stepV').textContent = T.v.toFixed(1); if ($('stepPL')) $('stepPL').textContent = paceLabel(T.v, T.share); if ($('stepWT')) $('stepWT').textContent = Math.round(T.sec / 60); if ($('stepAP')) $('stepAP').textContent = paceMin(T.v); $('stepBar').style.width = Math.min(100, T.steps / stepGoal() * 100) + '%'; }
 function stepMotion(e){
   const a = e.accelerationIncludingGravity; if (!a || a.x == null) return;
   const t = e.timeStamp || performance.now(), m = Math.hypot(a.x, a.y, a.z);
@@ -6083,8 +6086,8 @@ function stepStop(){ window.removeEventListener('devicemotion', stepMotion); STE
 function renderSteps(){
   const b = $('stepBox'); if (!b) return; const k = todayKey(), n = pdDay(k), goal = stepGoal(), T = dayTotals(k), PS = T, d7 = [...Array(7)].map((_, i) => { const d = shiftDays(k, i - 6); return [d.slice(8), pdDay(d)]; }), mx = Math.max(goal, ...d7.map(x => x[1]));
   b.innerHTML = `<div class="box"><h3>👣 Steps today</h3><div class="stepnum"><b id="stepN">${n.toLocaleString()}</b><small>/ ${goal.toLocaleString()}</small></div><div class="qbar"><i id="stepBar" style="width:${Math.min(100, n / goal * 100)}%"></i></div>
-    <div class="stepmeta"><span>🚶 <b id="stepK">${T.kcal}</b> kcal</span><span>🏋️ <b id="stepG">${T.gym}</b> kcal</span><span>🔥 <b id="stepT">${T.total}</b> total</span><span>📏 <b id="stepKm">${T.km.toFixed(2)}</b> km</span></div>
-    <div class="stepmeta"><span>⚡ <b id="stepPL">${paceLabel(PS.v, PS.share)}</b> · <b id="stepV">${PS.v.toFixed(1)}</b> ${LANG === 'ar' ? 'كم/س' : 'km/h'}</span><span title="${LANG === 'ar' ? 'نسبة خطواتك حسب السرعة (بطيء / متوسط / سريع وجري)' : 'Share of today\'s steps by pace (slow / normal / fast and running)'}">🐢 ${T.steps > 0 ? PS.share[0] + '%' : '—'}</span><span>🚶 ${T.steps > 0 ? PS.share[1] + '%' : '—'}</span><span>🏃 ${T.steps > 0 ? PS.share[2] + PS.share[3] + '%' : '—'}</span><span data-st="kg" style="cursor:pointer">⚖️ <b>${(+userKg()).toFixed(1)}</b> kg ✎</span></div>
+    <div class="stepmeta"><span>🚶 <b id="stepK">${T.kcal}</b> kcal</span><span>🏋️ <b id="stepG">${T.gym}</b> kcal</span><span title="${LANG === 'ar' ? 'كارديو مسجّل (دراجة، تجديف، سباحة…)' : 'Logged cardio (cycling, rowing, swimming…)'}">➕ <b id="stepO">${T.other}</b> kcal</span><span>🔥 <b id="stepT">${T.total}</b> total</span><span>📏 <b id="stepKm">${T.km.toFixed(2)}</b> km</span></div>
+    <small class="stepnote" style="display:block;margin:-.2rem 0 .35rem">${LANG === 'ar' ? '🚶 مشي · 🏋️ تمرين · ➕ نشاط آخر · 🔥 الإجمالي. كلها تقديرية وفوق سعرات الراحة، فمفيش حاجة بتتحسب مرتين.' : '🚶 walking · 🏋️ workout · ➕ other · 🔥 total. All are estimates above your resting burn, so nothing is counted twice.'}</small><div class="stepmeta"><span>⚡ <b id="stepPL">${paceLabel(PS.v, PS.share)}</b> · <b id="stepV">${PS.v.toFixed(1)}</b> ${LANG === 'ar' ? 'كم/س' : 'km/h'}</span><span title="${LANG === 'ar' ? 'نسبة خطواتك حسب السرعة (بطيء / متوسط / سريع وجري)' : 'Share of today\'s steps by pace (slow / normal / fast and running)'}">🐢 ${T.steps > 0 ? PS.share[0] + '%' : '—'}</span><span>🚶 ${T.steps > 0 ? PS.share[1] + '%' : '—'}</span><span>🏃 ${T.steps > 0 ? PS.share[2] + PS.share[3] + '%' : '—'}</span><span data-st="kg" style="cursor:pointer">⚖️ <b>${(+userKg()).toFixed(1)}</b> kg ✎</span></div>
     <div class="stepmeta"><span>⏱ <b id="stepWT">${Math.round(T.sec / 60)}</b> ${LANG === 'ar' ? 'د مشي' : 'min walking'}</span><span>🏁 <b id="stepAP">${paceMin(PS.v)}</b> ${LANG === 'ar' ? 'د/كم متوسط' : 'min/km avg'}</span></div>
     ${walkSessions(k)}<div id="walkBox"></div>
     <div class="stepbars">${d7.map(x => `<div><i style="height:${Math.round(x[1] / mx * 100)}%"></i><small>${x[0]}</small></div>`).join('')}</div>
@@ -6140,10 +6143,16 @@ function accCad(){   // steps/min over the last ~5 s; null if the sensor is sile
   if (p.length < 3) return ACC.mv < .35 ? 0 : p.length * 12;
   const span = (p[p.length - 1] - p[0]) / 60000; return span > 0 ? Math.min(210, (p.length - 1) / span) : 0;
 }
-function walkSessions(k){   // finished GPS sessions of the day, kept apart from the all-day totals
-  const all = (progress.walks || []).map(walkNorm).filter(x => x && x.date === k); if (!all.length) return ''; const ar = LANG === 'ar', ok = all.filter(x => !x.bad), nb = all.length - ok.length;
-  const row = x => { const kind = x.type === 'veh' ? (ar ? '🚗 مواصلات (مش محسوبة)' : '🚗 Vehicle (not counted)') : x.type === 'run' ? (ar ? '🏃 جري' : '🏃 Running') : x.type === 'walk' ? (ar ? '🚶 مشي' : '🚶 Walking') : (ar ? '🧍 ثبات' : '🧍 Still'); return `<span>${kind} · ${x.km.toFixed(2)} km · ${Math.round(x.min)} ${ar ? 'د' : 'min'} · ${paceMin(x.v)} /km · 🔥 ${x.kcal}</span>`; };
-  return `<div class="stepmeta" style="flex-wrap:wrap"><b>${ar ? '🛰️ جلسات النهارده' : '🛰️ Sessions today'}</b>${ok.map(row).join('')}${nb ? `<span>⚠️ ${nb} ${ar ? 'سجل بيانات غير منطقية محفوظ لكن مش داخل في الإجماليات' : 'invalid record(s) kept but not in the totals'}</span>` : ''}</div>`;
+function walkSessions(k){   // v102: GPS walk history, newest first, grouped by day; each row opens for details. Live numbers never appear here.
+  const ar = LANG === 'ar', all = (progress.walks || []).map(walkNorm).filter(Boolean);
+  if (!all.length) return `<div class="whist wempty">${ar ? '🛰️ مفيش مشيات GPS لسه. دوس "مشية بـ GPS" وابدأ أول جلسة.' : '🛰️ No GPS walks yet. Tap "GPS walk" to record your first one.'}</div>`;
+  const rec = all.slice().sort((a, b) => (b.t0 || b.t || 0) - (a.t0 || a.t || 0)).slice(0, 20), days = [...new Set(rec.map(x => x.date))], yk = shiftDays(k, -1), loc = typeof LOCALE === 'function' ? LOCALE() : undefined;
+  const lab = d => d === k ? (ar ? 'النهارده' : 'Today') : d === yk ? (ar ? 'امبارح' : 'Yesterday') : new Date(d + 'T12:00:00').toLocaleDateString(loc, {weekday:'short', day:'numeric', month:'short'});
+  const kind = x => x.type === 'veh' ? (ar ? '🚗 مواصلات' : '🚗 Vehicle') : x.type === 'run' ? (ar ? '🏃 جري' : '🏃 Running') : x.type === 'walk' ? (ar ? '🚶 مشي' : '🚶 Walking') : (ar ? '🧍 ثبات' : '🧍 Still');
+  const row = x => { const when = x.t0 ? new Date(x.t0).toLocaleTimeString(loc, {hour:'2-digit', minute:'2-digit'}) : '', note = x.bad ? (ar ? '⚠️ بيانات غير منطقية: محفوظة لكن مش داخلة في الإجماليات' : '⚠️ Implausible data: kept, but not in the totals') : x.type === 'veh' ? (ar ? 'مواصلات: مش بتتحسب مشي' : 'Vehicle trip: not counted as walking') : x.type === 'still' ? (ar ? 'ثبات: مش بيتحسب مشي' : 'Standing: not counted as walking') : x.split ? (ar ? 'مشية عدّت منتصف الليل: متقسّمة على اليومين' : 'Crossed midnight: split between the two days') : '';
+    return `<details class="wrow"><summary>${kind(x)} <bdi>${x.km.toFixed(2)} km</bdi> <i><bdi>${fmtDur(x.min * 60)}</bdi> · <bdi>🔥 ${x.kcal}</bdi>${when ? ' · <bdi>' + when + '</bdi>' : ''}</i></summary>
+      <div class="wdet"><span>${ar ? 'وقت الحركة' : 'Moving time'}<br><b>${fmtDur(x.min * 60)}</b></span><span>${ar ? 'وقت الجلسة' : 'Session time'}<br><b>${x.dur ? fmtDur(x.dur) : '—'}</b></span><span>${ar ? 'متوسط السرعة' : 'Avg speed'}<br><b>${x.v.toFixed(1)} km/h</b></span><span>${ar ? 'الإيقاع' : 'Pace'}<br><b>${paceMin(x.v)} /km</b></span><span>${ar ? 'الخطوات' : 'Steps'}<br><b>${(x.steps || 0).toLocaleString()}</b></span><span>${ar ? 'سعرات (تقديرية)' : 'Calories (est.)'}<br><b>${x.kcal} kcal</b></span>${note ? '<em>' + note + '</em>' : ''}</div></details>`; };
+  return `<div class="whist"><b>${ar ? '🛰️ سجل المشي' : '🛰️ Walk history'}</b>${days.map(d => { const L = rec.filter(x => x.date === d), km = L.filter(x => !x.bad && x.type !== 'veh' && x.type !== 'still').reduce((t, x) => t + x.km, 0); return `<h5><span>${lab(d)}</span><span><bdi>${km.toFixed(2)} km</bdi></span></h5>${L.map(row).join('')}`; }).join('')}${all.length > 20 ? `<small>${ar ? 'آخر 20 جلسة معروضة، والباقي محفوظ.' : 'Showing the last 20 sessions; older ones are kept.'}</small>` : ''}</div>`;
 }
 function walkCad(){
   const a = accCad(); if (a != null) return a;                         // fastest source
@@ -6179,12 +6188,13 @@ function walkRoute(){ return WALK.nat ? (WALK.rt || []) : (WALK.pts || []); }
 const fmtDur = sec => { sec = Math.max(0, Math.round(sec)); const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); };
 function walkUI(){
   const box = $('walkBox'); if (!box) return; const ar = LANG === 'ar', T2 = (a, b) => ar ? a : b;
+  if (!WALK.on && WALK.restoring){ box.innerHTML = `<div class="walkp wcard" role="status">⏳ ${T2('بنرجّع مشيتك…', 'Restoring your walk…')}</div>`; return; }
   if (!WALK.on && !WALK.sum){ box.innerHTML = ''; return; }
   const cell = (ic, v, u, l) => `<div class="wk"><span>${ic}</span><b>${v}</b><small>${u}</small><em>${l}</em></div>`;
   if (!WALK.on && WALK.sum){ const s = WALK.sum, pace = s.v > .8 ? paceMin(s.v) : '—';
-    box.innerHTML = `<div class="walkp wcard"><div class="wh"><b>✅ ${T2('ملخص المشية', 'Walk summary')}</b><span class="wbadge ok">${T2('انتهت', 'Finished')}</span></div>${walkMap(s.route, 120)}
+    box.innerHTML = `<div class="walkp wcard"><div class="wh"><b>✅ ${T2('ملخص المشية', 'Walk summary')}</b><span class="wbadge ok">${T2('انتهت', 'Finished')}</span></div><small>${s.t0 ? new Date(s.t0).toLocaleString(typeof LOCALE === 'function' ? LOCALE() : undefined, {weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}) : ''}</small>${walkMap(s.route, 120)}
       <div class="wbig"><b>${s.km.toFixed(2)}</b> km</div>
-      <div class="wgrid">${cell('⏱', fmtDur(s.min * 60), '', T2('وقت المشي', 'Moving time'))}${cell('⚡', s.v.toFixed(1), 'km/h', T2('متوسط السرعة', 'Avg speed'))}${cell('🏁', pace, 'min/km', T2('الإيقاع', 'Pace'))}${cell('🔥', Math.round(s.kcal), 'kcal', T2('سعرات الجلسة', 'Session kcal'))}${cell('👣', s.steps, '', T2('خطوات الجلسة', 'Session steps'))}${s.cal ? cell('📏', s.cal.toFixed(2), 'm', T2('طول خطوتك', 'Your stride')) : ''}</div>
+      <div class="wgrid">${cell('⏱', fmtDur(s.min * 60), '', T2('وقت الحركة', 'Moving time'))}${cell('🕒', s.dur ? fmtDur(s.dur) : '—', '', T2('وقت الجلسة', 'Session time'))}${cell('⚡', s.v.toFixed(1), 'km/h', T2('متوسط السرعة', 'Avg speed'))}${cell('🏁', pace, 'min/km', T2('الإيقاع', 'Pace'))}${cell('🔥', Math.round(s.kcal), 'kcal', T2('سعرات الجلسة', 'Session kcal'))}${cell('👣', s.steps, '', T2('خطوات الجلسة', 'Session steps'))}${s.cal ? cell('📏', s.cal.toFixed(2), 'm', T2('طول خطوتك', 'Your stride')) : ''}</div>
       <small>${T2('السعرات تقديرية حسب وزنك وسرعتك. الجلسة جزء من خطوات اليوم ومش بتتحسب مرتين.', 'Calories are estimates from your weight and speed. This walk is part of today\'s steps and is not counted twice.')}</small></div>`; return; }
   const now = Date.now(), cad = walkCad(), stale = now - WALK.fix > 5000, paused = !!WALK.paused;
   const gpsOk = !stale && WALK.acc != null && WALK.acc <= 40 && WALK.v > 0.5, vv = paused ? 0 : gpsOk ? WALK.v : (cad != null && cad > 20 ? cad * stepLenAt(cad) / 60 : (WALK.nat ? WALK.v : 0));
@@ -6192,16 +6202,16 @@ function walkUI(){
   const act = Math.max(0, (now - WALK.t0 - (WALK.pausedMs || 0) - (paused ? now - (WALK.pauseT || now) : 0)) / 1000), steps = walkSteps(), avg = WALK.mov > 5 ? WALK.km / (WALK.mov / 3600) : 0;
   const el = (now - WALK.t0) / 1000, gps = paused ? ['⏸', T2('متوقفة مؤقتًا', 'Paused'), 'wb-p'] : WALK.gpsErr === 1 ? ['🚫', T2('الموقع مرفوض', 'Location denied'), 'wb-w'] : (WALK.acc == null && (WALK.gpsErr || el > 45)) ? ['❌', T2('GPS غير متاح', 'GPS unavailable'), 'wb-w'] : WALK.acc == null ? ['🛰️', T2('بدوّر على GPS', 'Searching'), 'wb-s'] : (stale || WALK.acc > WGPS.weak) ? ['⚠️', T2('إشارة ضعيفة', 'Weak signal'), 'wb-w'] : (!WALK.nat && !WALK.last) ? ['📡', T2('بيثبّت الإشارة', 'Acquiring signal'), 'wb-s'] : ['📍', T2('بيتتبّع', 'Tracking'), 'wb-ok'];
   const k = todayKey(), T = walkDay(k), dn = T.steps;
-  box.innerHTML = `<div class="walkp wcard"><div class="wh"><b>${paused ? '⏸ ' + T2('متوقفة', 'Paused') : st.i + ' ' + st.t}</b><span class="wbadge ${gps[2]}">${gps[0]} ${gps[1]}${WALK.acc != null && !paused ? ' ±' + Math.round(WALK.acc) + 'm' : ''}</span></div>
+  box.innerHTML = `<div class="walkp wcard"><div class="wh"><b>${paused ? '⏸ ' + T2('متوقفة', 'Paused') : st.i + ' ' + st.t}</b><span class="wbadge ${gps[2]}" role="status" aria-live="polite">${gps[0]} ${gps[1]}${WALK.acc != null && !paused ? ' ±' + Math.round(WALK.acc) + 'm' : ''}</span></div>
     ${walkMap(walkRoute(), 110)}
     <div class="wbig"><b>${WALK.km.toFixed(2)}</b> km <small>${T2('مسافة الجلسة', 'session distance')}</small></div>
-    <div class="wgrid">${cell('⚡', (vv * 3.6).toFixed(1), 'km/h', T2('السرعة الحالية', 'Current speed'))}${cell('📈', avg.toFixed(1), 'km/h', T2('متوسط السرعة', 'Avg speed'))}${cell('⏱', fmtDur(act), '', T2('وقت الجلسة', 'Session time'))}${cell('🔥', Math.round(WALK.kcal), 'kcal', T2('سعرات الجلسة', 'Session kcal'))}${cell('👣', steps, '', T2('خطوات الجلسة', 'Session steps'))}${cell('🎚', cad != null ? Math.round(cad) : '—', '/min', T2('الإيقاع', 'Cadence'))}</div>
+    <div class="wgrid">${cell('👣', steps, '', T2('خطوات الجلسة', 'Session steps'))}${cell('⏱', fmtDur(act), '', T2('وقت الجلسة', 'Session time'))}${cell('📈', avg.toFixed(1), 'km/h', T2('متوسط السرعة', 'Avg speed'))}${cell('🔥', Math.round(WALK.kcal), 'kcal', T2('سعرات تقديرية', 'Est. kcal'))}${cell('⚡', (vv * 3.6).toFixed(1), 'km/h', T2('السرعة الحالية', 'Current speed'))}${cell('🎚', cad != null ? Math.round(cad) : '—', '/min', T2('الإيقاع', 'Cadence'))}</div>
     <div class="wact"><button type="button" class="sec" data-st="walkpause">${paused ? '▶ ' + T2('كمّل', 'Resume') : '⏸ ' + T2('إيقاف مؤقت', 'Pause')}</button><button type="button" data-st="walk" class="wstop">⏹ ${T2('إنهاء المشية', 'End walk')}</button></div>
-    <small class="wtoday">${T2('اليوم كله', 'All today')}: 👣 ${dn.toLocaleString()} · 📏 ${T.km.toFixed(2)} km · 🚶 ${T.kcal} kcal<br>${WALK.err ? '⚠️ ' + WALK.err : T2('الجلسة جزء من اليوم (مش بتتعد مرتين). السعرات تقديرية من وزنك وسرعتك.' + (WALK.nat ? ' تقدر تقفل الشاشة.' : ' سيب الشاشة شغالة.'), 'The session is part of today (not counted twice). Calories are estimates from your weight and speed.' + (WALK.nat ? ' You can lock the screen.' : ' Keep the screen on.'))}</small></div>`;
+    <small class="wtoday">${T2('اليوم كله', 'All today')}: 👣 <bdi>${dn.toLocaleString()}</bdi> · 📏 <bdi>${T.km.toFixed(2)} km</bdi> · 🚶 <bdi>${T.kcal} kcal</bdi><br>${WALK.err ? '⚠️ ' + WALK.err : T2('الجلسة جزء من اليوم (مش بتتعد مرتين). السعرات تقديرية من وزنك وسرعتك.' + (WALK.nat ? ' تقدر تقفل الشاشة.' : ' سيب الشاشة شغالة.'), 'The session is part of today (not counted twice). Calories are estimates from your weight and speed.' + (WALK.nat ? ' You can lock the screen.' : ' Keep the screen on.'))}</small></div>`;
 }
 async function walkPause(){
   if (!WALK.on) return; const P = WALK.nat && NATIVE.ped(), want = !WALK.paused;
-  try { if (P){ const r = want ? await P.pauseWalk() : await P.resumeWalk(); WALK.paused = !!r.paused; WALK.pausedMs = r.pausedMs || 0; } else { WALK.paused = want; if (want) WALK.pauseT = Date.now(); else { WALK.pausedMs = (WALK.pausedMs || 0) + Date.now() - WALK.pauseT; WALK.last = null; WALK.v = 0; WALK.err = ''; } } }
+  try { if (P){ const r = want ? await P.pauseWalk() : await P.resumeWalk(); WALK.paused = !!r.paused; WALK.pausedMs = r.pausedMs || 0; } else { WALK.paused = want; if (want) WALK.pauseT = Date.now(); else { WALK.pausedMs = (WALK.pausedMs || 0) + Date.now() - WALK.pauseT; WALK.last = null; WALK.v = 0; WALK.err = ''; if (!WALK.id) walkWatch(false); } } }
   catch(e){ return showToast('⚠️ ' + (LANG === 'ar' ? 'تحتاج APK أحدث للإيقاف المؤقت' : 'Pause needs the newer APK')); }
   if (WALK.paused) WALK.pauseT = Date.now(); walkUI();
 }
@@ -6214,10 +6224,13 @@ async function walkPoll(){
     if (typeof r.route === 'string' && r.route !== WALK.rs){ WALK.rs = r.route; WALK.rt = r.route.split(';').filter(Boolean).map(q => q.split(',').map(Number)).filter(q => q.length === 2 && isFinite(q[0]) && isFinite(q[1])); }
   } catch(e){} finally { WALK.polling = false; }
 }
-function walkTick(){ if (!WALK.on) return; if (WALK.paused){ if (WALK.nat) walkPoll(); walkUI(); return; } if (!WALK.nat){ const c = accCad(), now = Date.now(), gpsFresh = now - WALK.fix < 4000 && WALK.acc != null && WALK.acc <= 60 && WALK.v > .4;
-    if (!gpsFresh && c != null && c > 25){ const sp = c * stepLenAt(c) / 60; if (sp < 4.5){ WALK.km += sp / 1000; WALK.mov += 1; WALK.v = sp; WALK.kcal += (metAt(sp * 3.6) - 1) * userKg() / 3600; } }
-    else if (!gpsFresh && c === 0) WALK.v *= .5; } WALK.hist.push({t:Date.now(), s:walkSteps()}); if (WALK.hist.length > 40) WALK.hist.shift(); if (WALK.nat) walkPoll(); else if (WALK.tn++ % 6 === 5 && NATIVE.ok) stepNativeSync(); walkUI(); }
-async function walkStart(){
+function walkTick(){ if (!WALK.on) return; if (WALK.paused){ if (WALK.nat) walkPoll(); walkSaveLive(); walkUI(); return; } if (!WALK.nat){ const c = accCad(), now = Date.now(), dtk = Math.min(10, Math.max(.2, (now - (WALK.tT || now - 1000)) / 1000)), gpsFresh = now - WALK.fix < 4000 && WALK.acc != null && WALK.acc <= 60 && WALK.v > .4;
+    if (!gpsFresh && c != null && c > 25){ const sp = c * stepLenAt(c) / 60; if (sp < 4.5){ WALK.km += sp * dtk / 1000; WALK.mov += dtk; WALK.v = sp; WALK.kcal += (metAt(sp * 3.6) - 1) * userKg() * dtk / 3600; } }
+    else if (!gpsFresh && c === 0) WALK.v *= .5; WALK.tT = now; } WALK.hist.push({t:Date.now(), s:walkSteps()}); if (WALK.hist.length > 40) WALK.hist.shift(); if (WALK.nat) walkPoll(); else if (WALK.tn++ % 6 === 5 && NATIVE.ok) stepNativeSync(); walkSaveLive(); walkUI(); }
+async function walkStart(){   // one start at a time: a double tap can never open two sessions
+  if (WALK.on || WALK.starting) return; WALK.starting = true; try { await walkStart0(); } finally { WALK.starting = false; }
+}
+async function walkStart0(){
   const ar = LANG === 'ar', P = NATIVE.ok && NATIVE.ped();
   if (P && !P.startWalk) return showToast('⚠️ ' + (ar ? 'نسخة الـ APK على موبايلك قديمة وملهاش مشية GPS في الخلفية. ثبّت الـ APK الجديد.' : 'The APK on this phone is old and has no background GPS walk. Install the new APK.'));
   if (!navigator.geolocation && !(P && P.startWalk)) return showToast('⚠️ ' + (ar ? 'الجهاز مفيهوش GPS' : 'This device has no GPS'));
@@ -6230,14 +6243,19 @@ async function walkStart(){
     try { await P.startWalk({kg:userKg(), stride:stepLenAt(100)}); WALK.nat = true; } catch(e){ WALK.nat = false; WALK.on = false; renderSteps(); showToast('⚠️ ' + (ar ? 'تعذّر تشغيل المشية: ' : 'Could not start the walk: ') + (e && e.message || e)); return; }
     WALK.tick = setInterval(walkTick, 1000); renderSteps(); walkUI(); showToast('🛰️ ' + (ar ? 'المشية شغالة. تقدر تقفل الشاشة.' : 'Walk is recording. You can lock the screen.')); return;
   }
-  try { navigator.geolocation.getCurrentPosition(walkFix, () => {}, {enableHighAccuracy:false, maximumAge:120000, timeout:4000}); } catch(e){}   // a quick rough first fix, so the walk starts right away
+  walkClearLive(); await walkWatch(true); WALK.tick = setInterval(walkTick, 1000); renderSteps(); walkUI();
+}
+async function walkWatch(first){   // start (or restart after a restore) the browser GPS listener and keep the screen awake
+  const ar = LANG === 'ar'; accOn();
+  if (first){ try { navigator.geolocation.getCurrentPosition(walkFix, () => {}, {enableHighAccuracy:false, maximumAge:120000, timeout:4000}); } catch(e){} }   // a quick rough first fix, so the walk starts right away
   try { WALK.wl = await navigator.wakeLock.request('screen'); } catch(e){}
+  try { navigator.geolocation.clearWatch(WALK.id); } catch(e){}
   WALK.id = navigator.geolocation.watchPosition(walkFix, e => { WALK.gpsErr = e.code || 2; WALK.err = e.code === 1 ? (ar ? 'المتصفح منع الموقع لموقع Tracky. دوس على 🔒 جنب اللينك ← الأذونات ← الموقع ← السماح، وبعدين ابدأ المشية تاني. (ومن تطبيق الـ APK الجديد بتشتغل والشاشة مقفولة.)' : 'The browser blocked location for Tracky. Tap the 🔒 next to the address, then Permissions > Location > Allow, and start the walk again. (The new APK app also works with the screen off.)') : (ar ? 'مش لاقي إشارة GPS' : 'No GPS signal'); }, {enableHighAccuracy:true, maximumAge:1000, timeout:30000});
-  WALK.tick = setInterval(walkTick, 1000); renderSteps(); walkUI();
 }
 async function walkResume(){        // the app was closed during a walk: pick it up again
-  const P = NATIVE.ok && NATIVE.ped(); if (WALK.on || !P || !P.getWalk) return;
-  try { const r = await P.getWalk(); if (r && r.active){ Object.assign(WALK, {sk:null, pk:null, gpsErr:0, on:true, nat:true, km:r.km, mov:r.mov, kcal:r.kcal, v:r.v, acc:r.fixT ? r.acc : null, fix:r.fixT || 0, nsteps:r.steps, t0:r.t0 || Date.now(), hist:[], sum:null, err:'', polling:false, tn:0, paused:!!r.paused, pausedMs:r.pausedMs || 0, pauseT:Date.now()}); accOn(); clearInterval(WALK.tick); WALK.tick = setInterval(walkTick, 1000); renderSteps(); walkUI(); } } catch(e){}
+  const P = NATIVE.ok && NATIVE.ped(); if (WALK.on || !P || !P.getWalk || WALK.restoring) return;
+  if (!WALK.rsDone){ WALK.restoring = true; try { walkUI(); } catch(e){} }
+  try { const r = await P.getWalk(); if (r && r.active){ Object.assign(WALK, {sk:null, pk:null, gpsErr:0, on:true, nat:true, km:r.km, mov:r.mov, kcal:r.kcal, v:r.v, acc:r.fixT ? r.acc : null, fix:r.fixT || 0, nsteps:r.steps, t0:r.t0 || Date.now(), hist:[], sum:null, err:'', polling:false, tn:0, paused:!!r.paused, pausedMs:r.pausedMs || 0, pauseT:Date.now()}); accOn(); clearInterval(WALK.tick); WALK.tick = setInterval(walkTick, 1000); renderSteps(); walkUI(); } } catch(e){} finally { WALK.restoring = false; WALK.rsDone = true; try { walkUI(); } catch(e){} }
 }
 async function walkStop(){
   try { navigator.geolocation.clearWatch(WALK.id); } catch(e){} clearInterval(WALK.tick); accOff(); try { WALK.wl && WALK.wl.release(); } catch(e){} WALK.wl = null;
@@ -6246,15 +6264,19 @@ async function walkStop(){
 }
 function walkFinish(r){
   const t0 = WALK.t0 > 0 ? WALK.t0 : Date.now(), sid = 'w' + Math.round(t0 / 1000); if (WALK.finId === sid) return;   // the service end and the stop button can both arrive: record once
-  WALK.finId = sid; clearInterval(WALK.tick); WALK.on = false; const now = Date.now(), steps = Math.max(0, Math.round(r.steps || 0)), mov = Math.max(0, +r.mov || 0), minRaw = mov / 60, min = WALK.t0 > 0 ? Math.min(minRaw, Math.max(0, (now - t0) / 60000) + .5) : minRaw, km = Math.max(0, r.km || 0), v = min > 0 ? km / (min / 60) : 0; let cal = 0;
+  WALK.finId = sid; walkClearLive(); clearInterval(WALK.tick); WALK.on = false; const now = r.end || Date.now(), steps = Math.max(0, Math.round(r.steps || 0)), mov = Math.max(0, +r.mov || 0), minRaw = mov / 60, min = WALK.t0 > 0 ? Math.min(minRaw, Math.max(0, (now - t0) / 60000) + .5) : minRaw, km = Math.max(0, r.km || 0), v = min > 0 ? km / (min / 60) : 0; let cal = 0;
   const dur = Math.max(0, Math.min(86400, Math.round((now - t0 - (WALK.pausedMs || 0) - (WALK.paused ? now - (WALK.pauseT || now) : 0)) / 1000)));
   if (km >= .25 && steps >= 250 && v >= 1.5){                          // enough data: learn the real step length for this pace
     const L = km * 1000 / steps, cad = steps / min;
     if (L > .35 && L < 1.4 && cad > 40 && cad < 220){ const b = cad < 85 ? 0 : cad < 110 ? 1 : cad < 135 ? 2 : 3; progress.stepCal = progress.stepCal || [0, 0, 0, 0]; progress.stepCal[b] = progress.stepCal[b] > 0 ? progress.stepCal[b] * .6 + L * .4 : L; cal = progress.stepCal[b]; }
   }
   const cadF = min > 0 ? steps / min : 0, type = (v > 9 && min > 0 && cadF < 60) ? 'veh' : (v >= 7.2 && (steps < 50 || cadF >= 115)) ? 'run' : v >= 1.6 ? 'walk' : 'still';
-  WALK.sum = {id:sid, km, min, dur, v, kcal:r.kcal || 0, steps, cal, route:walkRoute().slice()};
-  if (km >= .05){ progress.walks = progress.walks || []; if (!progress.walks.some(w => w.id === sid)) progress.walks.push(walkNorm({id:sid, date:dayOfMs(t0), t0, t:now, km:+km.toFixed(3), min:+min.toFixed(1), dur, v:+v.toFixed(2), kcal:Math.round(r.kcal || 0), steps, type})); if (progress.walks.length > 1000) progress.walks = progress.walks.slice(-1000); }   // history is kept (old versions cut it at 60)
+  WALK.sum = {id:sid, t0, km, min, dur, v, kcal:r.kcal || 0, steps, cal, route:walkRoute().slice()};
+  if (km >= .05){ progress.walks = progress.walks || [];   // a walk over midnight is split between the two days by time
+    const days = []; for (let d = dayOfMs(t0), n = 0; d <= dayOfMs(now) && n < 4; d = shiftDays(d, 1), n++){ const fr = walkFrac(t0, now, d); if (fr > .001) days.push([d, fr]); }
+    (days.length ? days : [[dayOfMs(t0), 1]]).forEach(([d, fr], i) => { const id = i ? sid + '-' + i : sid; if (progress.walks.some(w => w.id === id)) return;
+      progress.walks.push(walkNorm({id, date:d, t0, t:now, km:+(km * fr).toFixed(3), min:+(min * fr).toFixed(1), dur:Math.round(dur * fr), v:+v.toFixed(2), kcal:Math.round((r.kcal || 0) * fr), steps:Math.round(steps * fr), type, split:days.length > 1 ? 1 : 0})); });
+    if (progress.walks.length > 1000) progress.walks = progress.walks.slice(-1000); }   // history is kept (old versions cut it at 60)
   save(); if (NATIVE.ok) stepNativeSync(); renderSteps(); try { trackerSync(true); } catch(e){} showToast('✅ ' + (LANG === 'ar' ? `المشية: ${km.toFixed(2)} كم بسرعة ${v.toFixed(1)} كم/س` : `Walk: ${km.toFixed(2)} km at ${v.toFixed(1)} km/h`));
 }
 /* ---- v88: in-app APK update. The app reads version.json next to the download page; when a newer build exists it offers a one-tap update (Android asks you to confirm the install). ---- */
@@ -6285,6 +6307,23 @@ function apkBanner(r, v){
     } catch(e){ btn.disabled = false; btn.textContent = ar ? 'حدّث الآن' : 'Update now'; showToast('⚠️ ' + (ar ? 'فشل التحديث: ' : 'Update failed: ') + (e && e.message || e)); }
   };
 }
+/* ---- v101: a browser walk survives closing the app (saved every 3 s, restored paused so the gap is never counted as walking) ---- */
+const WALK_KEY = 'trackyWalkLive';
+function walkSaveLive(){ if (!WALK.on || WALK.nat) return; const n = Date.now(); if (n - (WALK.svT || 0) < 3000) return; WALK.svT = n; try { localStorage.setItem(WALK_KEY, JSON.stringify({t0:WALK.t0, km:WALK.km, mov:WALK.mov, kcal:WALK.kcal, pts:(WALK.pts || []).slice(-300), paused:!!WALK.paused, pausedMs:WALK.pausedMs || 0, pauseT:WALK.pauseT || 0, st0:WALK.st0, steps:walkSteps(), saved:n})); } catch(e){} }
+function walkClearLive(){ try { localStorage.removeItem(WALK_KEY); } catch(e){} }
+function walkRestoreWeb(){
+  if (WALK.on || NATIVE.ok) return; let o = null; try { o = JSON.parse(localStorage.getItem(WALK_KEY) || 'null'); } catch(e){} if (!o || !(o.t0 > 0)) return;
+  const now = Date.now(), age = now - (o.saved || 0), ar = LANG === 'ar';
+  if (age > 6 * 3600e3 || o.t0 > now + 6e4){ Object.assign(WALK, {t0:o.t0, paused:false, pausedMs:o.pausedMs || 0, pts:o.pts || [], rt:[]}); walkFinish({km:o.km, mov:o.mov, kcal:o.kcal, steps:o.steps || 0, end:o.saved || now}); return; }   // too old to continue: keep it as a finished walk
+  Object.assign(WALK, {on:true, nat:false, id:null, km:+o.km || 0, mov:+o.mov || 0, kcal:+o.kcal || 0, pts:o.pts || [], rt:[], t0:o.t0, st0:o.st0 || 0, v:0, acc:null, last:null, hist:[], fix:0, err:'', sum:null, sk:null, pk:null, gpsErr:0, tn:0, tT:0, polling:false, paused:true, pausedMs:o.pausedMs || 0, pauseT:o.paused ? (o.pauseT || o.saved) : o.saved});
+  accOn(); clearInterval(WALK.tick); WALK.tick = setInterval(walkTick, 1000); renderSteps(); walkUI(); showToast('⏸ ' + (ar ? 'رجّعنا مشيتك متوقفة مؤقتًا. دوس "كمّل" علشان تكمّلها.' : 'Your walk was restored on pause. Tap Resume to continue.'));
+}
+function walkBtn(){   // the main walk button: start, or end only after a confirmation (and never within 3 s of starting)
+  if (!WALK.on) return walkStart(); if (WALK.starting || Date.now() - WALK.t0 < 3000) return;
+  if (!confirm(LANG === 'ar' ? 'تنهي المشية وتحفظها؟' : 'End and save this walk?')) return; walkStop();
+}
+document.addEventListener('visibilitychange', () => { if (WALK.on && !WALK.nat){ if (document.hidden){ WALK.svT = 0; walkSaveLive(); } else { try { navigator.wakeLock.request('screen').then(w => { WALK.wl = w; }).catch(() => {}); } catch(e){} } } });
+setTimeout(() => { try { walkRestoreWeb(); } catch(e){} }, 1500);
 setTimeout(() => { try { apkCheck(false); } catch(e){} }, 7000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) try { apkCheck(false); } catch(e){} });
 document.addEventListener('click', e => { const t = e.target.closest('[data-st]'); if (!t) return; const a = t.dataset.st;
@@ -6292,16 +6331,17 @@ document.addEventListener('click', e => { const t = e.target.closest('[data-st]'
   else if (a === 'native') nativeEnable();
   else if (a === 'add'){ const v = parseInt(prompt('Steps to add today'), 10); if (v > 0 && v < 100000){ addSteps(v); save(); renderSteps(); } }
   else if (a === 'notif') stepNotifToggle();
-  else if (a === 'walk') (WALK.on ? walkStop() : walkStart()); else if (a === 'walkpause') walkPause();
+  else if (a === 'walk') walkBtn(); else if (a === 'walkpause') walkPause();
   else if (a === 'kg'){ const v = parseFloat(String(prompt(LANG === 'ar' ? 'وزنك بالكيلو (بيتحسب عليه حرق السعرات)' : 'Your body weight in kg (calories burned are based on it)', (+userKg()).toFixed(1)) || '').replace(',', '.')); if (v >= 25 && v <= 300){ addBodyEntry(v); save(); try { renderAllViews(); } catch(_){} renderSteps(); trackerSync(true); } else if (v) showToast('⚠️ ' + (LANG === 'ar' ? 'اكتب وزن من 25 لـ 300 كجم' : 'Enter a weight from 25 to 300 kg')); }
   else if (a === 'goal'){ const v = parseInt(prompt('Daily step goal', stepGoal()), 10); if (v >= 1000 && v <= 100000){ progress.stepGoal = v; save(); renderSteps(); } } });
 document.addEventListener('visibilitychange', () => { if (STEP.on && document.visibilityState === 'visible'){ try { navigator.wakeLock.request('screen').then(w => { STEP.wl = w; }).catch(() => {}); } catch(e){} } else if (document.visibilityState === 'hidden' && progress.steps){ clearTimeout(STEP.sv); STEP.sv = 0; save(); stepNotify(); } });
 
-const gymKcalDay = k => Math.round(sessions.reduce((t, s) => t + (localKey(s.date) === k ? sessionKcal(s) : 0), 0));
+const gymKcalDay = k => Math.round(sessions.reduce((t, s) => t + (!s.cardio && localKey(s.date) === k ? sessionKcal(s) : 0), 0));   // Workout calories (strength sessions)
+const otherKcalDay = k => Math.round(sessions.reduce((t, s) => t + (s.cardio && localKey(s.date) === k ? sessionKcal(s) : 0), 0));   // Other activity calories (logged cardio: cycling, rowing, swimming...)
 async function stepNotify(){
   if (!progress.stepNotif || !STEP.on || !('Notification' in window) || Notification.permission !== 'granted') return;
   try { const reg = await navigator.serviceWorker.ready, k = todayKey(), T = dayTotals(k), n = T.steps, w = T.kcal, g = T.gym;
-    await reg.showNotification('👣 ' + n.toLocaleString() + ' / ' + stepGoal().toLocaleString() + ' steps', {body:'🔥 ' + (w + g) + ' kcal (walking ' + w + ' · gym ' + g + ') · 📏 ' + T.km.toFixed(2) + ' km', tag:'tracky-steps', renotify:false, silent:true, requireInteraction:true, icon:'icons/icon-192.png', badge:'icons/icon-192.png'}); } catch(e){}
+    await reg.showNotification('👣 ' + n.toLocaleString() + ' / ' + stepGoal().toLocaleString() + ' steps', {body:'🔥 ' + T.total + ' kcal (walking ' + w + ' · gym ' + g + (T.other ? ' · other ' + T.other : '') + ') · 📏 ' + T.km.toFixed(2) + ' km', tag:'tracky-steps', renotify:false, silent:true, requireInteraction:true, icon:'icons/icon-192.png', badge:'icons/icon-192.png'}); } catch(e){}
 }
 async function stepNotifyClose(){ try { const reg = await navigator.serviceWorker.ready; (await reg.getNotifications({tag:'tracky-steps'})).forEach(n => n.close()); } catch(e){} }
 /* ---------- Android app (Capacitor) bridge: background steps + scheduled local reminders. Does nothing in a normal browser. ---------- */
@@ -6402,8 +6442,8 @@ function reportData(ym){
   L.push('Main lifts (estimated 1RM, best before this month -> this month):\n' + (lifts.join('\n') || 'none logged'));
   const ms = k => { const o = {}; sessions.forEach(s => { if (localKey(s.date).slice(0, 7) === k) s.exercises.forEach(e => { const mu = muscleOf(e.name); if (mu) o[mu] = (o[mu] || 0) + e.sets.length; }); }); return o; }, a1 = ms(ym), a0 = ms(pv);
   L.push('Sets per muscle (this month / last month): ' + Object.keys(MUSCLES).map(k => `${k} ${a1[k] || 0}/${a0[k] || 0}`).join(', '));
-  const sm = stepMonth(ym), sp = stepMonth(pv), gk = gymKcalMonth(ym), gp = gymKcalMonth(pv);
-  L.push(`Steps: total ${sm.steps} (average ${sm.days ? Math.round(sm.steps / sm.days) : 0} per day over ${sm.days} tracked days), ${sm.km.toFixed(1)} km, daily goal ${stepGoal()} reached on ${sm.goalDays} days. Calories (estimates): walking ${sm.kcal}, gym ${gk}, total ${sm.kcal + gk}. Last month: steps ${sp.steps}, walking ${sp.kcal} kcal, gym ${gp} kcal.`);
+  const sm = stepMonth(ym), sp = stepMonth(pv), gk = gymKcalMonth(ym), gp = gymKcalMonth(pv), ok = otherKcalMonth(ym);
+  L.push(`Steps: total ${sm.steps} (average ${sm.days ? Math.round(sm.steps / sm.days) : 0} per day over ${sm.days} tracked days), ${sm.km.toFixed(1)} km, daily goal ${stepGoal()} reached on ${sm.goalDays} days. Calories (estimates, above resting): walking ${sm.kcal}, gym ${gk}, other activity ${ok}, total ${sm.kcal + gk + ok}. Last month: steps ${sp.steps}, walking ${sp.kcal} kcal, gym ${gp} kcal.`);
   const bm = bodyLog.filter(b => b.date.slice(0, 7) === ym), bb = bodyLog.filter(b => b.date.slice(0, 7) < ym).pop();
   L.push('Body weight (kg): ' + (bm.length ? (bb ? 'before ' + bb.kg + ' -> ' : '') + bm.map(b => b.kg).join(' -> ') : 'no weigh-in this month' + (bb ? ' (last known ' + bb.kg + ')' : '')));
   const mm = [...new Set(bodyM.map(x => x.part))].map(q => q + ': ' + bodyM.filter(x => x.part === q && x.date.slice(0, 7) <= ym).slice(-2).map(x => x.cm).join(' -> ') + ' cm').join('; '); if (mm) L.push('Measurements: ' + mm);
@@ -8926,10 +8966,10 @@ function kcalBreakdown(s){
   const rest = 1.2 * kg * Math.max(0, mins * 60 - tutSec) / 3600, net = mech + tutNet + rest, avgInt = intN ? intSum / intN : .6, epoc = net * (.04 + .08 * avgInt), base = kg * mins / 60;
   return {kcal:Math.round(net + epoc + base), mins:Math.round(mins), sets:nSets, net:Math.round(net + epoc)};
 }
-function sessionKcal(s){
-  const kg = userKg() || 70;
-  if (s.cardio) return cardioMET(s.cardio) * kg * ((+s.cardio.min || 0) / 60);
-  return kcalBreakdown(s).kcal;
+function sessionKcal(s){   // v102: NET energy above resting (same basis as walking), so walking + workout + other add up with no overlap and nothing is counted on top of the daily resting budget
+  const kg = +userKg() || 70;
+  if (s.cardio) return Math.max(0, (cardioMET(s.cardio) - 1) * kg * ((+s.cardio.min || 0) / 60));
+  return kcalBreakdown(s).net;
 }
 
 /* ===== ghosts: compare only inside the same training day ===== */
@@ -11588,7 +11628,7 @@ window.NUT = {parse:t => { const P = parseMeal(fcClean(t)); return {items:P.item
 })();
 
 /* ================= v65: friends-only games, settings menu, hero Build page, active update prompt ================= */
-const APP_VER = 'tracky-v100';
+const APP_VER = 'tracky-v103';
 /* 1) games: only the friends duel remains; finishing a workout now pays GP directly (no ghost hunt) */
 ghEvent = function(evId, kind, ratio){
   if (kind !== 'fin') return null;
