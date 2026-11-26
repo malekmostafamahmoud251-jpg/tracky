@@ -3136,7 +3136,14 @@ async function chatPhotoAnalysis(){
 /* ---------- phone push (works while the app is closed; needs the coach server) ---------- */
 const bytesToB64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const b64uToBytes = str => { const p = (str + '='.repeat((4 - str.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/'); return Uint8Array.from(atob(p), c => c.charCodeAt(0)); };
-const pushSupported = () => !!(APP_CONFIG.coachUrl && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window);
+const pushNative = () => { const C = window.Capacitor; return C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.PushNotifications; };   // the Android app uses Firebase instead of browser push
+const pushSupported = () => !!(APP_CONFIG.coachUrl && (pushNative() || ('serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window)));
+async function pushFcmToken(PN){
+  const perm = await PN.requestPermissions(); if (perm.receive !== 'granted') throw new Error(tr('Reminders need notifications to be allowed.'));
+  try { await PN.removeAllListeners(); } catch(_){}
+  return new Promise(async (res, rej) => { const t = setTimeout(() => rej(new Error('Firebase did not answer. Check your internet and try again.')), 20000);
+    await PN.addListener('registration', x => { clearTimeout(t); res(x.value); }); await PN.addListener('registrationError', e => { clearTimeout(t); rej(new Error('Firebase: ' + ((e && e.error) || 'registration failed'))); }); await PN.register(); });
+}
 const pushUrl = path => APP_CONFIG.coachUrl.replace(/\/+$/, '') + path;
 const pushPost = (path, body, keep) => fetch(pushUrl(path), {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body), keepalive:!!keep});
 function pushState(){
@@ -3147,6 +3154,8 @@ function pushState(){
     food:(typeof foodPushState === 'function' ? foodPushState() : null), photoMonths:[...new Set(photos.filter(q => q.pose).map(phMonth))], sent:settings.sent || {}};
 }
 async function enablePush(){
+  const PN = pushNative();
+  if (PN){ const tok = await pushFcmToken(PN), st = pushState(), r = await pushPost('/push/subscribe', {fcm:tok, state:st}); if (!r.ok) throw new Error('Server ' + r.status); settings.pushId = (await r.json()).id; settings.fcmTok = tok; settings.pushOn = true; localStorage.setItem('trackyPushHash', JSON.stringify(st)); save(); return; }
   if (!pushSupported()) throw new Error(tr('Phone notifications need the coach server and a browser that supports push. On iPhone, add Tracky to the Home Screen first.'));
   if (Notification.permission === 'default') await Notification.requestPermission();
   if (Notification.permission !== 'granted') throw new Error(tr('Reminders need notifications to be allowed.'));
@@ -3161,9 +3170,14 @@ async function enablePush(){
   settings.pushId = (await r.json()).id; try { await (await caches.open('tracky-cfg')).put('cfg', new Response(JSON.stringify({url:pushUrl(''), id:settings.pushId}))); } catch(_){} settings.pushOn = true; localStorage.setItem('trackyPushHash', JSON.stringify(st)); save();
 }
 async function disablePush(){
+  try { const PN = pushNative(); if (PN){ await PN.unregister(); delete settings.fcmTok; } } catch(e){}
   try { const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription(); if (sub) await sub.unsubscribe(); } catch(e){}
   try { if (settings.pushId) await pushPost('/push/unsubscribe', {id:settings.pushId}); } catch(e){}
   settings.pushOn = false; delete settings.pushId; save();
+}
+async function pushNativeSync(){   // the Firebase token can change: keep the server in step
+  const PN = pushNative(); if (!PN || !settings.pushOn || !APP_CONFIG.coachUrl) return;
+  try { const tok = await pushFcmToken(PN); if (tok !== settings.fcmTok){ const r = await pushPost('/push/subscribe', {fcm:tok, state:pushState()}); if (r.ok){ settings.pushId = (await r.json()).id; settings.fcmTok = tok; save(); } } } catch(e){}
 }
 async function pushApply(){
   const want = $('alPush').checked;
@@ -6254,6 +6268,7 @@ async function stepNotifyClose(){ try { const reg = await navigator.serviceWorke
 const NATIVE = (() => { const C = window.Capacitor; return {ok: !!(C && C.isNativePlatform && C.isNativePlatform()), ped: () => C && C.Plugins && C.Plugins.TrackyPedometer, ln: () => C && C.Plugins && C.Plugins.LocalNotifications, st: null}; })();
 async function stepNativeSync(){
   const P = NATIVE.ok && NATIVE.ped(); if (!P) return;
+  if (!NATIVE.pushSynced){ NATIVE.pushSynced = 1; pushNativeSync(); }
   if (!WALK.on) walkResume();
   try {
     const st = await P.status(), was = NATIVE.st && NATIVE.st.granted; NATIVE.st = st; if (!st.available || !st.granted){ if (was) renderSteps(); return; }
@@ -11533,7 +11548,7 @@ window.NUT = {parse:t => { const P = parseMeal(fcClean(t)); return {items:P.item
 })();
 
 /* ================= v65: friends-only games, settings menu, hero Build page, active update prompt ================= */
-const APP_VER = 'tracky-v97';
+const APP_VER = 'tracky-v98';
 /* 1) games: only the friends duel remains; finishing a workout now pays GP directly (no ghost hunt) */
 ghEvent = function(evId, kind, ratio){
   if (kind !== 'fin') return null;
