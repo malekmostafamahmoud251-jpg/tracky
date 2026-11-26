@@ -6021,10 +6021,11 @@ function stepBands(k){
   let known = 0; for (let i = 0; i < 8; i += 2) known += a[i]; const rest = Math.max(0, pdDay(k) - known); if (rest > 0){ a[2] += rest; a[3] += rest * .6; }   // steps with no pace data count as a normal walk (100 steps/min)
   return a;
 }
+function pct100(a){ const t = a.reduce((x, y) => x + y, 0); if (!(t > 0)) return a.map(() => 0); const raw = a.map(x => x / t * 100), fl = raw.map(Math.floor); let left = 100 - fl.reduce((x, y) => x + y, 0); raw.map((x, i) => [x - fl[i], i]).sort((p, q) => q[0] - p[0]).forEach(p => { if (left > 0){ fl[p[1]]++; left--; } }); return fl; }   // largest-remainder rounding: always exactly 100
 function stepStats(k){
   const a = stepBands(k), kg = userKg(); let kcal = 0, km = 0, h = 0, st = 0; const sh = [0, 0, 0, 0];
   for (let i = 0; i < 4; i++){ const s = a[i * 2], t = a[i * 2 + 1]; if (s > 0 && t > 0){ const r = paceCalc(s, t, kg); kcal += r.kcal; km += r.km; h += r.h; sh[i] = s; st += s; } }
-  return {kcal, km, h, v:h > 0 ? km / h : 0, n:st, share:st ? sh.map(x => Math.round(x / st * 100)) : [0, 100, 0, 0]};
+  return {kcal, km, h, v:h > 0 ? km / h : 0, n:st, share:st ? pct100(sh) : [0, 100, 0, 0]};
 }
 const stepKm = (n, k) => k ? stepStats(k).km : paceCalc(n, n * .6, 0).km, stepKcal = (n, k) => Math.round(k ? stepStats(k).kcal : paceCalc(n, n * .6, userKg()).kcal);
 const paceMin = v => { if (!(v > .8)) return '—'; const m = 60 / v; return Math.floor(m) + ':' + String(Math.round((m % 1) * 60) % 60).padStart(2, '0'); };
@@ -6036,12 +6037,12 @@ function walkNorm(w){   // idempotent: fills what older records lack, flags impo
   w.min = +w.min || 0; w.km = +w.km || 0; w.kcal = +w.kcal || 0; w.steps = +w.steps || 0; w.v = w.min > 0 ? w.km / (w.min / 60) : 0;
   if (!w.t0 && w.t) w.t0 = w.t - Math.round(w.min * 60000);
   if (!w.id) w.id = 'w' + Math.round((w.t0 || w.t || 0) / 1000);
-  if (!w.type) w.type = w.v >= 7.2 ? 'run' : w.v >= 1.6 ? 'walk' : 'still';
+  if (!w.type) w.type = w.v >= 7.2 && !(w.steps >= 50 && w.min > 0 && w.steps / w.min < 115) ? 'run' : w.v >= 1.6 ? 'walk' : 'still';
   w.bad = (w.min > 0 && w.min <= 480 && w.km >= 0 && w.km <= 100 && w.v <= 25 && w.kcal >= 0 && w.kcal <= 40 + w.km * kg * 2.5 + w.min * kg * .02 && !(w.type === 'still' && w.km > .3)) ? 0 : 1;
   w.nrm = 1; return w;
 }
 function walkList(k, live){   // valid GPS sessions of day k (+ the walk in progress); vehicle trips and invalid records are not counted as walking
-  const a = (progress.walks || []).map(walkNorm).filter(w => w && w.date === k && !w.bad && w.type !== 'veh');
+  const a = (progress.walks || []).map(walkNorm).filter(w => w && w.date === k && !w.bad && w.type !== 'veh' && w.type !== 'still');
   if (live !== false && WALK.on && dayOfMs(WALK.t0 || Date.now()) === k) a.push({live:1, km:WALK.km || 0, min:(WALK.mov || 0) / 60, kcal:WALK.kcal || 0, steps:walkSteps()});
   return a;
 }
@@ -6083,7 +6084,7 @@ function renderSteps(){
   const b = $('stepBox'); if (!b) return; const k = todayKey(), n = pdDay(k), goal = stepGoal(), T = dayTotals(k), PS = T, d7 = [...Array(7)].map((_, i) => { const d = shiftDays(k, i - 6); return [d.slice(8), pdDay(d)]; }), mx = Math.max(goal, ...d7.map(x => x[1]));
   b.innerHTML = `<div class="box"><h3>👣 Steps today</h3><div class="stepnum"><b id="stepN">${n.toLocaleString()}</b><small>/ ${goal.toLocaleString()}</small></div><div class="qbar"><i id="stepBar" style="width:${Math.min(100, n / goal * 100)}%"></i></div>
     <div class="stepmeta"><span>🚶 <b id="stepK">${T.kcal}</b> kcal</span><span>🏋️ <b id="stepG">${T.gym}</b> kcal</span><span>🔥 <b id="stepT">${T.total}</b> total</span><span>📏 <b id="stepKm">${T.km.toFixed(2)}</b> km</span></div>
-    <div class="stepmeta"><span>⚡ <b id="stepPL">${paceLabel(PS.v, PS.share)}</b> · <b id="stepV">${PS.v.toFixed(1)}</b> ${LANG === 'ar' ? 'كم/س' : 'km/h'}</span><span>🐢 ${PS.share[0]}%</span><span>🚶 ${PS.share[1]}%</span><span>🏃 ${PS.share[2] + PS.share[3]}%</span><span data-st="kg" style="cursor:pointer">⚖️ <b>${(+userKg()).toFixed(1)}</b> kg ✎</span></div>
+    <div class="stepmeta"><span>⚡ <b id="stepPL">${paceLabel(PS.v, PS.share)}</b> · <b id="stepV">${PS.v.toFixed(1)}</b> ${LANG === 'ar' ? 'كم/س' : 'km/h'}</span><span title="${LANG === 'ar' ? 'نسبة خطواتك حسب السرعة (بطيء / متوسط / سريع وجري)' : 'Share of today\'s steps by pace (slow / normal / fast and running)'}">🐢 ${T.steps > 0 ? PS.share[0] + '%' : '—'}</span><span>🚶 ${T.steps > 0 ? PS.share[1] + '%' : '—'}</span><span>🏃 ${T.steps > 0 ? PS.share[2] + PS.share[3] + '%' : '—'}</span><span data-st="kg" style="cursor:pointer">⚖️ <b>${(+userKg()).toFixed(1)}</b> kg ✎</span></div>
     <div class="stepmeta"><span>⏱ <b id="stepWT">${Math.round(T.sec / 60)}</b> ${LANG === 'ar' ? 'د مشي' : 'min walking'}</span><span>🏁 <b id="stepAP">${paceMin(PS.v)}</b> ${LANG === 'ar' ? 'د/كم متوسط' : 'min/km avg'}</span></div>
     ${walkSessions(k)}<div id="walkBox"></div>
     <div class="stepbars">${d7.map(x => `<div><i style="height:${Math.round(x[1] / mx * 100)}%"></i><small>${x[0]}</small></div>`).join('')}</div>
@@ -6095,9 +6096,18 @@ function renderSteps(){
    At the end the walk calibrates your real step length per pace, which makes background step distance and calories more accurate. ---- */
 const WALK = {on:false, id:null, tick:null, wl:null, km:0, mov:0, t0:0, kcal:0, v:0, acc:null, last:null, st0:0, hist:[], fix:0, err:'', paused:false, pausedMs:0, pauseT:0, pts:[], rt:[]};
 const haversine = (a, b) => { const R = 6371000, r = Math.PI / 180, dLa = (b.lat - a.lat) * r, dLo = (b.lon - a.lon) * r, h = Math.sin(dLa / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+/* ---- v100: GPS quality rules in one place (the Android service uses the same numbers) ---- */
+const WGPS = {first:80, acc:35, weak:40, jump:12, gap:60};   // metres of accuracy accepted (first point / next points / "weak" badge), m/s jump limit, seconds of silence before the track restarts
+const gpsValid = c => !!c && isFinite(c.latitude) && isFinite(c.longitude) && Math.abs(c.latitude) <= 90 && Math.abs(c.longitude) <= 180 && !(c.latitude === 0 && c.longitude === 0) && isFinite(c.accuracy) && c.accuracy > 0;
+function walkStable(st){   // a new state must last 4 s before the label changes, so GPS noise does not flicker it
+  const n = Date.now(); if (!WALK.sk){ WALK.sk = st; WALK.pk = null; return st; }
+  if (st.k === WALK.sk.k){ WALK.sk = st; WALK.pk = null; return st; }
+  if (WALK.pk !== st.k){ WALK.pk = st.k; WALK.pkT = n; }
+  if (n - WALK.pkT >= 4000){ WALK.sk = st; WALK.pk = null; return st; } return WALK.sk;
+}
 function walkState(v, cad){   // v in m/s (GPS), cad in steps/min (sensor); either may be missing
   const ar = LANG === 'ar'; const kmh = v == null ? null : v * 3.6;
-  if (kmh != null && kmh > 9 && cad != null && cad < 60) return {k:'veh', t:ar ? 'في مواصلات (مش بيتحسب جري)' : 'In a vehicle (not counted as running)', i:'🚗'};   // fast but no steps: car, bus or bike
+  if (kmh != null && (kmh > 20 || (kmh > 7 && cad != null && cad < 60))) return {k:'veh', t:ar ? 'في مواصلات (مش بيتحسب جري)' : 'In a vehicle (not counted as running)', i:'🚗'};   // fast but no steps: car, bus or bike
   if (kmh == null && cad == null) return {k:'unk', t:ar ? 'غير معروف' : 'Unknown', i:'❔'};
   if (kmh != null && kmh < 1.6 && !(cad > 40)) return {k:'still', t:ar ? 'واقف' : 'Standing', i:'🧍'};
   if (kmh == null){ if (!(cad > 20)) return {k:'still', t:ar ? 'واقف' : 'Standing', i:'🧍'}; return cad < 85 ? {k:'slow', t:ar ? 'مشي بطيء' : 'Slow walk', i:'🐢'} : cad < 110 ? {k:'mid', t:ar ? 'مشي متوسط' : 'Medium walk', i:'🚶'} : cad < 135 ? {k:'fast', t:ar ? 'مشي سريع' : 'Fast walk', i:'💨'} : {k:'run', t:ar ? 'جري' : 'Running', i:'🏃'}; }
@@ -6105,6 +6115,7 @@ function walkState(v, cad){   // v in m/s (GPS), cad in steps/min (sensor); eith
   if (kmh < 4) return {k:'slow', t:ar ? 'مشي بطيء' : 'Slow walk', i:'🐢'};
   if (kmh < 5.6) return {k:'mid', t:ar ? 'مشي متوسط' : 'Medium walk', i:'🚶'};
   if (kmh < 7.2) return {k:'fast', t:ar ? 'مشي سريع' : 'Fast walk', i:'💨'};
+  if (cad != null && cad < 115 && cad >= 60) return {k:'fast', t:ar ? 'مشي سريع' : 'Fast walk', i:'💨'};   // running needs a running cadence, speed alone is not proof
   return {k:'run', t:ar ? 'جري' : 'Running', i:'🏃'};
 }
 // Phone accelerometer: detects steps instantly (works the moment you move, no waiting for the step counter)
@@ -6140,15 +6151,18 @@ function walkCad(){
 }
 function walkFix(pos){
   if (WALK.paused) return;
-  const c = pos.coords, t = pos.timestamp || Date.now(); WALK.acc = c.accuracy; WALK.fix = Date.now(); WALK.err = '';
-  if (!(c.accuracy <= (WALK.last ? 35 : 80))) return;                // weak fix: ignore it (the very first fix may be rough, it only sets the start point)
+  const c = pos.coords, t = pos.timestamp || Date.now(); if (!gpsValid(c)){ WALK.rej = (WALK.rej || 0) + 1; return; }   // NaN, out-of-range or 0,0 coordinates: never used, never shown as a signal
+  WALK.acc = c.accuracy; WALK.fix = Date.now(); WALK.err = ''; WALK.gpsErr = 0;
+  if (!(c.accuracy <= (WALK.last ? WGPS.acc : WGPS.first))) return;                // weak fix: ignore it (the very first fix may be rough, it only sets the start point)
   const cur = {lat:c.latitude, lon:c.longitude, t}, L = WALK.last;
   if (!L){ WALK.last = cur; return; }
   const d = haversine(L, cur), dt = (t - L.t) / 1000; if (dt <= 0.4) return;
+  if (dt > WGPS.gap){ WALK.last = cur; WALK.v = 0; return; }          // long silence (tunnel, indoors): restart the track here, the step sensor covered the gap
   let v = d / dt; if (c.speed != null && c.speed >= 0 && c.accuracy <= 20) v = .6 * c.speed + .4 * v;
-  if (v > 12){ WALK.last = cur; return; }                            // GPS jump (faster than a sprinter): drop it
+  if (v > WGPS.jump){ WALK.last = cur; return; }                            // GPS jump (faster than a sprinter): drop it
   WALK.v = WALK.v ? WALK.v * .5 + v * .5 : v;
   if (d < Math.max(2, c.accuracy * .35) && v < .7){ WALK.last = cur; WALK.v *= .6; return; }   // jitter while standing: no distance
+  { const ac0 = accCad(); if (ac0 != null && ac0 < 15 && d < Math.max(4, c.accuracy * .6)){ WALK.v *= .6; return; } }   // the step sensor says you are not walking and the point is inside the GPS error circle: drift, keep the anchor
   { const ac = accCad(); if (v > 2.5 && ac != null && ac < 60){ WALK.last = cur; return; } }   // fast but no steps: a vehicle, not a walk
   WALK.pts.push([cur.lat, cur.lon]); if (WALK.pts.length > 400) WALK.pts = WALK.pts.filter((_, i) => i % 2 === 0);
   WALK.km += d / 1000; WALK.mov += dt; WALK.kcal += (metAt(v * 3.6) - 1) * userKg() * dt / 3600; WALK.last = cur;
@@ -6174,9 +6188,9 @@ function walkUI(){
       <small>${T2('السعرات تقديرية حسب وزنك وسرعتك. الجلسة جزء من خطوات اليوم ومش بتتحسب مرتين.', 'Calories are estimates from your weight and speed. This walk is part of today\'s steps and is not counted twice.')}</small></div>`; return; }
   const now = Date.now(), cad = walkCad(), stale = now - WALK.fix > 5000, paused = !!WALK.paused;
   const gpsOk = !stale && WALK.acc != null && WALK.acc <= 40 && WALK.v > 0.5, vv = paused ? 0 : gpsOk ? WALK.v : (cad != null && cad > 20 ? cad * stepLenAt(cad) / 60 : (WALK.nat ? WALK.v : 0));
-  const st = walkState(gpsOk || (cad != null && cad > 20) ? vv : (cad === 0 ? 0 : (stale ? null : WALK.v)), cad);
+  const st = walkStable(walkState(gpsOk || (cad != null && cad > 20) ? vv : (cad === 0 ? 0 : (stale ? null : WALK.v)), cad));
   const act = Math.max(0, (now - WALK.t0 - (WALK.pausedMs || 0) - (paused ? now - (WALK.pauseT || now) : 0)) / 1000), steps = walkSteps(), avg = WALK.mov > 5 ? WALK.km / (WALK.mov / 3600) : 0;
-  const gps = paused ? ['⏸', T2('متوقفة مؤقتًا', 'Paused'), 'wb-p'] : WALK.acc == null ? ['🛰️', T2('بدوّر على GPS', 'Searching'), 'wb-s'] : (stale || WALK.acc > 40) ? ['⚠️', T2('إشارة ضعيفة', 'Weak signal'), 'wb-w'] : ['📍', T2('GPS متصل', 'Connected'), 'wb-ok'];
+  const el = (now - WALK.t0) / 1000, gps = paused ? ['⏸', T2('متوقفة مؤقتًا', 'Paused'), 'wb-p'] : WALK.gpsErr === 1 ? ['🚫', T2('الموقع مرفوض', 'Location denied'), 'wb-w'] : (WALK.acc == null && (WALK.gpsErr || el > 45)) ? ['❌', T2('GPS غير متاح', 'GPS unavailable'), 'wb-w'] : WALK.acc == null ? ['🛰️', T2('بدوّر على GPS', 'Searching'), 'wb-s'] : (stale || WALK.acc > WGPS.weak) ? ['⚠️', T2('إشارة ضعيفة', 'Weak signal'), 'wb-w'] : (!WALK.nat && !WALK.last) ? ['📡', T2('بيثبّت الإشارة', 'Acquiring signal'), 'wb-s'] : ['📍', T2('بيتتبّع', 'Tracking'), 'wb-ok'];
   const k = todayKey(), T = walkDay(k), dn = T.steps;
   box.innerHTML = `<div class="walkp wcard"><div class="wh"><b>${paused ? '⏸ ' + T2('متوقفة', 'Paused') : st.i + ' ' + st.t}</b><span class="wbadge ${gps[2]}">${gps[0]} ${gps[1]}${WALK.acc != null && !paused ? ' ±' + Math.round(WALK.acc) + 'm' : ''}</span></div>
     ${walkMap(walkRoute(), 110)}
@@ -6207,7 +6221,7 @@ async function walkStart(){
   const ar = LANG === 'ar', P = NATIVE.ok && NATIVE.ped();
   if (P && !P.startWalk) return showToast('⚠️ ' + (ar ? 'نسخة الـ APK على موبايلك قديمة وملهاش مشية GPS في الخلفية. ثبّت الـ APK الجديد.' : 'The APK on this phone is old and has no background GPS walk. Install the new APK.'));
   if (!navigator.geolocation && !(P && P.startWalk)) return showToast('⚠️ ' + (ar ? 'الجهاز مفيهوش GPS' : 'This device has no GPS'));
-  Object.assign(WALK, {paused:false, pausedMs:0, pauseT:0, pts:[], rt:[], on:true, nat:false, km:0, mov:0, kcal:0, v:0, acc:null, last:null, hist:[], fix:0, err:'', sum:null, t0:Date.now(), st0:pdDay(todayKey()), nsteps:0, tn:0, polling:false});
+  Object.assign(WALK, {sk:null, pk:null, gpsErr:0, rej:0, paused:false, pausedMs:0, pauseT:0, pts:[], rt:[], on:true, nat:false, km:0, mov:0, kcal:0, v:0, acc:null, last:null, hist:[], fix:0, err:'', sum:null, t0:Date.now(), st0:pdDay(todayKey()), nsteps:0, tn:0, polling:false});
   accOn();
   if (P && P.startWalk){            // Android app: a foreground service records the walk even with the screen off
     let okLoc = false;
@@ -6218,12 +6232,12 @@ async function walkStart(){
   }
   try { navigator.geolocation.getCurrentPosition(walkFix, () => {}, {enableHighAccuracy:false, maximumAge:120000, timeout:4000}); } catch(e){}   // a quick rough first fix, so the walk starts right away
   try { WALK.wl = await navigator.wakeLock.request('screen'); } catch(e){}
-  WALK.id = navigator.geolocation.watchPosition(walkFix, e => { WALK.err = e.code === 1 ? (ar ? 'المتصفح منع الموقع لموقع Tracky. دوس على 🔒 جنب اللينك ← الأذونات ← الموقع ← السماح، وبعدين ابدأ المشية تاني. (ومن تطبيق الـ APK الجديد بتشتغل والشاشة مقفولة.)' : 'The browser blocked location for Tracky. Tap the 🔒 next to the address, then Permissions > Location > Allow, and start the walk again. (The new APK app also works with the screen off.)') : (ar ? 'مش لاقي إشارة GPS' : 'No GPS signal'); }, {enableHighAccuracy:true, maximumAge:1000, timeout:30000});
+  WALK.id = navigator.geolocation.watchPosition(walkFix, e => { WALK.gpsErr = e.code || 2; WALK.err = e.code === 1 ? (ar ? 'المتصفح منع الموقع لموقع Tracky. دوس على 🔒 جنب اللينك ← الأذونات ← الموقع ← السماح، وبعدين ابدأ المشية تاني. (ومن تطبيق الـ APK الجديد بتشتغل والشاشة مقفولة.)' : 'The browser blocked location for Tracky. Tap the 🔒 next to the address, then Permissions > Location > Allow, and start the walk again. (The new APK app also works with the screen off.)') : (ar ? 'مش لاقي إشارة GPS' : 'No GPS signal'); }, {enableHighAccuracy:true, maximumAge:1000, timeout:30000});
   WALK.tick = setInterval(walkTick, 1000); renderSteps(); walkUI();
 }
 async function walkResume(){        // the app was closed during a walk: pick it up again
   const P = NATIVE.ok && NATIVE.ped(); if (WALK.on || !P || !P.getWalk) return;
-  try { const r = await P.getWalk(); if (r && r.active){ Object.assign(WALK, {on:true, nat:true, km:r.km, mov:r.mov, kcal:r.kcal, v:r.v, acc:r.fixT ? r.acc : null, fix:r.fixT || 0, nsteps:r.steps, t0:r.t0 || Date.now(), hist:[], sum:null, err:'', polling:false, tn:0, paused:!!r.paused, pausedMs:r.pausedMs || 0, pauseT:Date.now()}); accOn(); clearInterval(WALK.tick); WALK.tick = setInterval(walkTick, 1000); renderSteps(); walkUI(); } } catch(e){}
+  try { const r = await P.getWalk(); if (r && r.active){ Object.assign(WALK, {sk:null, pk:null, gpsErr:0, on:true, nat:true, km:r.km, mov:r.mov, kcal:r.kcal, v:r.v, acc:r.fixT ? r.acc : null, fix:r.fixT || 0, nsteps:r.steps, t0:r.t0 || Date.now(), hist:[], sum:null, err:'', polling:false, tn:0, paused:!!r.paused, pausedMs:r.pausedMs || 0, pauseT:Date.now()}); accOn(); clearInterval(WALK.tick); WALK.tick = setInterval(walkTick, 1000); renderSteps(); walkUI(); } } catch(e){}
 }
 async function walkStop(){
   try { navigator.geolocation.clearWatch(WALK.id); } catch(e){} clearInterval(WALK.tick); accOff(); try { WALK.wl && WALK.wl.release(); } catch(e){} WALK.wl = null;
@@ -6238,7 +6252,7 @@ function walkFinish(r){
     const L = km * 1000 / steps, cad = steps / min;
     if (L > .35 && L < 1.4 && cad > 40 && cad < 220){ const b = cad < 85 ? 0 : cad < 110 ? 1 : cad < 135 ? 2 : 3; progress.stepCal = progress.stepCal || [0, 0, 0, 0]; progress.stepCal[b] = progress.stepCal[b] > 0 ? progress.stepCal[b] * .6 + L * .4 : L; cal = progress.stepCal[b]; }
   }
-  const type = (v > 9 && min > 0 && steps / min < 60) ? 'veh' : v >= 7.2 ? 'run' : v >= 1.6 ? 'walk' : 'still';
+  const cadF = min > 0 ? steps / min : 0, type = (v > 9 && min > 0 && cadF < 60) ? 'veh' : (v >= 7.2 && (steps < 50 || cadF >= 115)) ? 'run' : v >= 1.6 ? 'walk' : 'still';
   WALK.sum = {id:sid, km, min, dur, v, kcal:r.kcal || 0, steps, cal, route:walkRoute().slice()};
   if (km >= .05){ progress.walks = progress.walks || []; if (!progress.walks.some(w => w.id === sid)) progress.walks.push(walkNorm({id:sid, date:dayOfMs(t0), t0, t:now, km:+km.toFixed(3), min:+min.toFixed(1), dur, v:+v.toFixed(2), kcal:Math.round(r.kcal || 0), steps, type})); if (progress.walks.length > 1000) progress.walks = progress.walks.slice(-1000); }   // history is kept (old versions cut it at 60)
   save(); if (NATIVE.ok) stepNativeSync(); renderSteps(); try { trackerSync(true); } catch(e){} showToast('✅ ' + (LANG === 'ar' ? `المشية: ${km.toFixed(2)} كم بسرعة ${v.toFixed(1)} كم/س` : `Walk: ${km.toFixed(2)} km at ${v.toFixed(1)} km/h`));
@@ -11574,7 +11588,7 @@ window.NUT = {parse:t => { const P = parseMeal(fcClean(t)); return {items:P.item
 })();
 
 /* ================= v65: friends-only games, settings menu, hero Build page, active update prompt ================= */
-const APP_VER = 'tracky-v99';
+const APP_VER = 'tracky-v100';
 /* 1) games: only the friends duel remains; finishing a workout now pays GP directly (no ghost hunt) */
 ghEvent = function(evId, kind, ratio){
   if (kind !== 'fin') return null;
