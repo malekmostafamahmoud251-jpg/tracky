@@ -3776,20 +3776,21 @@ const nzK = t => String(t || '').toLowerCase().replace(/[ً-ٟـ]/g, '').replace
 const MUSCLES = {chest:'Chest', back:'Back muscles', shoulders:'Shoulders', arms:'Arms', legs:'Legs', glutes:'Glutes', core:'Core'};
 const PARTNER = {chest:['arms','shoulders'], back:['arms'], shoulders:['arms'], arms:[], legs:['glutes','core'], glutes:['legs'], core:[]};
 const muscleOf = name => { const x = LIB.find(l => sameEx(l[0], name)); return x ? x[1] : (typeof customCoarse === 'function' ? customCoarse(name) : null); };
-function suggestFor(day){
-  const have = new Set((day.exercises || []).map(e => e.name.trim().toLowerCase())), cnt = {}, want = {}, nm = day.name.toLowerCase();
+function suggestDetail(day){
+  const T = (x, e) => LANG === 'ar' ? x : e, have = new Set((day.exercises || []).map(e => canonEx(e.name))), cnt = {}, want = {}, why = {}, nm = day.name.toLowerCase(), mn = m => tr(MUSCLES[m]);
   (day.exercises || []).forEach(e => { const m = muscleOf(e.name); if (m) cnt[m] = (cnt[m] || 0) + 1; });
   const kw = {push:['chest','shoulders','arms'], pull:['back','arms'], leg:['legs','glutes'], lower:['legs','glutes'], upper:['chest','back','shoulders','arms'], chest:['chest'], back:['back'], arm:['arms'], shoulder:['shoulders'], core:['core'], abs:['core'], full:['legs','chest','back','shoulders','core']};
-  Object.keys(kw).forEach(k => { if (nm.includes(k)) kw[k].forEach(m => want[m] = (want[m] || 0) + 2); });
-  Object.keys(cnt).forEach(m => { want[m] = (want[m] || 0) + (cnt[m] < 3 ? 2 : 0); (PARTNER[m] || []).forEach(p => { if (!cnt[p]) want[p] = (want[p] || 0) + 1; }); });
-  if (!Object.keys(want).length) ['legs','chest','back','shoulders'].forEach(m => want[m] = 1);
+  Object.keys(kw).forEach(k => { if (nm.includes(k)) kw[k].forEach(m => { want[m] = (want[m] || 0) + 2; why[m] = why[m] || T(`يوم "${day.name}" بيستهدف ${mn(m)}`, `"${day.name}" targets ${mn(m)}`); }); });
+  Object.keys(cnt).forEach(m => { if (cnt[m] < 3){ want[m] = (want[m] || 0) + 2; why[m] = T(`عندك ${cnt[m]} تمرين ${mn(m)} بس في اليوم ده`, `Only ${cnt[m]} ${mn(m)} exercise(s) in this day`); } (PARTNER[m] || []).forEach(p => { if (!cnt[p]){ want[p] = (want[p] || 0) + 1; why[p] = why[p] || T(`بيكمّل ${mn(m)} وملهاش تمرين في اليوم`, `Balances ${mn(m)}; none for it in this day`); } }); });
+  if (!Object.keys(want).length) ['legs','chest','back','shoulders'].forEach(m => { want[m] = 1; why[m] = T('تغطية متوازنة للجسم', 'Balanced coverage'); });
   const home = settings.profile && settings.profile.place === 'home';
-  return LIB.filter(l => !l.h && !have.has(l[0].toLowerCase()) && want[l[1]]).map(l => ({n:l[0], s:want[l[1]] + (home ? (l[2] ? 1 : -1) : 0)})).sort((a,b) => b.s - a.s).slice(0, 6).map(x => x.n);
+  return LIB.filter(l => !l.h && !have.has(canonEx(l[0])) && !sugRejected(l[0]) && want[l[1]]).map(l => ({n:l[0], s:want[l[1]] + (home ? (l[2] ? 1 : -1) : 0), why:why[l[1]] + (home && l[2] ? T(' · مناسب للبيت', ' · works at home') : '')})).sort((a, b) => b.s - a.s).slice(0, 6);
 }
+const suggestFor = day => suggestDetail(day).map(x => x.n);
 function renderSuggest(dayId, idx){
   $('exSuggestBox').style.display = idx > -1 ? 'none' : '';
   const day = state.days.find(d => d.id === dayId); if (!day || idx > -1) return;
-  $('exSuggest').innerHTML = suggestFor(day).map(n => `<button type="button" class="sug" data-n="${escapeHTML(n)}">${escapeHTML(n)}</button>`).join('');
+  $('exSuggest').innerHTML = suggestDetail(day).map(x => `<span class="sugw"><button type="button" class="sug" data-n="${escapeHTML(x.n)}">${escapeHTML(x.n)}<small>${escapeHTML(x.why)}</small></button><button type="button" class="sugx" data-no="${escapeHTML(x.n)}" aria-label="Hide this suggestion" title="${LANG === 'ar' ? 'ما تقترحش ده تاني' : 'Do not suggest again'}">✕</button></span>`).join('');
 }
 $('exNameInput').addEventListener('input', () => { if (editingExIndex === -1){ $('exBoth').checked = UNI_RE.test($('exNameInput').value); syncHand(); } });
 $('handQ').addEventListener('click', e => { const b = e.target.closest('[data-hand]'); if (!b) return; $('exBoth').checked = b.dataset.hand === '1'; syncHand(); buzz(8); });
@@ -3868,7 +3869,7 @@ function exModalInit(idx){
   $('exSuggestBox').style.display = 'none'; renderExChips(); renderExResults(); syncRepChips(); $('exResults').scrollTop = 0; m.scrollTop = 0;
 }
 $('exResults').addEventListener('click', e => { const r = e.target.closest('.xrow'); if (r) pickEx(r.dataset.n); });
-$('exSuggest').addEventListener('click', e => { const b = e.target.closest('.sug'); if (b) pickEx(b.dataset.n); });
+$('exSuggest').addEventListener('click', e => { const x = e.target.closest('.sugx'); if (x){ settings.sugNo = (settings.sugNo || []).concat(canonEx(x.dataset.no)).slice(-60); save(); renderSuggest(editingExDayId, editingExIndex); buzz(6); return; } const b = e.target.closest('.sug'); if (b) pickEx(b.dataset.n); });
 $('exMuscleChips').addEventListener('click', e => { const b = e.target.closest('[data-m]'); if (!b) return; EX_M = b.dataset.m; renderExChips(); renderExResults(); buzz(6); });
 $('exEquipChips').addEventListener('click', e => { const b = e.target.closest('[data-e]'); if (!b) return; EX_E = b.dataset.e; renderExChips(); renderExResults(); buzz(6); });
 $('exRepChips').addEventListener('click', e => { const b = e.target.closest('[data-r]'); if (!b) return; $('exRepsInput').value = b.dataset.r; syncRepChips(); buzz(6); });
@@ -6038,7 +6039,7 @@ function stepSrcHtml(){
 /* data and privacy panel */
 async function openDataPanel(){
   const box = mkModal('modalData'), ar = LANG === 'ar', au = getAuth(), o = JSON.parse(buildBackup()), c = bkCounts(o), snaps = getSnaps().length, ct = lastCloudT();
-  box.innerHTML = `<h3>🛡️ ${T6('البيانات والخصوصية', 'Data and privacy')}</h3><div id="dpBody"></div><div class="acts" style="flex-wrap:wrap;gap:.4rem"><button type="button" onclick="exportAll()">📦 ${T6('تصدير كل شيء (ZIP)', 'Export everything (ZIP)')}</button><button type="button" class="sec" onclick="$('exportBtn').click()">⬇ JSON</button><button type="button" class="sec" onclick="$('importFile').click()">⬆ ${T6('استيراد', 'Import')}</button><button type="button" class="cancel" onclick="closeModal('modalData')">${T6('إغلاق', 'Close')}</button></div>`;
+  box.innerHTML = `<h3>🛡️ ${T6('البيانات والخصوصية', 'Data and privacy')}</h3><div id="dpBody"></div><div class="acts" style="flex-wrap:wrap;gap:.4rem"><button type="button" onclick="exportAll()">📦 ${T6('تصدير كل شيء (ZIP)', 'Export everything (ZIP)')}</button><button type="button" class="sec" onclick="$('exportBtn').click()">⬇ JSON</button><button type="button" class="sec" onclick="$('importFile').click()">⬆ ${T6('استيراد', 'Import')}</button>${((settings.aiNo || []).length + (settings.sugNo || []).length) ? `<button type="button" class="sec" onclick="aiNoClear()">🧹 ${T6('امسح اقتراحات الـ AI المرفوضة', 'Clear rejected AI suggestions')} (${(settings.aiNo || []).length + (settings.sugNo || []).length})</button>` : ''}<button type="button" class="cancel" onclick="closeModal('modalData')">${T6('إغلاق', 'Close')}</button></div>`;
   $('modalData').classList.add('active');
   const row = (i, t, v, cls) => `<div class="dprow ${cls || ''}"><span>${i}</span><div><b>${escapeHTML(t)}</b><small>${escapeHTML(v)}</small></div></div>`;
   const draw = extra => { $('dpBody').innerHTML =
@@ -11486,16 +11487,16 @@ async function agentRound(o){
 }
 function offerActs(bubble, full, O){
   O = O || {}; const BOX = () => O.box ? O.box() : $('chatMessages'), SV = () => { try { (O.save || saveChat)(); } catch(_){} };
-  const acts = parseActs(full).filter(a => ACT[a.do] && (!O.allow || O.allow.has(a.do))).filter(a => !ACT[a.do].r); if (!acts.length) return;
+  const acts = parseActs(full).filter(a => ACT[a.do] && (!O.allow || O.allow.has(a.do))).filter(a => !ACT[a.do].r).filter(a => !aiRejected(a)); if (!acts.length) return;
   const auto = false, now = [], ask = [];
   acts.forEach(a => { const d = ACT[a.do]; (auto && d && d.risk === 'low' ? now : ask).push(a); });
   const card = document.createElement('div'); card.className = 'msg ai act-card'; bubble.after(card);
   const done = [], undos = [];
-  const applyList = list => { list.forEach(a => { const r = runAct(a); done.push({a, r}); if (r.ok && r.undo) undos.push(r.undo); }); };
+  const applyList = list => { const snap = actSnapAll(list), i0 = undos.length; let miss = false; list.forEach(a => { const r = runAct(a); done.push({a, r}); if (r.ok && r.undo) undos.push(r.undo); else if (r.ok && !ACT_NOUNDO.has(a.do)) miss = true; }); if (miss && snap){ undos.splice(i0); undos.push(snap); } };
   const hasHigh = list => list.some(a => ACT[a.do] && (ACT[a.do].risk === 'high'));
   const finish = () => {
     const ok = done.filter(x => x.r.ok).length;
-    card.innerHTML = `<b>${ok ? '✅' : '⚠️'} ${I('Done')}</b><ul>${done.map(x => `<li class="${x.r.ok ? 'ok' : 'bad'}">${x.r.ok ? '✓' : '✕'} ${E(((ACT[x.a.do] && ACT[x.a.do].label) ? ACT[x.a.do].label(x.a) : x.a.do))}${x.r.msg ? ' <small>' + E(x.r.msg) + '</small>' : ''}</li>`).join('')}</ul>${undos.length ? `<button type="button" class="sec tiny" data-tone="none" id="actUndo">↩ ${I('Undo all')}</button>` : ''}`;
+    card.innerHTML = `<b>${ok ? '✅' : '⚠️'} ${I('Done')}</b><ul>${done.map(x => `<li class="${x.r.ok ? 'ok' : 'bad'}">${x.r.ok ? '✓' : '✕'} ${E(((ACT[x.a.do] && ACT[x.a.do].label) ? ACT[x.a.do].label(x.a) : x.a.do))}${whyHtml(x.a)}${x.r.msg ? ' <small>' + E(x.r.msg) + '</small>' : ''}</li>`).join('')}</ul>${undos.length ? `<button type="button" class="sec tiny" data-tone="none" id="actUndo">↩ ${I('Undo all')}</button>` : ''}`;
     const u = card.querySelector('#actUndo'); if (u) u.onclick = () => { undos.slice().reverse().forEach(f => { try { f(); } catch(e){ console.error(e); } }); card.innerHTML = '↩ ' + I('Changes undone.'); bubble.dataset.raw = (bubble.dataset.raw || '').replace(/\n\[Actions applied:[^\]]*\]/, '') + '\n[Actions undone]'; SV(); };
     bubble.dataset.raw = (bubble.dataset.raw || '') + '\n[Actions applied: ' + done.filter(x => x.r.ok).map(x => x.a.do).join(', ') + ']'; try { SV(); } catch(_){}
     BOX().scrollTop = 1e9; buzz(10);
@@ -11504,7 +11505,9 @@ function offerActs(bubble, full, O){
   if (!ask.length){ finish(); return; }
   if (now.length === 0 && done.length === 0){ /* nothing applied yet */ }
   const sel = ask.map(() => true);
-  card.innerHTML = `<b>🛠️ ${I('Do this for you?')}</b><div class="ac-list">${ask.map((a, i) => `<label><input type="checkbox" data-i="${i}" checked> <span>${E(ACT[a.do] && ACT[a.do].label ? ACT[a.do].label(a) : String(a.do))}</span></label>`).join('')}</div><div class="ac-b"><button type="button" id="actYes">✅ ${I('Yes, do it')}</button><button type="button" class="sec" data-tone="none" id="actNo">❌ ${I('No')}</button></div>`;
+  card.innerHTML = `<b>🛠️ ${I('Do this for you?')}</b><div class="ac-list">${ask.map((a, i) => `<label><input type="checkbox" data-i="${i}" checked> <span>${E(ACT[a.do] && ACT[a.do].label ? ACT[a.do].label(a) : String(a.do))}${whyHtml(a, true)}</span>${aiKey(a).endsWith('|') ? '' : `<button type="button" class="sugx" data-tone="none" data-no="${i}" aria-label="Never suggest this" title="${LANG === 'ar' ? 'ما تقترحش ده تاني' : 'Never suggest this'}">🚫</button>`}</label>`).join('')}</div><div class="ac-b"><button type="button" id="actYes">✅ ${I('Yes, do it')}</button><button type="button" class="sec" data-tone="none" id="actNo">❌ ${I('No')}</button><button type="button" class="sec" data-tone="none" id="actNever">🚫 ${LANG === 'ar' ? 'مش تاني' : 'Never'}</button></div>`;
+  card.querySelectorAll('.ac-list [data-no]').forEach(btn => btn.onclick = ev => { ev.preventDefault(); const i = +btn.dataset.no; aiReject(ask[i]); sel[i] = false; const lab = btn.closest('label'); if (lab) lab.remove(); card.querySelector('#actYes').disabled = !sel.some(Boolean); });
+  card.querySelector('#actNever').onclick = () => { ask.forEach(aiReject); card.remove(); bubble.dataset.raw = (bubble.dataset.raw || '') + '\n[User rejected these suggestions and does not want them again]'; SV(); };
   card.querySelectorAll('.ac-list input').forEach(c => c.onchange = () => { sel[+c.dataset.i] = c.checked; card.querySelector('#actYes').disabled = !sel.some(Boolean); });
   card.querySelector('#actNo').onclick = () => { card.remove(); bubble.dataset.raw = (bubble.dataset.raw || '') + '\n[User skipped the proposed actions]'; SV(); };
   card.querySelector('#actYes').onclick = () => {
@@ -11838,6 +11841,33 @@ const EXTRA_RULES = [
 ].join('\n\n');
 COACH_RULES = NEW_RULES + '\n\n' + EXTRA_RULES + actionGuide();
 
+/* ===== v110: AI suggestions come with a reason, can be rejected for good, never repeat an exercise, and can always be undone ===== */
+const T7 = (a, e) => LANG === 'ar' ? a : e;
+let _CANON = null;
+function canonEx(name){   // one key per exercise, whatever alias or language it is written in
+  if (!_CANON){ _CANON = new Map(); LIB.forEach(l => { if (l.h) return; const base = nzK(l[0]); [l[0], l.ar || '', ...(l.al ? l.al.split(';') : [])].forEach(a => { const k = nzK(a); if (k && !_CANON.has(k)) _CANON.set(k, base); }); }); }
+  const k = nzK(name); return _CANON.get(k) || k;
+}
+const dupIn = (day, name, skip) => (day && day.exercises || []).find(e => e !== skip && canonEx(e.name) === canonEx(name));
+const sugRejected = n => (settings.sugNo || []).includes(canonEx(n));
+const aiKey = a => String(a.do) + '|' + canonEx(a.exercise || a.new_name || a.name || a.text || '');
+const aiRejected = a => { const k = aiKey(a); return !k.endsWith('|') && (settings.aiNo || []).includes(k); };
+function aiReject(a){ if (!a) return; const k = aiKey(a); if (k.endsWith('|')) return; settings.aiNo = (settings.aiNo || []).filter(x => x !== k).concat(k).slice(-40); save(); }
+function aiNoClear(){ settings.aiNo = []; settings.sugNo = []; save(); showToast('✅ ' + T7('اتمسحت الاقتراحات المرفوضة', 'Rejected suggestions cleared')); try { closeModal('modalData'); } catch(e){} }
+const whyHtml = (a, inl) => { const w = String(a && a.why || '').trim().slice(0, 200); return w ? `<small class="ac-why">💡 ${E(w)}</small>` : (inl ? `<small class="ac-why none">${T7('من غير سبب مذكور', 'No reason given')}</small>` : ''); };
+window.canonEx = canonEx; window.sugRejected = sugRejected; window.aiNoClear = aiNoClear;   // used by code outside this scope
+const ACT_NOUNDO = new Set(['navigate', 'start_rest', 'start_workout']);
+function actSnapAll(list){   // safety net: if an action cannot undo itself, the whole batch can still be rolled back
+  if (!list.some(a => ACT[a.do] && !ACT[a.do].r && !ACT_NOUNDO.has(a.do))) return null;
+  try { const b = JSON.parse(buildBackup()); delete b.photos; const ld = JSON.stringify(logData || {}); return () => { applyBackup(b, true); try { logData = JSON.parse(ld); saveDraft(); renderAllViews(); } catch(e){} }; } catch(e){ return null; }
+}
+{ const _ae = ACT.add_exercise.run; ACT.add_exercise.run = a => { const d = dayBy(a.day), nm = String(a.exercise || '').trim(), dup = d && nm && dupIn(d, nm); if (dup) return NO(T7('موجود بالفعل في اليوم ده باسم ', 'Already in this day as ') + dup.name); return _ae(a); }; }
+{ const _ue = ACT.update_exercise.run; ACT.update_exercise.run = a => { if (a.new_name){ const d = dayBy(a.day), e = exBy(d, String(a.exercise || '')), dup = e && dupIn(d, String(a.new_name), e); if (dup) return NO(T7('موجود بالفعل في اليوم ده باسم ', 'Already in this day as ') + dup.name); } return _ue(a); }; }
+{ const _ad = ACT.add_day.run; ACT.add_day.run = a => { if (Array.isArray(a.exercises)){ const seen = new Set(); a = Object.assign({}, a, {exercises:a.exercises.filter(x => { const k = canonEx(x && (x.name || x.exercise) || ''); if (!k || seen.has(k)) return false; seen.add(k); return true; })}); } return _ad(a); }; }
+COACH_RULES += ' WHY AND NO REPEATS: put a short "why" (one sentence, in the user\'s language, citing their own data such as recent sets, a missing muscle or a plateau) inside EVERY write action block. Never propose an exercise that is already in that plan day under any name or alias, and avoid giving the same exercise to two days of the plan unless the user asks. If the user rejected a suggestion (see REJECTED SUGGESTIONS in the context) do not propose it again.';
+{ const _bc7 = buildCoachContext; buildCoachContext = function(text){ let c = _bc7(text); try { const no = (settings.aiNo || []).concat((settings.sugNo || []).map(x => 'exercise|' + x)); if (no.length){ const i = c.lastIndexOf('\n\nUser question:'), L = '\nREJECTED SUGGESTIONS (the user said never suggest these again): ' + no.slice(-25).map(x => x.replace('|', ': ')).join('; ') + '.'; c = i > 0 ? c.slice(0, i) + L + c.slice(i) : c + L; } } catch(e){ console.error(e); } return c; }; }
+
+
 window.coachRound = coachRound; window.offerActs = offerActs;
 /* ---------- init ---------- */
 nLoad(); renderFood(); try { renderHome(); } catch(e){}
@@ -11847,7 +11877,7 @@ window.NUT = {parse:t => { const P = parseMeal(fcClean(t)); return {items:P.item
 })();
 
 /* ================= v65: friends-only games, settings menu, hero Build page, active update prompt ================= */
-const APP_VER = 'tracky-v109';
+const APP_VER = 'tracky-v110';
 /* 1) games: only the friends duel remains; finishing a workout now pays GP directly (no ghost hunt) */
 ghEvent = function(evId, kind, ratio){
   if (kind !== 'fin') return null;
